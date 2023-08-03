@@ -1,0 +1,10 @@
+population := 1;
+
+observed ~ Binomial(population, 0.25);
+observe observed = 1;
+
+arrivals := 1;
+population ~ Binomial(population, 0.25);
+population += arrivals;
+
+return population

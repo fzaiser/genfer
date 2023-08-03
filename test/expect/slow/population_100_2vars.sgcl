@@ -1,0 +1,23 @@
+population := 0;
+
+arrivals ~ Poisson(11.63);
+population ~ Binomial(population, 0.2636);
+population += arrivals;
+observe 0 ~ Binomial(population, 0.2);
+
+arrivals ~ Poisson(21.04);
+population ~ Binomial(population, 0.2636);
+population += arrivals;
+observe 2 ~ Binomial(population, 0.2);
+
+arrivals ~ Poisson(15.04);
+population ~ Binomial(population, 0.2636);
+population += arrivals;
+observe 4 ~ Binomial(population, 0.2);
+
+arrivals ~ Poisson(4.28);
+population ~ Binomial(population, 0.2636);
+population += arrivals;
+observe 4 ~ Binomial(population, 0.2);
+
+return population

@@ -1,0 +1,26 @@
+// sample from either 1, 2, or 3 geom distributions and add the results
+// infer from how many distributions we sampled based on observing one result
+
+nat c;
+nat res;
+nat tmp;
+
+res := 0;
+
+c := unif(1,3);
+
+tmp := geometric(1/2);
+res := res + tmp;
+if(c = 2 || c = 3) {
+    tmp := geometric(3/10);
+    res := res + tmp;
+} else {skip}
+if(c = 3) {
+    tmp := geometric(1/5);
+    res := res + tmp;
+} else {
+     skip
+}
+observe(res = 4)
+?Pr[c]
+#!Plot[c]

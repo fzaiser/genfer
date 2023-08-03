@@ -1,0 +1,46 @@
+# Adapted from https://github.com/LKlinke/Prodigy/blob/main/pgfexamples/inference/max.pgcl
+
+a ~ Bernoulli(1/2);
+b ~ Bernoulli(1/2);
+
+x := a;
+y := b;
+if (x > y) {
+    res := x;
+} else {
+    res := y;
+}
+
+r := res;
+a := 0;
+b := 0;
+
+return r;
+
+#= Original code:
+
+fun max := {
+    nat x;
+    nat y;
+    nat res;
+    if (x > y) {
+        res := x;
+    } else {
+        res := y;
+    }
+    return res;
+}
+
+nat a;
+nat b;
+nat r;
+
+a := bernoulli(1/2);
+b := bernoulli(1/2);
+r := max(a, b);
+a := 0;
+b := 0;
+
+?Pr[r = 1]
+
+=#

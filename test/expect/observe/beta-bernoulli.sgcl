@@ -1,0 +1,8 @@
+# flags: --no-probs
+
+P ~ UniformCont(0,1); # P ~ Beta(1, 1)
+observe 0 ~ Bernoulli(P); # P ~ Beta(1, 2)
+observe 0 ~ Bernoulli(P); # P ~ Beta(1, 3)
+observe 0 ~ Bernoulli(P); # P ~ Beta(1, 4)
+observe 1 ~ Bernoulli(P); # P ~ Beta(2, 4)
+return P

@@ -1,0 +1,3 @@
+X ~ UniformDisc(0,4);
+observe(X in [1, 3, 4, 6]);
+return X;

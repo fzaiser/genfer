@@ -1,0 +1,23 @@
+fun max := {
+    nat x;
+    nat y;
+    nat res;
+    if (x > y) {
+        res := x;
+    } else {
+        res := y;
+    }
+    return res;
+}
+
+nat a;
+nat b;
+nat r;
+
+a := bernoulli(1/2);
+b := bernoulli(1/2);
+r := max(a, b);
+a := 0;
+b := 0;
+
+?Pr[r = 1]

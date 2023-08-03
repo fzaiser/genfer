@@ -1,0 +1,18 @@
+nat x; // 0: weekday, 1: weekend
+nat d; // sample the number of phone calls received in one hour.
+rparam p;
+nparam n;
+
+x := bernoulli(2/7)
+if (x=0){
+    d := poisson(6) // Weekdays there are 10 phone calls on average in an hour
+} else {
+    d := poisson(2) // Weekends there are 4 phone calls in average in an hour
+}
+
+observe(d=5) // we have observed 5 phone calls.
+?Pr[x = 0]
+//!Plot[x, d]
+!Print
+
+

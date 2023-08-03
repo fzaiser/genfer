@@ -1,0 +1,3 @@
+X ~ UniformDisc(0, 100);
+observe X <= 98;
+return X

@@ -1,0 +1,12 @@
+# https://probmods.org/chapters/social-cognition.html
+
+normalize {
+    Action ~ Bernoulli(0.5);
+    if Action = 0 {
+        Result := 0;
+    } else {
+        Result := 1;
+    }
+    observe Result = 1;
+}
+return Action

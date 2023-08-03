@@ -1,0 +1,87 @@
+Support is a subset of: {0, ..., 99}
+
+Computing moments...
+Total measure:             Z = 0.02
+Expected value:            E = 15.0
+Standard deviation:        σ = 4.999999999999993
+Variance:                  V = 24.99999999999993
+Skewness (3rd std moment): S = 2.1827872842550903e-14
+Kurtosis (4th std moment): K = 0.9999999999998426
+
+Computing probabilities up to 37...
+Unnormalized: p(0)     = 0.0
+Normalized:   p(0) / Z = 0.0
+Unnormalized: p(1)     = 0.0
+Normalized:   p(1) / Z = 0.0
+Unnormalized: p(2)     = 0.0
+Normalized:   p(2) / Z = 0.0
+Unnormalized: p(3)     = 0.0
+Normalized:   p(3) / Z = 0.0
+Unnormalized: p(4)     = 0.0
+Normalized:   p(4) / Z = 0.0
+Unnormalized: p(5)     = 0.0
+Normalized:   p(5) / Z = 0.0
+Unnormalized: p(6)     = 0.0
+Normalized:   p(6) / Z = 0.0
+Unnormalized: p(7)     = 0.0
+Normalized:   p(7) / Z = 0.0
+Unnormalized: p(8)     = 0.0
+Normalized:   p(8) / Z = 0.0
+Unnormalized: p(9)     = 0.0
+Normalized:   p(9) / Z = 0.0
+Unnormalized: p(10)     = 0.01
+Normalized:   p(10) / Z = 0.5
+Unnormalized: p(11)     = 0.0
+Normalized:   p(11) / Z = 0.0
+Unnormalized: p(12)     = 0.0
+Normalized:   p(12) / Z = 0.0
+Unnormalized: p(13)     = 0.0
+Normalized:   p(13) / Z = 0.0
+Unnormalized: p(14)     = 0.0
+Normalized:   p(14) / Z = 0.0
+Unnormalized: p(15)     = 0.0
+Normalized:   p(15) / Z = 0.0
+Unnormalized: p(16)     = 0.0
+Normalized:   p(16) / Z = 0.0
+Unnormalized: p(17)     = 0.0
+Normalized:   p(17) / Z = 0.0
+Unnormalized: p(18)     = 0.0
+Normalized:   p(18) / Z = 0.0
+Unnormalized: p(19)     = 0.0
+Normalized:   p(19) / Z = 0.0
+Unnormalized: p(20)     = 0.01
+Normalized:   p(20) / Z = 0.5
+Unnormalized: p(21)     = 0.0
+Normalized:   p(21) / Z = 0.0
+Unnormalized: p(22)     = 0.0
+Normalized:   p(22) / Z = 0.0
+Unnormalized: p(23)     = 0.0
+Normalized:   p(23) / Z = 0.0
+Unnormalized: p(24)     = 0.0
+Normalized:   p(24) / Z = 0.0
+Unnormalized: p(25)     = 0.0
+Normalized:   p(25) / Z = 0.0
+Unnormalized: p(26)     = 0.0
+Normalized:   p(26) / Z = 0.0
+Unnormalized: p(27)     = 0.0
+Normalized:   p(27) / Z = 0.0
+Unnormalized: p(28)     = 0.0
+Normalized:   p(28) / Z = 0.0
+Unnormalized: p(29)     = 0.0
+Normalized:   p(29) / Z = 0.0
+Unnormalized: p(30)     = 0.0
+Normalized:   p(30) / Z = 0.0
+Unnormalized: p(31)     = 0.0
+Normalized:   p(31) / Z = 0.0
+Unnormalized: p(32)     = 0.0
+Normalized:   p(32) / Z = 0.0
+Unnormalized: p(33)     = 0.0
+Normalized:   p(33) / Z = 0.0
+Unnormalized: p(34)     = 0.0
+Normalized:   p(34) / Z = 0.0
+Unnormalized: p(35)     = 0.0
+Normalized:   p(35) / Z = 0.0
+Unnormalized: p(36)     = 0.0
+Normalized:   p(36) / Z = 0.0
+Unnormalized: p(n)     <= 1.7347234759768075e-18 for all n >= 37
+Normalized:   p(n) / Z <= 8.673617379884038e-17 for all n >= 37

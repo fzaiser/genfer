@@ -1,0 +1,49 @@
+Support is a subset of: {0, ...}
+
+Computing moments...
+Total measure:             Z = 0.003378231027347774
+Expected value:            E = 5.8393288852196745
+Standard deviation:        σ = 1.9385793700416571
+Variance:                  V = 3.758089973951108
+Skewness (3rd std moment): S = 0.49794129305333473
+Kurtosis (4th std moment): K = 3.2438305015344238
+
+Computing probabilities up to 18...
+Unnormalized: p(0)     = 0.0
+Normalized:   p(0) / Z = 0.0
+Unnormalized: p(1)     = 0.0
+Normalized:   p(1) / Z = 0.0
+Unnormalized: p(2)     = 0.0000693279644754596
+Normalized:   p(2) / Z = 0.02052197256914324
+Unnormalized: p(3)     = 0.0002731978086183595
+Normalized:   p(3) / Z = 0.08087007857270354
+Unnormalized: p(4)     = 0.0005339040473708688
+Normalized:   p(4) / Z = 0.1580424911880681
+Unnormalized: p(5)     = 0.0006905198782498319
+Normalized:   p(5) / Z = 0.20440279917503285
+Unnormalized: p(6)     = 0.0006654069667068959
+Normalized:   p(6) / Z = 0.19696905312876198
+Unnormalized: p(7)     = 0.000509918080541643
+Normalized:   p(7) / Z = 0.1509423353268933
+Unnormalized: p(8)     = 0.00032387885735667935
+Normalized:   p(8) / Z = 0.09587232333572948
+Unnormalized: p(9)     = 0.00017545919067649365
+Normalized:   p(9) / Z = 0.05193818577122165
+Unnormalized: p(10)     = 0.0000827975963174972
+Normalized:   p(10) / Z = 0.024509157499065723
+Unnormalized: p(11)     = 0.000034586519670377616
+Normalized:   p(11) / Z = 0.010238056364526156
+Unnormalized: p(12)     = 0.000012953286068127189
+Normalized:   p(12) / Z = 0.0038343399143713165
+Unnormalized: p(13)     = 4.394680547829239e-6
+Normalized:   p(13) / Z = 0.0013008821813111676
+Unnormalized: p(14)     = 1.3622753080057167e-6
+Normalized:   p(14) / Z = 0.00040325107933048313
+Unnormalized: p(15)     = 3.886146628584942e-7
+Normalized:   p(15) / Z = 0.00011503495755990167
+Unnormalized: p(16)     = 1.0264964924395849e-7
+Normalized:   p(16) / Z = 0.000030385621472593017
+Unnormalized: p(17)     = 2.5239582162387848e-8
+Normalized:   p(17) / Z = 7.471242185056619e-6
+Unnormalized: p(n)     <= 7.371545442271298e-9 for all n >= 18
+Normalized:   p(n) / Z <= 2.182072623984704e-6 for all n >= 18

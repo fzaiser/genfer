@@ -1,0 +1,7 @@
+X ~ Bernoulli(0.5);
+if X = 0 {
+    observe X <= 3;
+} else {
+    observe X <= 10;
+}
+return X

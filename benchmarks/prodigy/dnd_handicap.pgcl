@@ -1,0 +1,38 @@
+// Estimates benefits or punishments when beeing allowed to throw multiple dice
+// and take the maximum / mininmum of these dice. The punishment is controlled
+// by the variable `good`.
+
+nat x;
+nat m;
+nat good;
+
+// the maximum value.
+m := unif(1,6)
+
+// this loop statemnts controls how many dice you are allowed to throw
+loop(5){
+    // the additional die toss
+    x := unif(1,6);
+
+    if (good = 1){
+        // beneficial case
+        if (x > m){
+            m := x
+        } else {skip}
+    } else {
+        // punishment case
+        if (x < m){
+        m := x
+        } else {skip}
+    }
+}
+
+// what is the expected value one achieves?
+?Ex[m]
+
+// for benefit this should be:
+    # 14077/2592 (six sided dice, 5 dice simultaneously)
+    # 272283756/40353607 (seven sided dice, 10 dice simultaneously)
+// for punishment this should be:
+    # 4067/2592 (six sided dice, 5 dice simultaneously)
+    # 50545100/40353607 (seven sided dice, 10 dice simultaneously)

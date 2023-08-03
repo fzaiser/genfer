@@ -1,0 +1,47 @@
+nat n0;
+nat n1;
+nat n2;
+nat n3;
+nat n4;
+nat n21;
+nat n22;
+nat n33;
+nat n31;
+nat n32;
+
+
+n0 := bernoulli(1/2);
+n4 := bernoulli(1/2);
+if (n0=1) {
+  n1 := bernoulli(4/5);
+  n21 := bernoulli(4/5);
+} else {
+  n1 := bernoulli(1/10);
+  n21 := bernoulli(1/10);
+}
+if (n4 = 1){
+  n22 := bernoulli(4/5);
+  n33 := bernoulli(4/5);
+} else {
+  n22 := bernoulli(1/10);
+  n33 := bernoulli(1/10);
+}
+if (n21 = 1 || n22 = 1){
+    n2 := 1
+} else {skip}
+if (n1=1){
+        n31 := bernoulli(4/5);
+} else {
+  n31 := bernoulli(1/10);
+}
+if (n2=1){
+  n32 := bernoulli(4/5);
+} else {
+  n32 := bernoulli(1/10);
+}
+if (n31 = 1 || n32 = 1 || n33 =1){
+    n3 := 1
+} else {skip}
+
+?Pr[n3]
+#!Plot[n3]; // expected: 130307/160000·δ(1)[n3]+29693/160000·δ(0)[n3]

@@ -1,0 +1,3 @@
+X := 4;
+observe 7 ~ NegBinomial(X, 0.25);
+return X

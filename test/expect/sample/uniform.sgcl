@@ -1,0 +1,2 @@
+X ~ UniformDisc(0, 10);
+return X

@@ -1,0 +1,21 @@
+# flags: -s
+
+population := 0;
+
+population ~ Binomial(population, 0.2636);
+population +~ Poisson(5.815);
+observe 0 ~ Binomial(population, 0.2);
+
+population ~ Binomial(population, 0.2636);
+population +~ Poisson(10.52);
+observe 1 ~ Binomial(population, 0.2);
+
+population ~ Binomial(population, 0.2636);
+population +~ Poisson(7.52);
+observe 2 ~ Binomial(population, 0.2);
+
+population ~ Binomial(population, 0.2636);
+population +~ Poisson(2.14);
+observe 2 ~ Binomial(population, 0.2);
+
+return population

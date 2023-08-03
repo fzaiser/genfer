@@ -1,0 +1,39 @@
+# Adapted from https://github.com/LKlinke/Prodigy/blob/main/pgfexamples/inference/lucky_throw.pgcl
+
+hand := 0;
+lucky_throw := 0;
+
+sum ~ UniformDisc(4, 25);
+
+loop 4 {
+    die ~ UniformDisc(1, 7);
+    if die = 6 { lucky_throw := 1; }
+    hand += die;
+}
+
+observe(hand = sum);
+
+return lucky_throw
+
+#= Original code:
+
+nat die;
+nat lucky_throw;
+nat hand;
+nat sum;
+
+
+sum := unif(4, 24)
+
+loop(4){
+    die := unif(1,6)
+    if (die =6){ lucky_throw := 1} else {skip}
+    hand:= hand + die
+}
+
+
+observe(hand=sum)
+?Pr[lucky_throw]
+#!Plot[lucky_throw, \infty]
+
+=#

@@ -1,0 +1,4 @@
+# flags: --no-probs
+X ~ Exponential(0.1);  # X ~ Gamma(k, theta) = Gamma(1, 10)
+observe 4 ~ Poisson(X);  # conjugate posterior: Gamma(k + obs, theta / (theta + 1))
+return X  # X ~ Gamma(1 + 4, 10 / (10 + 1)) = Gamma(5, 10 / 11)

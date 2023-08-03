@@ -1,0 +1,21 @@
+nat piranha
+nat fish_taken_is_piranha
+
+// add a goldfish or a piranha into the bowl
+piranha := bernoulli(1/2)
+
+if (piranha = 1) {
+    // if you have added the goldfish, there are only piranhas in the bowl
+    fish_taken_is_piranha := 1
+} else {
+    // otherwise you have a 50:50 chance of blindly taking a goldfish or a piranha.
+    fish_taken_is_piranha := bernoulli(1/2)
+}
+// Now you pick randomly one fish out of the tank and observe that it is a piranha
+observe(fish_taken_is_piranha = 1)
+
+// What is the probability that at the beginning of this experiment,
+// you have added a piranha instead of a goldfish into the tank?
+?Pr[piranha = 1]
+#!Plot[piranha, \infty]
+

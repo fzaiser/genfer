@@ -1,0 +1,35 @@
+nat earthquake;
+nat burglary;
+nat alarm;
+nat phoneWorking;
+nat maryWakes;
+nat called;
+
+earthquake := bernoulli(1/10000);
+burglary := bernoulli(1/1000);
+if (earthquake = 1 || burglary = 1){
+    alarm := 1
+} else {skip}
+
+if (earthquake=1){
+    phoneWorking := bernoulli(7/10);
+}else{
+    phoneWorking := bernoulli(99/100);
+}
+
+if (alarm=1){
+    if (earthquake =1){
+        maryWakes := bernoulli(4/5);
+    }else{
+        maryWakes := bernoulli(3/5);
+    }
+}else{
+    maryWakes := bernoulli(1/5);
+}
+
+if (maryWakes =1 & phoneWorking=1){
+    called := 1;
+} else {skip}
+observe(called=1);
+
+?Pr[burglary]; // expected: 2969983/992160802·δ(1)[burglary]+989190819/992160802·δ(0)[burglary]

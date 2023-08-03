@@ -1,0 +1,13 @@
+Expensive ~ Bernoulli(0.9);
+normalize Expensive {
+    Rate ~ Geometric(0.1);
+    Failures ~ Poisson(Rate);
+    if Expensive = 1 {
+        observe Failures <= 3;
+    } else {
+        observe Failures <= 10;
+    }
+}
+observe 8 ~ Poisson(Rate);
+
+return Expensive

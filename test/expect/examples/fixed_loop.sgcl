@@ -1,0 +1,7 @@
+# flags: --rational --limit 6
+X := 0;
+
+loop 5 {
+    X +~ Bernoulli(1/2);
+}
+return X;

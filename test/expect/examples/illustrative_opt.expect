@@ -1,0 +1,65 @@
+Support is a subset of: {0, ...}
+
+Computing moments...
+Total measure:             Z = 0.27067056647322557
+Expected value:            E = 9.0
+Standard deviation:        σ = 2.82842712474619
+Variance:                  V = 8.0
+Skewness (3rd std moment): S = 0.3535533905932964
+Kurtosis (4th std moment): K = 3.1249999999998295
+
+Computing probabilities up to 26...
+Unnormalized: p(0)     = 0.0
+Normalized:   p(0) / Z = 0.0
+Unnormalized: p(1)     = 0.00009079985952496972
+Normalized:   p(1) / Z = 0.0003354626279025117
+Unnormalized: p(2)     = 0.0007263988761997578
+Normalized:   p(2) / Z = 0.0026837010232200935
+Unnormalized: p(3)     = 0.002905595504799031
+Normalized:   p(3) / Z = 0.010734804092880374
+Unnormalized: p(4)     = 0.007748254679464083
+Normalized:   p(4) / Z = 0.028626144247680996
+Unnormalized: p(5)     = 0.015496509358928169
+Normalized:   p(5) / Z = 0.05725228849536201
+Unnormalized: p(6)     = 0.02479441497428507
+Normalized:   p(6) / Z = 0.09160366159257921
+Unnormalized: p(7)     = 0.03305921996571343
+Normalized:   p(7) / Z = 0.12213821545677227
+Unnormalized: p(8)     = 0.037781965675101066
+Normalized:   p(8) / Z = 0.13958653195059692
+Unnormalized: p(9)     = 0.03778196567510108
+Normalized:   p(9) / Z = 0.13958653195059695
+Unnormalized: p(10)     = 0.03358396948897873
+Normalized:   p(10) / Z = 0.1240769172894195
+Unnormalized: p(11)     = 0.026867175591182985
+Normalized:   p(11) / Z = 0.0992615338315356
+Unnormalized: p(12)     = 0.0195397640663149
+Normalized:   p(12) / Z = 0.07219020642293499
+Unnormalized: p(13)     = 0.013026509377543266
+Normalized:   p(13) / Z = 0.048126804281956655
+Unnormalized: p(14)     = 0.00801631346310355
+Normalized:   p(14) / Z = 0.02961649494274256
+Unnormalized: p(15)     = 0.004580750550344886
+Normalized:   p(15) / Z = 0.016923711395852893
+Unnormalized: p(16)     = 0.0024430669601839396
+Normalized:   p(16) / Z = 0.009025979411121545
+Unnormalized: p(17)     = 0.00122153348009197
+Normalized:   p(17) / Z = 0.004512989705560773
+Unnormalized: p(18)     = 0.0005748392847491623
+Normalized:   p(18) / Z = 0.0021237598614403637
+Unnormalized: p(19)     = 0.00025548412655518327
+Normalized:   p(19) / Z = 0.0009438932717512729
+Unnormalized: p(20)     = 0.00010757226381270876
+Normalized:   p(20) / Z = 0.000397428746000536
+Unnormalized: p(21)     = 0.00004302890552508351
+Normalized:   p(21) / Z = 0.0001589714984002144
+Unnormalized: p(22)     = 0.000016391964009555622
+Normalized:   p(22) / Z = 0.0000605605708191293
+Unnormalized: p(23)     = 5.960714185292954e-6
+Normalized:   p(23) / Z = 0.000022022025752410655
+Unnormalized: p(24)     = 2.0732918905366794e-6
+Normalized:   p(24) / Z = 7.659835044316748e-6
+Unnormalized: p(25)     = 6.910972968455599e-7
+Normalized:   p(25) / Z = 2.5532783481055835e-6
+Unnormalized: p(n)     <= 3.172783407296981e-7 for all n >= 26
+Normalized:   p(n) / Z <= 1.1721937293136857e-6 for all n >= 26

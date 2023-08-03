@@ -1,0 +1,13 @@
+normalize { # observer's reasoning
+    Goal ~ Bernoulli(0.5);
+    normalize Goal { # agent's reasoning
+        Rate ~ Geometric(0.1);
+        if Goal = 0 {
+            observe 5 ~ Poisson(Rate);
+        } else {
+            observe 10 ~ Poisson(Rate);
+        }
+    }
+    observe 6 ~ Poisson(Rate);
+}
+return Goal

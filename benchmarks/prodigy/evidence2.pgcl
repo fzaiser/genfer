@@ -1,0 +1,14 @@
+nat evidence;
+nat coin;
+nat coin1;
+
+evidence := bernoulli(1/2);
+coin := 0;
+if (evidence = 1) {
+    coin1 := bernoulli(1/2);
+    observe(coin1=1);
+    coin := coin1;
+}else{
+    coin := bernoulli(1/2);
+}
+!Print

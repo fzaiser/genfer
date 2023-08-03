@@ -1,0 +1,3 @@
+X ~ UniformCont(0,0.5);
+X ~ Bernoulli(X);
+return X

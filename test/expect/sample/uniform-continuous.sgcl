@@ -1,0 +1,3 @@
+# flags: --no-probs
+X ~ UniformCont(10, 14);
+return X

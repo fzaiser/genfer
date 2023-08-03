@@ -1,0 +1,2 @@
+X ~ Binomial(8, 0.25);
+return X

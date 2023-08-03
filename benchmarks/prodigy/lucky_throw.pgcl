@@ -1,0 +1,18 @@
+nat die;
+nat lucky_throw;
+nat hand;
+nat sum;
+
+
+sum := unif(4, 24)
+
+loop(4){
+    die := unif(1,6)
+    if (die =6){ lucky_throw := 1} else {skip}
+    hand:= hand + die
+}
+
+
+observe(hand=sum)
+?Pr[lucky_throw]
+#!Plot[lucky_throw, \infty]

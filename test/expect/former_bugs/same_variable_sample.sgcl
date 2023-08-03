@@ -1,0 +1,7 @@
+population ~ Binomial(10, 0.5);
+observe population = 1;
+
+population ~ Binomial(population, 0.5);
+observe population = 1;
+
+return population

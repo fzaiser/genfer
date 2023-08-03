@@ -1,0 +1,22 @@
+Support is a subset of: {0, ..., 9}
+
+Computing moments...
+Total measure:             Z = 0.9999999999999999
+Expected value:            E = 4.500000000000001
+Standard deviation:        σ = 2.8722813232690125
+Variance:                  V = 8.249999999999991
+Skewness (3rd std moment): S = 1.799121656690449e-15
+Kurtosis (4th std moment): K = 1.775757575757558
+
+Computing probabilities up to 10...
+p(0) = 0.1
+p(1) = 0.1
+p(2) = 0.1
+p(3) = 0.1
+p(4) = 0.1
+p(5) = 0.1
+p(6) = 0.1
+p(7) = 0.1
+p(8) = 0.1
+p(9) = 0.1
+p(n) <= 0.0 for all n >= 10

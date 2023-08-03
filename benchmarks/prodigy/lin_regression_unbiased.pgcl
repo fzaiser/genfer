@@ -1,0 +1,24 @@
+nat a;
+nat b;
+nat x1;
+nat x2;
+nat y1;
+nat y2;
+
+
+a := unif(1,10) // a = 3 is the actual point
+b := unif(1,10) // b = 7 is the actual point
+
+x1 := 5
+y1 := 3*x1 +7
+
+x2 := 3
+y2 := 3*x2 + 7
+
+observe(y1=a*x1+b)
+observe(y2=a*x2+b)
+
+!Print
+#!Plot[a,b,\infty]
+
+

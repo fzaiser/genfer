@@ -1,0 +1,27 @@
+#![warn(clippy::pedantic)]
+#![allow(clippy::module_name_repetitions)]
+#![allow(clippy::must_use_candidate)]
+#![allow(clippy::return_self_not_must_use)]
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::enum_glob_use)]
+#![allow(clippy::float_cmp)]
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_possible_wrap)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::missing_panics_doc)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::needless_pass_by_value)]
+#![allow(clippy::single_match_else)]
+#![allow(clippy::comparison_chain)]
+#![allow(clippy::bool_to_int_with_if)]
+// TODO: get rid of as many of those `#![allow]`s as possible
+
+pub mod generating_function;
+pub mod interval;
+pub mod multivariate_taylor;
+pub mod number;
+pub mod parser;
+pub mod ppl;
+pub mod support;
+pub mod symbolic;
+pub mod univariate_taylor;

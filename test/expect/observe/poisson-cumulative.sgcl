@@ -1,0 +1,3 @@
+X ~ Poisson(2);
+observe X <= 10;
+return X

@@ -1,0 +1,19 @@
+nat prize;
+nat player;
+nat door;
+nat switch;
+
+prize := unif(1,3);
+player := unif(1,3);
+query {
+  door := unif(1,3);
+  observe(not (prize = door || player = door))
+}
+// switch?
+query {
+  switch := unif(1,3);
+  observe(not (switch = player || switch = door));
+}
+player := switch
+switch := 0
+?Pr[player = prize]

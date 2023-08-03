@@ -1,0 +1,550 @@
+
+Rate1 ~ Geometric(0.1);
+Rate2 ~ Geometric(0.1);
+if 1 ~ Bernoulli(0.5) {
+    observe 4 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 4 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 5 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 5 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 4 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 4 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 4 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 4 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 3 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 3 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 4 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 4 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 6 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 6 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 3 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 3 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 3 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 3 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 4 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 4 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 2 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 2 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 6 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 6 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 3 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 3 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 3 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 3 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 5 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 5 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 4 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 4 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 5 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 5 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 3 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 3 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 4 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 4 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 4 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 4 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 5 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 5 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 5 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 5 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 3 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 3 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 4 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 4 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 2 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 2 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 5 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 5 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 2 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 2 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 2 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 2 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 3 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 3 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 4 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 4 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 2 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 2 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 3 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 3 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 2 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 2 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 3 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 3 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 3 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 3 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 3 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 3 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 2 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 2 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 2 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 2 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 2 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 2 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 2 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 2 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 3 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 3 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 3 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 3 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 2 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 2 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 2 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 2 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 4 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 4 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 2 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 2 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 4 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 4 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 0 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 0 ~ Poisson(0.1 * Rate2);
+}
+if 1 ~ Bernoulli(0.5) {
+    observe 1 ~ Poisson(0.1 * Rate1);
+} else {
+    observe 1 ~ Poisson(0.1 * Rate2);
+}
+
+return Rate1;

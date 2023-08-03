@@ -1,0 +1,4 @@
+rate ~ Poisson(10);
+spam ~ Binomial(rate, 0.2);
+observe spam = 1;
+return rate

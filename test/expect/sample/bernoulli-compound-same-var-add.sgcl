@@ -1,0 +1,4 @@
+# flags: --no-probs
+X ~ UniformCont(0, 1);
+X +~ Bernoulli(X);
+return X

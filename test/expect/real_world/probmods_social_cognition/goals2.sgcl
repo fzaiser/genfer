@@ -1,0 +1,20 @@
+# https://probmods.org/chapters/social-cognition.html
+
+normalize {
+    Goal ~ Bernoulli(0.5);
+    normalize Goal {
+        Action ~ Bernoulli(0.5);
+        if Action = 0 {
+            Result ~ Bernoulli(0.1);
+        } else {
+            Result ~ Bernoulli(0.5);
+        }
+        if Goal = 0 {
+            observe Result = 0;
+        } else {
+            observe Result = 1;
+        }
+    }
+    observe Action = 1;
+}
+return Goal

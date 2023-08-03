@@ -1,0 +1,3 @@
+X ~ Bernoulli(0.5);
+observe(X in []);
+return X;

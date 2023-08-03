@@ -1,0 +1,69 @@
+Support is a subset of: {0, ...}
+
+Computing moments...
+Total measure:             Z = 0.00016122011018572833
+Expected value:            E = 11.680953088824573
+Standard deviation:        σ = 2.7417519690582166
+Variance:                  V = 7.517203859834609
+Skewness (3rd std moment): S = 0.35199868793251876
+Kurtosis (4th std moment): K = 3.1218510273316564
+
+Computing probabilities up to 28...
+Unnormalized: p(0)     = 0.0
+Normalized:   p(0) / Z = 0.0
+Unnormalized: p(1)     = 0.0
+Normalized:   p(1) / Z = 0.0
+Unnormalized: p(2)     = 0.0
+Normalized:   p(2) / Z = 0.0
+Unnormalized: p(3)     = 0.0
+Normalized:   p(3) / Z = 0.0
+Unnormalized: p(4)     = 6.768514442748075e-8
+Normalized:   p(4) / Z = 0.0004198306548079288
+Unnormalized: p(5)     = 5.337364013655316e-7
+Normalized:   p(5) / Z = 0.003310606851407422
+Unnormalized: p(6)     = 2.0957464994173673e-6
+Normalized:   p(6) / Z = 0.012999287105082805
+Unnormalized: p(7)     = 5.464637409595923e-6
+Normalized:   p(7) / Z = 0.033895507224877636
+Unnormalized: p(8)     = 0.000010647169220162874
+Normalized:   p(8) / Z = 0.06604119801119819
+Unnormalized: p(9)     = 0.00001653738841645932
+Normalized:   p(9) / Z = 0.10257646144397224
+Unnormalized: p(10)     = 0.000021333590785447165
+Normalized:   p(10) / Z = 0.1323258665489715
+Unnormalized: p(11)     = 0.000023514197959448986
+Normalized:   p(11) / Z = 0.14585151897216933
+Unnormalized: p(12)     = 0.000022609251143461296
+Normalized:   p(12) / Z = 0.14023840523006126
+Unnormalized: p(13)     = 0.00001926783312008137
+Normalized:   p(13) / Z = 0.1195125911890551
+Unnormalized: p(14)     = 0.000014737465059226929
+Normalized:   p(14) / Z = 0.09141207658429905
+Unnormalized: p(15)     = 0.000010220556531474509
+Normalized:   p(15) / Z = 0.06339504742739756
+Unnormalized: p(16)     = 6.481010262022078e-6
+Normalized:   p(16) / Z = 0.04019976325878852
+Unnormalized: p(17)     = 3.784434997457419e-6
+Normalized:   p(17) / Z = 0.02347371548808449
+Unnormalized: p(18)     = 2.0472525238726922e-6
+Normalized:   p(18) / Z = 0.012698493516188658
+Unnormalized: p(19)     = 1.0313759899008539e-6
+Normalized:   p(19) / Z = 0.00639731599682379
+Unnormalized: p(20)     = 4.860843446585071e-7
+Normalized:   p(20) / Z = 0.0030150354326053345
+Unnormalized: p(21)     = 2.1517511216752065e-7
+Normalized:   p(21) / Z = 0.0013346666983395262
+Unnormalized: p(22)     = 8.97838957864161e-8
+Normalized:   p(22) / Z = 0.0005569025829531037
+Unnormalized: p(23)     = 3.542470433689439e-8
+Normalized:   p(23) / Z = 0.00021972881854555567
+Unnormalized: p(24)     = 1.325412800898309e-8
+Normalized:   p(24) / Z = 0.00008221138165526688
+Unnormalized: p(25)     = 4.7146523394192064e-9
+Normalized:   p(25) / Z = 0.000029243574725186866
+Unnormalized: p(26)     = 1.598142314698582e-9
+Normalized:   p(26) / Z = 9.912797558924222e-6
+Unnormalized: p(27)     = 5.173363710931087e-10
+Normalized:   p(27) / Z = 3.2088823813426767e-6
+Unnormalized: p(n)     <= 2.2640592320033066e-10 for all n >= 28
+Normalized:   p(n) / Z <= 1.4043280515036691e-6 for all n >= 28

@@ -1,0 +1,19 @@
+population := 0;
+
+population ~ Binomial(population, 0.2636);
+population +~ Poisson(232.6);
+observe 0 ~ Binomial(population, 0.2);
+
+population ~ Binomial(population, 0.2636);
+population +~ Poisson(420.8);
+observe 49 ~ Binomial(population, 0.2);
+
+population ~ Binomial(population, 0.2636);
+population +~ Poisson(300.8);
+observe 97 ~ Binomial(population, 0.2);
+
+population ~ Binomial(population, 0.2636);
+population +~ Poisson(85.6);
+observe 85 ~ Binomial(population, 0.2);
+
+return population

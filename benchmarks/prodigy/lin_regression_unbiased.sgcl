@@ -1,0 +1,41 @@
+# Adapted from https://github.com/LKlinke/Prodigy/blob/main/pgfexamples/inference/lin_regression_unbiased.pgcl
+
+a ~ UniformDisc(1,11);
+b ~ UniformDisc(1,11);
+
+y1 := 5 * a;
+y1 += b;
+observe(y1 = 22);
+
+y2 := 3 * a;
+y2 += b;
+observe(y2 = 16);
+
+return a;
+
+#= Original code:
+
+nat a;
+nat b;
+nat x1;
+nat x2;
+nat y1;
+nat y2;
+
+
+a := unif(1,10) // a = 3 is the actual point
+b := unif(1,10) // b = 7 is the actual point
+
+x1 := 5
+y1 := 3*x1 +7
+
+x2 := 3
+y2 := 3*x2 + 7
+
+observe(y1=a*x1+b)
+observe(y2=a*x2+b)
+
+!Print
+#!Plot[a,b,\infty]
+
+=#

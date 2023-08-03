@@ -1,0 +1,17 @@
+Support is a subset of: {1}
+
+Computing moments...
+Total measure:             Z = 0.25
+Expected value:            E = 1.0
+Standard deviation:        σ = 1.7473160325823093e-8
+Variance:                  V = 6.106226635438362e-16
+Skewness (3rd std moment): S = NaN
+Kurtosis (4th std moment): K = inf
+
+Computing probabilities up to 2...
+Unnormalized: p(0)     = 0.0
+Normalized:   p(0) / Z = 0.0
+Unnormalized: p(1)     = 0.25
+Normalized:   p(1) / Z = 1.0
+Unnormalized: p(n)     <= 0.0 for all n >= 2
+Normalized:   p(n) / Z <= 0.0 for all n >= 2

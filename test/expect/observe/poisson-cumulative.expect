@@ -1,0 +1,35 @@
+Support is a subset of: {0, ...}
+
+Computing moments...
+Total measure:             Z = 0.9999916917756316
+Expected value:            E = 1.9999236196641175
+Standard deviation:        σ = 1.4139704986820276
+Variance:                  V = 1.999312571143102
+Skewness (3rd std moment): S = 0.7053369883841447
+Kurtosis (4th std moment): K = 3.487483245639645
+
+Computing probabilities up to 11...
+Unnormalized: p(0)     = 0.1353352832366127
+Normalized:   p(0) / Z = 0.1353364076418526
+Unnormalized: p(1)     = 0.2706705664732254
+Normalized:   p(1) / Z = 0.2706728152837052
+Unnormalized: p(2)     = 0.2706705664732254
+Normalized:   p(2) / Z = 0.2706728152837052
+Unnormalized: p(3)     = 0.1804470443154836
+Normalized:   p(3) / Z = 0.18044854352247014
+Unnormalized: p(4)     = 0.0902235221577418
+Normalized:   p(4) / Z = 0.09022427176123507
+Unnormalized: p(5)     = 0.03608940886309672
+Normalized:   p(5) / Z = 0.03608970870449403
+Unnormalized: p(6)     = 0.012029802954365574
+Normalized:   p(6) / Z = 0.012029902901498008
+Unnormalized: p(7)     = 0.0034370865583901638
+Normalized:   p(7) / Z = 0.0034371151147137165
+Unnormalized: p(8)     = 0.0008592716395975409
+Normalized:   p(8) / Z = 0.0008592787786784291
+Unnormalized: p(9)     = 0.00019094925324389798
+Normalized:   p(9) / Z = 0.0001909508397063176
+Unnormalized: p(10)     = 0.000038189850648779595
+Normalized:   p(10) / Z = 0.000038190167941263515
+Unnormalized: p(n)     <= 3.38772521320252e-16 for all n >= 11
+Normalized:   p(n) / Z <= 3.387753359417535e-16 for all n >= 11

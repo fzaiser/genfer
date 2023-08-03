@@ -1,0 +1,29 @@
+Support is a subset of: {0, ..., 7}
+
+Computing moments...
+Total measure:             Z = 7/8
+Expected value:            E = 53/14
+Standard deviation:        σ = NaN
+Variance:                  V = 1013/196
+Skewness (3rd std moment): S = NaN
+Kurtosis (4th std moment): K = NaN
+
+Computing probabilities up to 8...
+Unnormalized: p(0)     = 3/32
+Normalized:   p(0) / Z = 3/28
+Unnormalized: p(1)     = 3/32
+Normalized:   p(1) / Z = 3/28
+Unnormalized: p(2)     = 3/32
+Normalized:   p(2) / Z = 3/28
+Unnormalized: p(3)     = 3/32
+Normalized:   p(3) / Z = 3/28
+Unnormalized: p(4)     = 1/8
+Normalized:   p(4) / Z = 1/7
+Unnormalized: p(5)     = 1/8
+Normalized:   p(5) / Z = 1/7
+Unnormalized: p(6)     = 1/8
+Normalized:   p(6) / Z = 1/7
+Unnormalized: p(7)     = 1/8
+Normalized:   p(7) / Z = 1/7
+Unnormalized: p(n)     <= 0 for all n >= 8
+Normalized:   p(n) / Z <= 0 for all n >= 8

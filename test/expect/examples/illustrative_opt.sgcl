@@ -1,0 +1,3 @@
+rate ~ Poisson(10);
+observe 1 ~ Binomial(rate, 0.2);
+return rate

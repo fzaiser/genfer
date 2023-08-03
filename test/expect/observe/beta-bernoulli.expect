@@ -1,0 +1,9 @@
+Support is a subset of: [0, 1]
+
+Computing moments...
+Total measure:             Z = 0.050000000000000044
+Expected value:            E = 0.3333333333333328
+Standard deviation:        σ = 0.17817416127495084
+Variance:                  V = 0.03174603174603219
+Skewness (3rd std moment): S = 0.4677071733466604
+Kurtosis (4th std moment): K = 2.6250000000001723
