@@ -1,0 +1,78 @@
+#![warn(clippy::pedantic)]
+#![allow(clippy::wildcard_imports)]
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::missing_panics_doc)]
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
+
+use std::path::PathBuf;
+use std::time::{Duration, Instant};
+
+use genfer::bounds::{BoundCtx, SolverError};
+use genfer::parser;
+use genfer::ppl::Program;
+
+use clap::Parser;
+
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct CliArgs {
+    /// The file containing the probabilistic program
+    file_name: PathBuf,
+    /// Print the parsed probabilistic program
+    #[arg(long)]
+    print_program: bool,
+    /// Disable timing of the execution
+    #[arg(long)]
+    no_timing: bool,
+    /// Timeout for the SMT solver in ms
+    #[arg(long, default_value = "30000")]
+    timeout: u64,
+}
+
+pub fn main() {
+    let args = CliArgs::parse();
+    let contents = std::fs::read_to_string(&args.file_name).unwrap();
+    let program = parser::parse_program(&contents);
+    if args.print_program {
+        println!("Parsed program:\n{program}\n");
+    }
+    run_program(&program, &args);
+}
+
+fn run_program(program: &Program, args: &CliArgs) {
+    let start = Instant::now();
+    let mut ctx = BoundCtx::new();
+    let bound = ctx.bound_program(program);
+    println!("Bound:");
+    println!("{bound}");
+    println!("Constraints:");
+    for constraint in ctx.constraints() {
+        println!("  {constraint}");
+    }
+    println!("SMT:");
+    println!("{}", ctx.output_smt());
+    let time_constraint_gen = start.elapsed();
+    println!("Constraint generation time: {:?}", time_constraint_gen);
+    println!("Solving constraints...");
+    let start_smt = Instant::now();
+    let solver_result = ctx.solve_z3(&bound, Duration::from_millis(args.timeout));
+    let solver_time = start_smt.elapsed();
+    println!("Solver time: {:?}", solver_time);
+    match solver_result {
+        Ok(z3_bound) => {
+            println!("\nFinal bound:\n");
+            println!("{z3_bound}");
+        }
+        Err(e) => match e {
+            SolverError::Timeout => {
+                println!("SMT solver timeout");
+            }
+            SolverError::Infeasible => {
+                println!("SMT proved that there is no bound of the required form");
+            }
+        },
+    }
+    println!("Total time: {:?}", start.elapsed());
+}

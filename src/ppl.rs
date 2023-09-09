@@ -754,6 +754,10 @@ pub enum Statement {
         addend: Option<(Natural, Var)>,
         offset: Natural,
     },
+    Decrement {
+        var: Var,
+        amount: Natural,
+    },
     IfThenElse {
         cond: Event,
         then: Vec<Statement>,
@@ -766,6 +770,11 @@ pub enum Statement {
         /// This is necessary for nested inference.
         given_vars: Vec<Var>,
         stmts: Vec<Statement>,
+    },
+    While {
+        cond: Event,
+        unroll: Option<usize>,
+        body: Vec<Statement>,
     },
 }
 
@@ -820,6 +829,7 @@ impl Statement {
                 let gf = gf * var.pow(offset.0);
                 GfTranslation { var_info, gf }
             }
+            Decrement { .. } => todo!(),
             IfThenElse { cond, then, els } => {
                 if let Some(factor) = cond.recognize_const_prob::<T>() {
                     // In this case we can avoid path explosion by multiplying with factor
@@ -850,6 +860,7 @@ impl Statement {
                     }
                 }
             }
+            While { .. } => todo!(),
             Fail => GfTranslation {
                 var_info: translation.var_info,
                 gf: GenFun::zero(),
@@ -966,6 +977,7 @@ impl Statement {
                 }
                 Ok(())
             }
+            Decrement { var, amount } => writeln!(f, "{var} -= {amount};"),
             IfThenElse { cond, then, els } => {
                 if let Some(event) = self.recognize_observe() {
                     return writeln!(f, "observe {event};");
@@ -987,6 +999,16 @@ impl Statement {
                 }
                 Ok(())
             }
+            While { cond, unroll, body } => {
+                let indent_str = " ".repeat(indent);
+                write!(f, "while {cond} ")?;
+                if let Some(unroll) = unroll {
+                    write!(f, "unroll {unroll} ")?;
+                }
+                writeln!(f, "{{")?;
+                Self::fmt_block(body, indent + 2, f)?;
+                writeln!(f, "{indent_str}}}")
+            }
             Fail => writeln!(f, "fail;"),
             Normalize { given_vars, stmts } => {
                 let indent_str = " ".repeat(indent);
@@ -1003,10 +1025,11 @@ impl Statement {
 
     pub fn uses_observe(&self) -> bool {
         match self {
-            Sample { .. } | Assign { .. } => false,
+            Sample { .. } | Assign { .. } | Decrement { .. } => false,
             IfThenElse { then, els, .. } => {
                 then.iter().any(Statement::uses_observe) || els.iter().any(Statement::uses_observe)
             }
+            While { body, .. } => body.iter().any(Statement::uses_observe),
             Fail => true,
             Normalize { stmts, .. } => stmts.iter().any(Statement::uses_observe),
         }
@@ -1026,10 +1049,19 @@ impl Statement {
             } else {
                 VarRange::empty()
             }),
+            Decrement { var: v, amount: _ } => VarRange::new(*v),
+
             IfThenElse { cond, then, els } => cond
                 .used_vars()
                 .union(&VarRange::union_all(then.iter().map(Statement::used_vars)))
                 .union(&VarRange::union_all(els.iter().map(Statement::used_vars))),
+            While {
+                cond,
+                body,
+                unroll: _,
+            } => cond
+                .used_vars()
+                .union(&VarRange::union_all(body.iter().map(Statement::used_vars))),
             Fail => VarRange::empty(),
             Normalize {
                 given_vars: _,

@@ -1,0 +1,122 @@
+# Adapted from https://github.com/eth-sri/psi/blob/f9aa5028235e46b5a02dbe67e37d39b0ab53f412/test/squid.psi
+# Note that this loop is actually bounded
+
+known := 0;
+
+person1_alive := 1;
+while person1_alive != 0 and known < 18 {
+    person1_alive ~ Bernoulli(0.5);
+    known += 1;
+}
+
+person2_alive := 1;
+while person2_alive != 0 and known < 18 {
+    person2_alive ~ Bernoulli(0.5);
+    known += 1;
+}
+
+person3_alive := 1;
+while person3_alive != 0 and known < 18 {
+    person3_alive ~ Bernoulli(0.5);
+    known += 1;
+}
+
+person4_alive := 1;
+while person4_alive != 0 and known < 18 {
+    person4_alive ~ Bernoulli(0.5);
+    known += 1;
+}
+
+person5_alive := 1;
+while person5_alive != 0 and known < 18 {
+    person5_alive ~ Bernoulli(0.5);
+    known += 1;
+}
+
+person6_alive := 1;
+while person6_alive != 0 and known < 18 {
+    person6_alive ~ Bernoulli(0.5);
+    known += 1;
+}
+
+person7_alive := 1;
+while person7_alive != 0 and known < 18 {
+    person7_alive ~ Bernoulli(0.5);
+    known += 1;
+}
+
+person8_alive := 1;
+while person8_alive != 0 and known < 18 {
+    person8_alive ~ Bernoulli(0.5);
+    known += 1;
+}
+
+person9_alive := 1;
+while person9_alive != 0 and known < 18 {
+    person9_alive ~ Bernoulli(0.5);
+    known += 1;
+}
+
+person10_alive := 1;
+while person10_alive != 0 and known < 18 {
+    person10_alive ~ Bernoulli(0.5);
+    known += 1;
+}
+
+person11_alive := 1;
+while person11_alive != 0 and known < 18 {
+    person11_alive ~ Bernoulli(0.5);
+    known += 1;
+}
+
+person12_alive := 1;
+while person12_alive != 0 and known < 18 {
+    person12_alive ~ Bernoulli(0.5);
+    known += 1;
+}
+
+person13_alive := 1;
+while person13_alive != 0 and known < 18 {
+    person13_alive ~ Bernoulli(0.5);
+    known += 1;
+}
+
+person14_alive := 1;
+while person14_alive != 0 and known < 18 {
+    person14_alive ~ Bernoulli(0.5);
+    known += 1;
+}
+
+person15_alive := 1;
+while person15_alive != 0 and known < 18 {
+    person15_alive ~ Bernoulli(0.5);
+    known += 1;
+}
+
+person16_alive := 1;
+while person16_alive != 0 and known < 18 {
+    person16_alive ~ Bernoulli(0.5);
+    known += 1;
+}
+
+return person1_alive;
+
+#= Original PSI code:
+
+tiles:=18;
+people:=16;
+def main(){
+	known:=0;
+	r:=[];
+	for i in 0..people{
+		alive := true;
+		while alive && known<tiles{
+			alive = flip(1/2);
+			known += 1;
+		}
+		r~=[Expectation(alive)];
+	}
+	return r; // expected: δ(1/262144,19/262144,43/65536,247/65536,253/16384,1577/32768,7795/65536,15751/65536,53381/131072,77691/131072,49785/65536,57741/65536,31191/32768,16131/16384,65289/65536,65493/65536)[r]
+}
+
+=#

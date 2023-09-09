@@ -1,0 +1,17 @@
+# Adapted from Example 2, Fig 2 of:
+# Chen, Mingshuai et al.: "Does a Program Yield the Right Distribution? - Verifying Probabilistic Programs via Generating Functions" (CAV 2022)
+
+C := 0;
+N := 5;
+while N != 0 {
+    if 0 ~ Bernoulli(0.5) { N -= 1; } else { C += 1; }
+}
+return C;
+
+#= Original code:
+
+while (n > 0) {
+    { n := n − 1 } [1/2] { c := c + 1 }
+}
+
+=#

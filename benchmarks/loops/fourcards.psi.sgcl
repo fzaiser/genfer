@@ -1,0 +1,52 @@
+# Adapted from https://github.com/eth-sri/psi/blob/f9aa5028235e46b5a02dbe67e37d39b0ab53f412/test/fourcards.psi
+
+card1 := 0;
+card2 := 0;
+card3 := 0;
+card4 := 0;
+
+num_flips_mod_4 := 0;
+while card1 = 0 or card2 = 0 or card3 = 0 or card4 = 0 {
+    card ~ UniformDisc(0, 4);
+    if card = 0 {
+        card1 := 1;
+    } else if card = 1 {
+        card2 := 1;
+    } else if card = 2 {
+        card3 := 1;
+    } else if card = 3 {
+        card4 := 1;
+    }
+    num_flips_mod_4 += 1;
+    if num_flips_mod_4 = 4 {
+        num_flips_mod_4 := 0;
+    }
+}
+if num_flips_mod_4 = 0 {
+    answer := 1;
+} else {
+    answer := 0;
+}
+return answer;
+
+#= Original PSI code:
+
+// skipped
+// https://www.quora.com/There-are-4-cards-on-the-table-all-facing-downwards-Each-time-one-of-the-cards-is-randomly-chosen-and-flipped-until-all-cards-are-facing-upwards-If-n-denotes-the-total-number-of-flippings-what-is-the-probability
+
+// TODO
+
+def all[a](f: a → 𝔹, x: a[]):𝔹⇒if x.length≠0 then f(x[0]) && all(f, x[1..x.length]) else true;
+
+def main(){
+	cards := array(4,0);
+	def up(cards: ℝ[])⇒all((x)⇒x=1, cards);
+	num_flips := 0;
+	while !up(cards){
+		cards[uniformInt(0,3)] ⊕← 1;
+		num_flips +← 1;
+	}
+	return num_flips%4 = 0;
+}
+
+=#
