@@ -665,7 +665,11 @@ impl Event {
     }
 
     pub fn complement(self) -> Event {
-        Event::Complement(Box::new(self))
+        if let Event::Complement(e) = self {
+            *e
+        } else {
+            Event::Complement(Box::new(self))
+        }
     }
 
     pub fn and(self, other: Event) -> Event {
@@ -687,10 +691,18 @@ impl Event {
     }
 
     pub fn intersection(es: Vec<Event>) -> Event {
-        if es.len() == 1 {
-            es[0].clone()
+        let mut conjuncts = Vec::new();
+        for e in es {
+            if let Event::Intersection(mut es) = e {
+                conjuncts.append(&mut es);
+            } else {
+                conjuncts.push(e);
+            }
+        }
+        if conjuncts.len() == 1 {
+            conjuncts.pop().unwrap()
         } else {
-            Event::Intersection(es)
+            Event::Intersection(conjuncts)
         }
     }
 

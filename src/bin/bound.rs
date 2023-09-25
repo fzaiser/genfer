@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 
 use genfer::bounds::{BoundCtx, SolverError};
 use genfer::parser;
-use genfer::ppl::Program;
+use genfer::ppl::{Program, Var};
 
 use clap::Parser;
 
@@ -44,9 +44,13 @@ pub fn main() {
 fn run_program(program: &Program, args: &CliArgs) {
     let start = Instant::now();
     let mut ctx = BoundCtx::new();
-    let bound = ctx.bound_program(program);
-    println!("Bound:");
-    println!("{bound}");
+    let supports = BoundCtx::var_supports_program(&program);
+    for (v, support) in supports.iter().enumerate() {
+        println!("Support of {}: {support}", Var(v));
+    }
+    let result = ctx.bound_program(program);
+    println!("Bound result:");
+    println!("{result}");
     println!("Constraints:");
     for constraint in ctx.constraints() {
         println!("  {constraint}");
@@ -57,7 +61,7 @@ fn run_program(program: &Program, args: &CliArgs) {
     println!("Constraint generation time: {:?}", time_constraint_gen);
     println!("Solving constraints...");
     let start_smt = Instant::now();
-    let solver_result = ctx.solve_z3(&bound, Duration::from_millis(args.timeout));
+    let solver_result = ctx.solve_z3(&result.bound, Duration::from_millis(args.timeout));
     let solver_time = start_smt.elapsed();
     println!("Solver time: {:?}", solver_time);
     match solver_result {

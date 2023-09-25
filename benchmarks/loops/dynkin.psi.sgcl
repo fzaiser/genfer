@@ -1,7 +1,7 @@
 # Adapted from https://github.com/eth-sri/psi/blob/f9aa5028235e46b5a02dbe67e37d39b0ab53f412/test/coupling/dynkin.psi
 
 X := 10;
-while X < 11 {
+while X < 21 {
     X +~ UniformDisc(1, 11);
 }
 return X
