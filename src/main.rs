@@ -322,7 +322,7 @@ fn print_probs<T: IntervalNumber + Into<f64>>(
             1
         }
     };
-    let limit = if let Some(range) = var_info.finite_range() {
+    let limit = if let Some(range) = var_info.finite_nonempty_range() {
         limit.min(*range.end() as usize + 1)
     } else {
         limit
@@ -353,7 +353,7 @@ fn print_probs<T: IntervalNumber + Into<f64>>(
         }
         mass_missing -= p.clone();
     }
-    if let Some(range) = var_info.finite_range() {
+    if let Some(range) = var_info.finite_nonempty_range() {
         if (*range.end() as usize) < limit {
             mass_missing = Interval::zero();
         }

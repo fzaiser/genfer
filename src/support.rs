@@ -122,7 +122,7 @@ impl SupportSet {
         }
     }
 
-    pub fn finite_range(&self) -> Option<std::ops::RangeInclusive<u32>> {
+    pub fn finite_nonempty_range(&self) -> Option<std::ops::RangeInclusive<u32>> {
         match self {
             Self::Empty | Self::Interval { .. } => None,
             Self::Range { start, end } => Some(*start..=(*end)?),

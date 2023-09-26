@@ -127,8 +127,18 @@ impl BoundCtx {
             Event::InSet(v, set) => {
                 let mut then_support = init.clone();
                 then_support[v.id()].retain_only(set.iter().map(|n| n.0));
+                if then_support[v.id()].is_empty() {
+                    for w in 0..then_support.len() {
+                        then_support[w] = SupportSet::empty();
+                    }
+                }
                 let mut else_support = init;
                 else_support[v.id()].remove_all(set.iter().map(|n| n.0));
+                if else_support[v.id()].is_empty() {
+                    for w in 0..else_support.len() {
+                        else_support[w] = SupportSet::empty();
+                    }
+                }
                 (then_support, else_support)
             }
             Event::DataFromDist(..) => (init.clone(), init),
@@ -152,6 +162,9 @@ impl BoundCtx {
 
     // TODO: avoid code duplication with `bound_statement`
     pub fn var_supports_statement(init: Vec<SupportSet>, stmt: &Statement) -> Vec<SupportSet> {
+        if init.iter().all(|s| s.is_empty()) {
+            return init;
+        }
         match stmt {
             Statement::Sample {
                 var,
@@ -210,89 +223,92 @@ impl BoundCtx {
             Statement::Fail => vec![SupportSet::empty(); init.len()],
             Statement::Normalize { .. } => todo!(),
             Statement::While { cond, body, .. } => {
-                let (mut loop_entry, mut loop_exit) = Self::var_supports_event(init, cond);
-                // TODO: upper bound of the loop should be the highest constant occurring in the loop or something like that
-                for _ in 0..100 {
-                    if loop_entry.iter().any(|s| s.is_empty()) {
-                        return loop_exit;
-                    }
-                    let (new_loop_entry, new_loop_exit) =
-                        Self::one_iteration(loop_entry.clone(), loop_exit.clone(), body, cond);
-                    if loop_entry == new_loop_entry && loop_exit == new_loop_exit {
-                        return loop_exit;
-                    }
-                    loop_entry = new_loop_entry;
-                    loop_exit = new_loop_exit;
-                }
-                if loop_entry.iter().any(|s| s.is_empty()) {
-                    return loop_exit;
-                }
-                // The number of widening steps needed is at most the number of variables:
-                for _ in 0..loop_entry.len() + 1 {
-                    let (new_loop_entry, new_loop_exit) =
-                        Self::one_iteration(loop_entry.clone(), loop_exit.clone(), body, cond);
-                    if SupportSet::vec_is_subset_of(&new_loop_entry, &loop_entry)
-                        && SupportSet::vec_is_subset_of(&new_loop_exit, &loop_exit)
-                    {
-                        assert_eq!(loop_exit, new_loop_exit);
-                        return loop_exit;
-                    }
-                    for v in 0..loop_entry.len() {
-                        match (&loop_entry[v], &new_loop_entry[v]) {
-                            (
-                                SupportSet::Range { start, end },
-                                SupportSet::Range {
-                                    start: new_start,
-                                    end: new_end,
-                                },
-                            ) => {
-                                if end.is_some() && new_end.is_none() {
-                                    unreachable!();
-                                }
-                                if (new_end.is_some() && new_end < end) || new_start < start {
-                                    panic!("More iterations needed");
-                                }
-                                if new_end > end {
-                                    loop_entry[v] = (*start..).into();
-                                }
-                            }
-                            _ => {
-                                dbg!(v, &loop_entry[v], &new_loop_entry[v]);
-                                unreachable!("Unexpected variable supports")
-                            }
-                        }
-                        match (&loop_exit[v], &new_loop_exit[v]) {
-                            (
-                                SupportSet::Range { start, end },
-                                SupportSet::Range {
-                                    start: new_start,
-                                    end: new_end,
-                                },
-                            ) => {
-                                if end.is_some() && new_end.is_none() {
-                                    unreachable!();
-                                }
-                                if (new_end.is_some() && new_end < end) || new_start < start {
-                                    panic!("More iterations needed");
-                                }
-                                if new_end > end {
-                                    loop_exit[v] = (*start..).into();
-                                }
-                            }
-                            _ => unreachable!("Unexpected variable supports"),
-                        }
-                    }
-                }
-                let (new_loop_entry, new_loop_exit) =
-                    Self::one_iteration(loop_entry.clone(), loop_exit.clone(), body, cond);
-                assert!(
-                    SupportSet::vec_is_subset_of(&new_loop_entry, &loop_entry)
-                        && SupportSet::vec_is_subset_of(&new_loop_exit, &loop_exit),
-                    "Widening failed."
-                );
+                let (_, _loop_entry, loop_exit) = Self::analyze_while_support(cond, body, init);
                 loop_exit
             }
         }
+    }
+
+    fn analyze_while_support(
+        cond: &Event,
+        body: &[Statement],
+        init: Vec<SupportSet>,
+    ) -> (Option<usize>, Vec<SupportSet>, Vec<SupportSet>) {
+        let (mut loop_entry, mut loop_exit) = Self::var_supports_event(init, cond);
+        // TODO: upper bound of the loop should be the highest constant occurring in the loop or something like that
+        for i in 0..100 {
+            let (new_loop_entry, new_loop_exit) =
+                Self::one_iteration(loop_entry.clone(), loop_exit.clone(), body, cond);
+            if loop_entry == new_loop_entry && loop_exit == new_loop_exit {
+                return (Some(i + 1), loop_entry, loop_exit);
+            }
+            loop_entry = new_loop_entry;
+            loop_exit = new_loop_exit;
+        }
+        // The number of widening steps needed is at most the number of variables:
+        for _ in 0..loop_entry.len() + 1 {
+            let (new_loop_entry, new_loop_exit) =
+                Self::one_iteration(loop_entry.clone(), loop_exit.clone(), body, cond);
+            if SupportSet::vec_is_subset_of(&new_loop_entry, &loop_entry)
+                && SupportSet::vec_is_subset_of(&new_loop_exit, &loop_exit)
+            {
+                assert_eq!(loop_exit, new_loop_exit);
+                return (None, loop_entry, loop_exit);
+            }
+            for v in 0..loop_entry.len() {
+                match (&loop_entry[v], &new_loop_entry[v]) {
+                    (
+                        SupportSet::Range { start, end },
+                        SupportSet::Range {
+                            start: new_start,
+                            end: new_end,
+                        },
+                    ) => {
+                        if end.is_some() && new_end.is_none() {
+                            unreachable!();
+                        }
+                        if (new_end.is_some() && new_end < end) || new_start < start {
+                            panic!("More iterations needed");
+                        }
+                        if new_end > end {
+                            loop_entry[v] = (*start..).into();
+                        }
+                    }
+                    _ => {
+                        dbg!(v, &loop_entry[v], &new_loop_entry[v]);
+                        unreachable!("Unexpected variable supports")
+                    }
+                }
+                match (&loop_exit[v], &new_loop_exit[v]) {
+                    (
+                        SupportSet::Range { start, end },
+                        SupportSet::Range {
+                            start: new_start,
+                            end: new_end,
+                        },
+                    ) => {
+                        if end.is_some() && new_end.is_none() {
+                            unreachable!();
+                        }
+                        if (new_end.is_some() && new_end < end) || new_start < start {
+                            panic!("More iterations needed");
+                        }
+                        if new_end > end {
+                            loop_exit[v] = (*start..).into();
+                        }
+                    }
+                    _ => unreachable!("Unexpected variable supports"),
+                }
+            }
+        }
+        let (new_loop_entry, new_loop_exit) =
+            Self::one_iteration(loop_entry.clone(), loop_exit.clone(), body, cond);
+        assert!(
+            SupportSet::vec_is_subset_of(&new_loop_entry, &loop_entry)
+                && SupportSet::vec_is_subset_of(&new_loop_exit, &loop_exit),
+            "Widening failed."
+        );
+        (None, loop_entry, loop_exit)
     }
 
     fn one_iteration(
@@ -340,8 +356,18 @@ impl BoundCtx {
                     var_supports: init.var_supports.clone(),
                 };
                 then_res.var_supports[v.id()].retain_only(set.iter().map(|n| n.0));
+                if then_res.var_supports[v.id()].is_empty() {
+                    for w in 0..then_res.var_supports.len() {
+                        then_res.var_supports[w] = SupportSet::empty();
+                    }
+                }
                 let mut else_res = init;
                 else_res.var_supports[v.id()].remove_all(set.iter().map(|n| n.0));
+                if else_res.var_supports[v.id()].is_empty() {
+                    for w in 0..else_res.var_supports.len() {
+                        else_res.var_supports[w] = SupportSet::empty();
+                    }
+                }
                 for Natural(n) in set {
                     let mut coeff = SymPolynomial::zero();
                     for i in 0..=*n {
@@ -485,19 +511,41 @@ impl BoundCtx {
                     var_supports: vec![SupportSet::empty(); pre_loop.var_supports.len()],
                 };
                 let unroll_count = unroll.unwrap_or(0);
+                let (iters, invariant_supports, _) =
+                    Self::analyze_while_support(cond, body, pre_loop.var_supports.clone());
+                let unroll_count = if let Some(iters) = iters {
+                    unroll_count.max(iters)
+                } else {
+                    unroll_count
+                };
                 println!("Unrolling {unroll_count} times");
                 for _ in 0..unroll_count {
                     let (then_bound, else_bound) = self.bound_event(pre_loop.clone(), cond);
                     pre_loop = self.bound_statements(then_bound, body);
                     rest = self.add_bound_results(rest, else_bound);
                 }
-                let invariant_supports =
-                    Self::var_supports_statement(pre_loop.var_supports.clone(), stmt);
-                let max_degree_p1 = 2; // TODO: should be configurable
+                let shape = invariant_supports
+                    .iter()
+                    .map(|s| match s {
+                        SupportSet::Empty => 0,
+                        SupportSet::Range { end, .. } => {
+                            if let Some(end) = end {
+                                *end as usize + 1
+                            } else {
+                                1
+                            }
+                        }
+                        _ => todo!(),
+                    })
+                    .collect::<Vec<_>>();
+                let finite_supports = invariant_supports
+                    .iter()
+                    .map(|s| s.is_empty() || s.finite_nonempty_range().is_some())
+                    .collect::<Vec<_>>();
                 let (loop_entry, loop_exit) = self.bound_event(pre_loop, cond);
                 rest = self.add_bound_results(rest, loop_exit);
                 let invariant = BoundResult {
-                    bound: self.new_bound(max_degree_p1),
+                    bound: self.new_bound(shape, &finite_supports),
                     var_supports: invariant_supports,
                 };
                 self.assert_le(&loop_entry.bound, &invariant.bound);
@@ -562,8 +610,7 @@ impl BoundCtx {
         out
     }
 
-    fn new_polynomial(&mut self, degree_p1: usize) -> SymPolynomial {
-        let shape = vec![degree_p1; self.program_var_count];
+    fn new_polynomial(&mut self, shape: Vec<usize>) -> SymPolynomial {
         let mut coeffs = ArrayD::zeros(shape);
         for c in &mut coeffs {
             *c = self.fresh_sym_var();
@@ -571,13 +618,15 @@ impl BoundCtx {
         SymPolynomial::new(coeffs)
     }
 
-    fn new_bound(&mut self, degree_p1: usize) -> GeometricBound {
-        let mut geo_params = vec![SymExpr::zero(); self.program_var_count];
-        for p in &mut geo_params {
-            *p = self.new_geo_param_var();
+    fn new_bound(&mut self, shape: Vec<usize>, finite_supports: &[bool]) -> GeometricBound {
+        let mut geo_params = vec![SymExpr::zero(); shape.len()];
+        for (v, p) in geo_params.iter_mut().enumerate() {
+            if !finite_supports[v] {
+                *p = self.new_geo_param_var();
+            }
         }
         GeometricBound {
-            polynomial: self.new_polynomial(degree_p1),
+            polynomial: self.new_polynomial(shape),
             geo_params,
         }
     }
@@ -832,7 +881,9 @@ pub struct BoundResult {
 impl BoundResult {
     pub fn marginalize(self, var: Var) -> BoundResult {
         let mut var_supports = self.var_supports;
-        var_supports[var.id()] = SupportSet::zero();
+        if !var_supports[var.id()].is_empty() {
+            var_supports[var.id()] = SupportSet::zero();
+        }
         BoundResult {
             bound: self.bound.marginalize(var),
             var_supports,
@@ -1380,6 +1431,9 @@ impl SymPolynomial {
     }
 
     fn shift_coeffs_left(&self, Var(v): Var) -> SymPolynomial {
+        if v >= self.coeffs.ndim() {
+            return SymPolynomial::zero();
+        }
         Self::new(self.coeffs.slice_axis(Axis(v), Slice::from(1..)).to_owned())
     }
 

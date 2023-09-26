@@ -523,8 +523,8 @@ impl Event {
             Event::InSet(var, set) => gf_in_set(*var, set, gf),
             Event::VarComparison(v1, comp, v2) => {
                 let (scrutinee, other, reversed, range) = match (
-                    var_info[v1.id()].finite_range(),
-                    var_info[v2.id()].finite_range(),
+                    var_info[v1.id()].finite_nonempty_range(),
+                    var_info[v2.id()].finite_nonempty_range(),
                 ) {
                     (None, None) => panic!("Cannot compare two variables with infinite support."),
                     (None, Some(r)) => (*v2, *v1, false, r),
@@ -902,7 +902,9 @@ impl Statement {
             let rest = &given_vars[1..];
             let mut var_info = translation.var_info.clone();
             let support = var_info[v.id()].clone();
-            let range = support.finite_range().unwrap_or_else(|| panic!("Cannot normalize with respect to variable `{v}`, because its value could not be proven to be bounded."));
+            let range = support
+                .finite_nonempty_range()
+                .unwrap_or_else(|| panic!("Cannot normalize with respect to variable `{v}`, because its value could not be proven to be bounded."));
             let mut gf = GenFun::zero();
             for i in range {
                 let summand =
