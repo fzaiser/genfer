@@ -9,10 +9,12 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use genfer::bounds::{BoundCtx, SolverError};
+use genfer::number::F64;
 use genfer::parser;
 use genfer::ppl::{Program, Var};
 
 use clap::Parser;
+use num_traits::{One, Zero};
 
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Parser)]
@@ -68,6 +70,33 @@ fn run_program(program: &Program, args: &CliArgs) {
         Ok(z3_bound) => {
             println!("\nFinal bound:\n");
             println!("{z3_bound}");
+
+            println!("\nProbability masses:");
+            let mut inputs = vec![F64::one(); supports.len()];
+            inputs[program.result.id()] = F64::zero();
+            let degree_p1 =
+                if let Some(range) = supports[program.result.id()].finite_nonempty_range() {
+                    *range.end() as usize + 1
+                } else {
+                    100
+                };
+            let expansion = z3_bound.evaluate_var(&inputs, program.result, degree_p1);
+            let mut index = vec![0; supports.len()];
+            for i in 0..degree_p1 {
+                index[program.result.id()] = i;
+                let prob = expansion.coefficient(&index);
+                println!("p({i}) <= {prob}");
+            }
+
+            println!("\nMoments:");
+            let inputs = vec![F64::one(); supports.len()];
+            let expansion = z3_bound.evaluate_var(&inputs, program.result, 5);
+            let mut index = vec![0; supports.len()];
+            for i in 0..5 {
+                index[program.result.id()] = i;
+                let factorial_moment = expansion.coefficient(&index);
+                println!("{i}-th factorial moment <= {factorial_moment}");
+            }
         }
         Err(e) => match e {
             SolverError::Timeout => {

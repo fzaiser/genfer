@@ -8,6 +8,7 @@ use ndarray::{arr0, indices, ArrayD, ArrayViewD, ArrayViewMutD, Axis, Dimension,
 use num_traits::{One, Zero};
 
 use crate::{
+    multivariate_taylor::TaylorPoly,
     number::{Number, F64},
     ppl::{Distribution, Event, Natural, Program, Statement, Var},
     support::SupportSet,
@@ -941,6 +942,37 @@ impl GeometricBound {
                 .collect(),
         }
     }
+
+    pub fn evaluate_var<T: From<f64> + Number>(
+        &self,
+        inputs: &[T],
+        var: Var,
+        degree_p1: usize,
+    ) -> TaylorPoly<T> {
+        let vars = inputs
+            .iter()
+            .enumerate()
+            .map(|(w, val)| {
+                if w == var.id() {
+                    TaylorPoly::var(var, val.clone(), degree_p1)
+                } else {
+                    TaylorPoly::from(val.clone())
+                }
+            })
+            .collect::<Vec<_>>();
+        self.eval(&vars)
+    }
+
+    fn eval<T: From<f64> + Number>(&self, inputs: &[TaylorPoly<T>]) -> TaylorPoly<T> {
+        let numerator = self.polynomial.eval(inputs);
+        let mut denominator = TaylorPoly::one();
+        for (v, geo_param) in self.geo_params.iter().enumerate() {
+            denominator *= TaylorPoly::one()
+                - TaylorPoly::from(T::from(geo_param.extract_constant().unwrap()))
+                    * inputs[v].clone();
+        }
+        numerator / denominator
+    }
 }
 
 impl std::fmt::Display for GeometricBound {
@@ -1032,6 +1064,13 @@ impl SymExpr {
             SymExpr::Add(lhs, rhs) => lhs.substitute(replacements) + rhs.substitute(replacements),
             SymExpr::Mul(lhs, rhs) => lhs.substitute(replacements) * rhs.substitute(replacements),
             SymExpr::Pow(base, n) => base.substitute(replacements).pow(*n),
+        }
+    }
+
+    pub fn extract_constant(&self) -> Option<f64> {
+        match self {
+            SymExpr::Constant(c) => Some(*c),
+            _ => None,
         }
     }
 
@@ -1446,6 +1485,18 @@ impl SymPolynomial {
 
     fn substitute(&self, replacements: &[SymExpr]) -> SymPolynomial {
         Self::new(self.coeffs.map(|c| c.substitute(replacements)))
+    }
+
+    fn eval<T: From<f64> + Number>(&self, inputs: &[TaylorPoly<T>]) -> TaylorPoly<T> {
+        let coeffs = self
+            .coeffs
+            .map(|sym_expr| T::from(sym_expr.extract_constant().unwrap()))
+            .to_owned();
+        let mut taylor = TaylorPoly::new(coeffs, vec![usize::MAX; inputs.len()]);
+        for (v, input) in inputs.iter().enumerate() {
+            taylor = taylor.subst_var(Var(v), input);
+        }
+        taylor
     }
 }
 
