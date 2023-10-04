@@ -1,0 +1,32 @@
+# Adapted from https://github.com/LKlinke/Prodigy/blob/main/pgfexamples/equivalence/dep_bern.pgcl
+
+c ~ Geometric(1/2);
+m := 0;
+n := 0;
+
+while c > 0 {
+    if 0 ~ Bernoulli(1/2) {
+        m += 1;
+    } else {
+        n += 1;
+    }
+    c -= 1;
+}
+
+return c;
+
+#= Original code:
+
+nat c;
+nat m;
+nat n;
+nat tmp;
+
+
+while( c > 0 ){
+    {m := m+1} [1/2] {n:= n+1}
+    c := c-1
+    tmp := 0
+}
+
+=#
