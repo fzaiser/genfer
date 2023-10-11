@@ -6,7 +6,7 @@ use nom::{
     character::complete::{alpha1, alphanumeric1, char, digit1},
     combinator::{cut, eof, map, not, opt, peek, recognize, success, value},
     error::{context, convert_error},
-    multi::{many0, many0_count, many1, separated_list0},
+    multi::{many0, many0_count, many1, separated_list0, separated_list1},
     sequence::{delimited, pair, preceded, separated_pair, terminated},
     Finish,
 };
@@ -387,6 +387,17 @@ fn distribution<'a>(vars: &[&'a str], input: &'a str) -> IResult<&'a str, Distri
                     |(id, p)| Distribution::BinomialVarTrials(expect_var(vars, id), p),
                 ),
             ))),
+            char(')'),
+        )(input),
+        "Categorical" => delimited(
+            char('('),
+            cut(context(
+                "list of rational numbers",
+                map(
+                    separated_list1(char(','), pos_ratio),
+                    Distribution::Categorical,
+                ),
+            )),
             char(')'),
         )(input),
         "NegBinomial" => delimited(

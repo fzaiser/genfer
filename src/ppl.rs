@@ -182,6 +182,7 @@ pub enum Distribution {
     BernoulliVarProb(Var),
     BinomialVarTrials(Var, PosRatio),
     Binomial(Natural, PosRatio),
+    Categorical(Vec<PosRatio>),
     NegBinomialVarSuccesses(Var, PosRatio),
     NegBinomial(Natural, PosRatio),
     Geometric(PosRatio),
@@ -221,6 +222,7 @@ impl Distribution {
             }
             Bernoulli(_) | BernoulliVarProb(_) => (0..=1).into(),
             Binomial(n, _) => (0..=n.0).into(),
+            Categorical(rs) => (0..rs.len() as u32).into(),
             BinomialVarTrials(..)
             | NegBinomialVarSuccesses(..)
             | NegBinomial(..)
@@ -301,6 +303,14 @@ impl Distribution {
                     + GenFun::from_ratio(p.complement()))
                 .pow(n.0);
                 binomial * base
+            }
+            Categorical(rs) => {
+                let mut categorical = GenFun::zero();
+                for r in rs.iter().rev() {
+                    categorical *= GenFun::var(v);
+                    categorical += GenFun::from_ratio(*r);
+                }
+                categorical * base
             }
             NegBinomialVarSuccesses(w, p) => {
                 let subst = GenFun::from_ratio(*p)
@@ -408,6 +418,7 @@ impl Distribution {
             Dirac(_)
             | Bernoulli(_)
             | Binomial(_, _)
+            | Categorical(_)
             | NegBinomial(_, _)
             | Geometric(_)
             | Poisson(_)
@@ -431,6 +442,19 @@ impl Display for Distribution {
             BernoulliVarProb(v) => write!(f, "Bernoulli({v})"),
             BinomialVarTrials(n, p) => write!(f, "Binomial({n}, {p})"),
             Binomial(n, p) => write!(f, "Binomial({n}, {p})"),
+            Categorical(rs) => {
+                write!(f, "Categorical(")?;
+                let mut first = true;
+                for r in rs {
+                    if first {
+                        first = false;
+                    } else {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{r}")?;
+                }
+                write!(f, ")")
+            }
             NegBinomialVarSuccesses(r, p) => write!(f, "NegBinomial({r}, {p})"),
             NegBinomial(r, p) => write!(f, "NegBinomial({r}, {p})"),
             Geometric(p) => write!(f, "Geometric({p})"),

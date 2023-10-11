@@ -132,6 +132,7 @@ The following distributions are supported (where `m`, `n` are natural numbers, `
 * `Bernoulli(X)` where `X` is a discrete or continuous variable taking on values between 0 and 1
 * `Binomial(n, p)`
 * `Binomial(X, p)` where `X` is a discrete variable
+* `Categorical(p_0, p_1, ..., p_n)`: categorical distribution on `{0, ..., n}` where `i` has probability `p_i`
 * `Dirac(a)` where `a`
 * `Exponential(rate)` where `rate` is a rational number
 * `Geometric(p)`
