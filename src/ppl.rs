@@ -79,6 +79,12 @@ impl From<u64> for PosRatio {
     }
 }
 
+impl From<u32> for PosRatio {
+    fn from(n: u32) -> Self {
+        Self::from(u64::from(n))
+    }
+}
+
 impl Display for PosRatio {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.denom == 1 {
@@ -814,7 +820,6 @@ impl Statement {
                 let v = *v;
                 let mut gf = translation.gf;
                 let mut var_info = translation.var_info;
-                assert!(var_info[v.id()].is_discrete());
                 let var = GenFun::var(v);
                 let mut v_exp = if *add_previous_value { 1 } else { 0 };
                 let mut new_support = if *add_previous_value {
@@ -823,25 +828,41 @@ impl Statement {
                     SupportSet::zero()
                 };
                 let w_subst = if let Some((factor, w)) = addend {
-                    assert!(var_info[w.id()].is_discrete());
                     let other_support = var_info[w.id()].clone();
                     new_support += other_support * factor.0;
                     if v == *w {
                         v_exp += factor.0;
                         None
-                    } else {
+                    } else if var_info[w.id()].is_discrete() {
                         Some((*w, GenFun::var(*w) * var.pow(factor.0)))
+                    } else {
+                        assert!(
+                            !var_info[v.id()].is_discrete() || !*add_previous_value,
+                            "cannot add a continuous to a discrete variable"
+                        );
+                        Some((
+                            *w,
+                            GenFun::var(*w) + var.clone() * GenFun::from_u32(factor.0),
+                        ))
                     }
                 } else {
                     None
                 };
-                gf = gf.substitute_var(v, var.pow(v_exp));
+                if var_info[v.id()].is_discrete() {
+                    gf = gf.substitute_var(v, var.pow(v_exp));
+                } else {
+                    gf = gf.substitute_var(v, var.clone() * GenFun::from_u32(v_exp));
+                }
                 if let Some((w, w_subst)) = w_subst {
                     gf = gf.substitute_var(w, w_subst);
                 }
                 new_support += SupportSet::from(offset.0);
                 var_info[v.id()] = new_support;
-                let gf = gf * var.pow(offset.0);
+                let gf = if var_info[v.id()].is_discrete() {
+                    gf * var.pow(offset.0)
+                } else {
+                    gf * (var * GenFun::from_u32(offset.0)).exp()
+                };
                 GfTranslation { var_info, gf }
             }
             IfThenElse { cond, then, els } => {

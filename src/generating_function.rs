@@ -63,6 +63,10 @@ impl<T: Number> GenFun<T> {
         Self::constant(T::one())
     }
 
+    pub fn from_u32(n: u32) -> GenFun<T> {
+        Self::constant(T::from(n))
+    }
+
     pub fn from_ratio(ratio: PosRatio) -> GenFun<T> {
         Self::constant(T::from_ratio(ratio.numer, ratio.denom))
     }
