@@ -1005,6 +1005,8 @@ impl Statement {
                     write!(f, "{var}")?;
                     if offset != &Natural(0) {
                         writeln!(f, " + {offset};")?;
+                    } else {
+                        writeln!(f, ";")?;
                     }
                 } else {
                     writeln!(f, "{offset};")?;

@@ -553,9 +553,9 @@ impl<T: Number> GeneratingFunctionKind<T> {
                     let y = TaylorPoly::var_at_zero(Var(0), degree_p1 + 1);
                     let numerator = y.exp() - TaylorPoly::one();
                     let mut numerator_array = numerator.into_array();
-                    numerator_array.slice_axis_inplace(ndarray::Axis(0), (1..).into());
-                    let numerator_shifted = TaylorPoly::new(numerator_array, vec![degree_p1]);
-                    numerator_shifted.subst_var(Var(0), &x)
+                    numerator_array.slice_axis_inplace(ndarray::Axis(0), (1..).into()); // divide by y
+                    let fraction = TaylorPoly::new(numerator_array, vec![degree_p1]);
+                    fraction.subst_var(Var(0), &x)
                 } else {
                     let numerator = x.exp() - TaylorPoly::one();
                     (numerator / x).truncate_to_degree_p1(degree_p1)
