@@ -306,6 +306,8 @@ fn print_probs<T: IntervalNumber + Into<f64>>(
         limit
     } else if total.is_zero() {
         1
+    } else if let Some(range) = var_info.finite_range() {
+        *range.end() as usize + 1
     } else {
         // Markov's inequality ensures that P(X >= limit) <= 1 / 4.0^4 = 1 / 256.
         // For practicality, we cap the limit at 1000.
@@ -318,14 +320,9 @@ fn print_probs<T: IntervalNumber + Into<f64>>(
         } else {
             println!("Failed to find a limit automatically due to non-finite moments.");
             println!("Please specify a limit manually with `--limit`.");
-            println!("Using a limit of 1 for now.");
-            1
+            println!("Using a limit of 2 for now.");
+            2
         }
-    };
-    let limit = if let Some(range) = var_info.finite_range() {
-        limit.min(*range.end() as usize + 1)
-    } else {
-        limit
     };
     println!("Computing probabilities up to {limit}...");
     let is_normalized = !uses_observe || total.is_one();
