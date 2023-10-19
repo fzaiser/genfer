@@ -1006,7 +1006,15 @@ pub fn central_to_standardized_moments<T: FloatNumber>(central_moments: &[T]) ->
         .iter()
         .skip(1)
         .enumerate()
-        .map(|(i, x)| x.clone() / sigma.pow((i + 3) as u32))
+        .map(|(i, x)| {
+            let sigma_power = if i % 2 == 0 {
+                sigma.pow((i + 3) as u32)
+            } else {
+                // Special case to avoid square roots (useful for rational computations)
+                variance.pow(((i + 3) / 2) as u32)
+            };
+            x.clone() / sigma_power
+        })
         .collect();
     (variance, result)
 }

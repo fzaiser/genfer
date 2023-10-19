@@ -6,7 +6,7 @@ Expected value:            E = 53/14
 Standard deviation:        σ = NaN
 Variance:                  V = 1013/196
 Skewness (3rd std moment): S = NaN
-Kurtosis (4th std moment): K = NaN
+Kurtosis (4th std moment): K = 1866377/1026169
 
 Computing probabilities up to 8...
 Unnormalized: p(0)     = 3/32

@@ -1,4 +1,4 @@
-# flags: --rational --limit 6
+# flags: --rational
 X := 0;
 
 loop 5 {

@@ -310,11 +310,10 @@ fn print_probs<T: IntervalNumber + Into<f64>>(
         *range.end() as usize + 1
     } else {
         // Markov's inequality ensures that P(X >= limit) <= 1 / 4.0^4 = 1 / 256.
-        // For practicality, we cap the limit at 1000.
+        // For practicality, we cap the limit at MAX_PROB_LIMIT.
         let (mean, central_moments) = moments_to_central_moments(moments);
-        let central4th_root = central_moments[2].sqrt().sqrt();
-        let limit = mean + Interval::from(4) * central4th_root;
-        let limit = limit.hi.into().ceil();
+        let central4th_root = central_moments[2].hi.clone().into().sqrt().sqrt();
+        let limit = (mean.hi.into() + 4.0 * central4th_root).ceil();
         if limit.is_finite() {
             (limit as usize + 1).min(MAX_PROB_LIMIT)
         } else {
