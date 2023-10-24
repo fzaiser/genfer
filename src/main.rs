@@ -92,36 +92,36 @@ pub fn main() {
     let args = CliArgs::parse();
     let contents = std::fs::read_to_string(&args.file_name).unwrap();
     let program = parser::parse_program(&contents);
-    let start = Instant::now();
+    let inference_start = Instant::now();
     if args.print_program {
         println!("Parsed program:\n{program}\n");
     }
     if args.bounds {
         if args.rational {
-            run_program_intervals::<Rational>(&program, &args, start);
+            run_program_intervals::<Rational>(&program, &args, inference_start);
         } else if let Some(prec) = args.precision {
             PRECISION.with(|p| {
                 p.set(prec).unwrap();
             });
-            run_program_intervals::<MultiPrecFloat>(&program, &args, start);
+            run_program_intervals::<MultiPrecFloat>(&program, &args, inference_start);
         } else if args.big_float {
-            run_program_intervals::<BigFloat>(&program, &args, start);
+            run_program_intervals::<BigFloat>(&program, &args, inference_start);
         } else {
-            run_program_intervals::<F64>(&program, &args, start);
+            run_program_intervals::<F64>(&program, &args, inference_start);
         }
     } else {
         #[allow(clippy::collapsible_else_if)]
         if args.rational {
-            run_program::<Rational>(&program, &args, start);
+            run_program::<Rational>(&program, &args, inference_start);
         } else if let Some(prec) = args.precision {
             PRECISION.with(|p| {
                 p.set(prec).unwrap();
             });
-            run_program::<MultiPrecFloat>(&program, &args, start);
+            run_program::<MultiPrecFloat>(&program, &args, inference_start);
         } else if args.big_float {
-            run_program::<BigFloat>(&program, &args, start);
+            run_program::<BigFloat>(&program, &args, inference_start);
         } else {
-            run_program::<F64>(&program, &args, start);
+            run_program::<F64>(&program, &args, inference_start);
         }
     }
 }
@@ -129,7 +129,7 @@ pub fn main() {
 fn run_program_intervals<T: IntervalNumber + Into<f64>>(
     program: &Program,
     args: &CliArgs,
-    start: Instant,
+    inference_start: Instant,
 ) {
     let uses_observe = program.uses_observe();
     let GfTranslation { var_info, gf } = translate_program_to_gf::<Interval<T>>(program, args);
@@ -141,7 +141,7 @@ fn run_program_intervals<T: IntervalNumber + Into<f64>>(
             &var_info[program.result.id()],
             uses_observe,
             args,
-            start,
+            inference_start,
         );
     } else {
         print_moments_and_probs_interval(
@@ -150,12 +150,16 @@ fn run_program_intervals<T: IntervalNumber + Into<f64>>(
             &var_info[program.result.id()],
             uses_observe,
             args,
-            start,
+            inference_start,
         );
     }
 }
 
-fn run_program<T: IntervalNumber + Into<f64>>(program: &Program, args: &CliArgs, start: Instant) {
+fn run_program<T: IntervalNumber + Into<f64>>(
+    program: &Program,
+    args: &CliArgs,
+    inference_start: Instant,
+) {
     let uses_observe = program.uses_observe();
     let GfTranslation { var_info, gf } = translate_program_to_gf::<T>(program, args);
     if args.symbolic {
@@ -166,7 +170,7 @@ fn run_program<T: IntervalNumber + Into<f64>>(program: &Program, args: &CliArgs,
             &var_info[program.result.id()],
             uses_observe,
             args,
-            start,
+            inference_start,
         );
     } else {
         print_moments_and_probs(
@@ -175,7 +179,7 @@ fn run_program<T: IntervalNumber + Into<f64>>(program: &Program, args: &CliArgs,
             &var_info[program.result.id()],
             uses_observe,
             args,
-            start,
+            inference_start,
         );
     }
 }
@@ -203,7 +207,7 @@ fn print_moments_and_probs<T: IntervalNumber + Into<f64>>(
     var_info: &SupportSet,
     uses_observe: bool,
     args: &CliArgs,
-    start: Instant,
+    inference_start: Instant,
 ) {
     print_moments_and_probs_interval(
         |limit| {
@@ -222,7 +226,7 @@ fn print_moments_and_probs<T: IntervalNumber + Into<f64>>(
         var_info,
         uses_observe,
         args,
-        start,
+        inference_start,
     );
 }
 
@@ -242,7 +246,7 @@ fn print_moments_and_probs_interval<T: IntervalNumber + Into<f64>>(
     var_info: &SupportSet,
     uses_observe: bool,
     args: &CliArgs,
-    start: Instant,
+    inference_start: Instant,
 ) {
     println!("Support is a subset of: {var_info}");
     println!();
@@ -278,13 +282,13 @@ fn print_moments_and_probs_interval<T: IntervalNumber + Into<f64>>(
         );
         Some((probs, probs_start.elapsed()))
     };
-    print_elapsed_message(start, "Total time: ", args);
+    print_elapsed_message(inference_start, "Total inference time: ", args);
     if let Some(json_path) = &args.json {
         print_json(
             (&moments_struct.map(Interval::center), time_for_moments),
             &probs_data
                 .map(|(ivs, t)| (ivs.into_iter().map(Interval::center).collect::<Vec<_>>(), t)),
-            start.elapsed(),
+            inference_start.elapsed(),
             args,
             json_path,
         )
@@ -442,14 +446,24 @@ fn print_moments<T: IntervalNumber>(moments: &Moments<Interval<T>>, print_interv
 
 fn print_elapsed_message(start: Instant, text: &str, args: &CliArgs) {
     if !args.no_timing {
-        println!("{text}{:?}", start.elapsed());
+        let elapsed = start.elapsed().as_secs_f64();
+        print!("{text}");
+        if elapsed < 0.001 {
+            println!("{elapsed:.6}s")
+        } else if elapsed < 0.01 {
+            println!("{elapsed:.5}s")
+        } else if elapsed < 0.1 {
+            println!("{elapsed:.4}s")
+        } else {
+            println!("{elapsed:.3}s")
+        }
     }
 }
 
 fn print_json<T: Number>(
     moments_data: (&Moments<T>, Duration),
     probs_data: &Option<(Vec<T>, Duration)>,
-    total_time: Duration,
+    time_for_inference: Duration,
     args: &CliArgs,
     json_path: &PathBuf,
 ) -> std::io::Result<()> {
@@ -477,19 +491,19 @@ fn print_json<T: Number>(
     "stddev": {stddev},
     "skewness": {skewness},
     "kurtosis": {kurtosis},
-    "time_moments_ms": {time_for_moments},
+    "time_moments": {time_for_moments},
     "masses": [{masses}],
-    "time_probs_ms": {time_for_probs},
-    "total_time_ms": {total_time},
+    "time_probs": {time_for_probs},
+    "time_infer": {total_time},
 }}
 "#,
-            time_for_moments = time_for_moments.as_secs_f64() * 1000.0,
+            time_for_moments = time_for_moments.as_secs_f64(),
             masses = probs_data
                 .into_iter()
                 .map(|x| format!("{x}, "))
                 .collect::<String>(),
-            time_for_probs = time_for_probs.as_secs_f64() * 1000.0,
-            total_time = total_time.as_secs_f64() * 1000.0,
+            time_for_probs = time_for_probs.as_secs_f64(),
+            total_time = time_for_inference.as_secs_f64(),
         ),
     )
 }
