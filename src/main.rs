@@ -286,10 +286,12 @@ fn print_moments_and_probs_interval<T: IntervalNumber + Into<f64>>(
     };
     print_elapsed_message(inference_start, "Total inference time: ", args);
     if let Some(json_path) = &args.json {
+        let moment_data = (&moments_struct.map(Interval::center), time_for_moments);
+        let probs_data = probs_data
+            .map(|(ivs, t)| (ivs.into_iter().map(Interval::center).collect::<Vec<_>>(), t));
         print_json(
-            (&moments_struct.map(Interval::center), time_for_moments),
-            &probs_data
-                .map(|(ivs, t)| (ivs.into_iter().map(Interval::center).collect::<Vec<_>>(), t)),
+            moment_data,
+            &probs_data,
             gf_translation_time,
             inference_start.elapsed(),
             args,
@@ -334,6 +336,7 @@ fn print_probs<T: IntervalNumber + Into<f64>>(
     let is_normalized = !uses_observe || total.is_one();
     let mut mass_missing = total.clone();
     let mut probs = probs_fn(limit);
+    let mut normalized_probs = Vec::new();
     for i in 0..limit {
         let p = probs[i].clone();
         assert!(
@@ -353,6 +356,7 @@ fn print_probs<T: IntervalNumber + Into<f64>>(
             let normalized = in_interval(&normalized_p, args.bounds);
             println!("Unnormalized: p({i})     {unnormalized}");
             println!("Normalized:   p({i}) / Z {normalized}");
+            normalized_probs.push(normalized_p);
         }
         mass_missing -= p.clone();
     }
@@ -373,7 +377,7 @@ fn print_probs<T: IntervalNumber + Into<f64>>(
         println!("Normalized:   p(n) / Z <= {mass_missing_norm} for all n >= {limit}");
     }
     print_elapsed_message(probs_start, "Time to compute probability masses: ", args);
-    probs
+    normalized_probs
 }
 
 #[derive(Clone, Debug)]
