@@ -1,0 +1,22 @@
+// flags: --dp
+def main(){ // didItRain
+    cloudy := flip(1/2);
+    rain := 0; sprinkler := 0;
+
+    if (cloudy){
+        rain = flip(4/5);
+        sprinkler = flip(1/10);
+    }else{
+        rain = flip(1/5);
+        sprinkler = flip(1/2);
+    }
+
+    temp1 := flip(7/10);
+    wetRoof := temp1 && rain;
+    temp2 := flip(9/10);
+    temp3 := flip(9/10);
+    wetGrass := (temp2 && rain) || (temp3 && sprinkler);
+
+    observe(wetGrass);
+    return rain;
+}

@@ -1,0 +1,32 @@
+diff --git a/bin/dice.ml b/bin/dice.ml
+index 871c835..b0a52db 100644
+--- a/bin/dice.ml
++++ b/bin/dice.ml
+@@ -64,6 +64,10 @@ let parse_and_print ~print_parsed ~print_internal ~print_size ~skip_table
+     lexbuf : result List.t = try
+   let parsed = Compiler.parse_with_error lexbuf in
+   let res = if print_parsed then [StringRes("Parsed program", (ExternalGrammar.string_of_prog parsed))] else [] in
++
++  (* start timer *)
++  let start_time = Unix.gettimeofday () in
++
+   let parsed_norec = Passes.expand_recursion ?recursion_limit parsed in
+   let cfg =
+     { max_list_length = Option.value (Option.first_some max_list_length recursion_limit)
+@@ -92,9 +96,15 @@ let parse_and_print ~print_parsed ~print_internal ~print_size ~skip_table
+              let div_res = if wmc_type = 1 || wmc_type = 2 then Bignum.(numer / z) else LogProbability.rat_div_and_conv numer z in 
+              (label, div_res)) in
+        let l = [["Value"; "Probability"]] @
+-         List.map probs ~f:(fun (typ, prob) -> [print_pretty typ; Bignum.to_string_hum prob]) in
++         List.map probs ~f:(fun (typ, prob) -> [print_pretty typ; Bignum.to_string_accurate prob]) in
+        [TableRes("Joint Distribution", l)]
+       ) in
++    
++    (* stop timer *)
++    let end_time = Unix.gettimeofday () in
++    let elapsed_time = end_time -. start_time in
++    Printf.printf "Total inference time: %fs\n" elapsed_time;
++
+     let res = if show_recursive_calls then res @ [StringRes("Number of recursive calls",
+                                                             Format.sprintf "%s" 
+                                                             (Unsigned.UInt64.to_string (Bdd.bdd_num_recursive_calls compiled.ctx.man)))]

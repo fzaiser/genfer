@@ -1,4 +1,3 @@
-
 Rate1 ~ Geometric(0.1);
 Rate2 ~ Geometric(0.1);
 if 1 ~ Bernoulli(0.5) {

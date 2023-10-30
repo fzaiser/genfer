@@ -34,4 +34,3 @@ observed := iid(bernoulli(0.2), population);
 observe (38 = observed);
 
 ?Ex[population]
-

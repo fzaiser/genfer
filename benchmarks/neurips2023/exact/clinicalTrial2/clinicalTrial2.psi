@@ -1,0 +1,25 @@
+def main(){
+    isEffective := bernoulli(1/2);
+    probIfTreated := uniform(0, 1);
+    if isEffective {
+        probIfControl := uniform(0, 1);
+    } else {
+        probIfControl := probIfTreated;
+    }
+
+    // Control group:
+    observe(0 = bernoulli(probIfControl));
+    observe(0 = bernoulli(probIfControl));
+    observe(1 = bernoulli(probIfControl));
+    observe(0 = bernoulli(probIfControl));
+    observe(0 = bernoulli(probIfControl));
+
+    // Treated group:
+    observe(1 = bernoulli(probIfTreated));
+    observe(0 = bernoulli(probIfTreated));
+    observe(1 = bernoulli(probIfTreated));
+    observe(1 = bernoulli(probIfTreated));
+    observe(1 = bernoulli(probIfTreated));
+
+    return isEffective;
+}

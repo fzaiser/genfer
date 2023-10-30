@@ -1,0 +1,25 @@
+diff --git a/prodigy/cli.py b/prodigy/cli.py
+index a5bdb25..5abd70a 100644
+--- a/prodigy/cli.py
++++ b/prodigy/cli.py
+@@ -99,7 +99,7 @@ def main(ctx, program_file: IO, input_dist: str,
+ 
+     print(Style.OKBLUE + "Result: \t" + Style.OKGREEN + "(" + str(dist) +
+           ", " + str(error_prob) + ")" + Style.RESET)
+-    print(f"CPU-time elapsed: {stop - start:04f} seconds")
++    print(f"Total inference time: {stop - start:04f}s")
+ 
+ 
+ @cli.command('check_equality')
+diff --git a/pyproject.toml b/pyproject.toml
+index 5cc36ae..aed916e 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -36,6 +36,7 @@ hypothesis = "^5.18.0"
+ 
+ 
+ [tool.poetry.scripts]
++cli = "prodigy.cli:cli"
+ prodigy = "prodigy.cli:main"
+ web-service = "prodigy.web.web_equivalence:start_server"
+ 

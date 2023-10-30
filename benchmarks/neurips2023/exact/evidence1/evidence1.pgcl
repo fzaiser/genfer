@@ -1,0 +1,10 @@
+nat evidence;
+nat coin;
+
+evidence := bernoulli(1/2);
+coin := bernoulli(1/2);
+if (evidence = 1) {
+    observe(coin = 1);
+} else {skip}
+
+?Pr[evidence];

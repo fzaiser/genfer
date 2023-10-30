@@ -1,0 +1,4 @@
+let aliceDunnit  = flip 0.3 in
+let withGun = if aliceDunnit then flip 0.03 else flip 0.8 in
+let tmp = observe withGun in
+aliceDunnit
