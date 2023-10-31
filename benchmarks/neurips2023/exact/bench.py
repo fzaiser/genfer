@@ -106,22 +106,24 @@ def bench_tool(tool, command, path: Path, expected):
 
 
 def bench(name):
-    expected = Path(f"benchmarks/{name}.expected").read_text().strip().splitlines()
+    path = f"{name}/{name}"
+    expected = Path(f"{path}.expected").read_text().strip().splitlines()
     expected = list(e for e in expected if e != "")
     assert len(expected) > 0, f"No expected string for {name} found."
-    genfer = bench_tool("Genfer", genfer_path, Path(f"benchmarks/{name}.sgcl"), expected)
-    dice = bench_tool("Dice", dice_path, Path(f"benchmarks/{name}.dice"), expected)
+    genfer = bench_tool("Genfer", genfer_path, Path(f"{path}.sgcl"), expected)
+    dice = bench_tool("Dice", dice_path, Path(f"{path}.dice"), expected)
     genfer_rational = bench_tool(
         "Genfer (rational)",
         [genfer_path, "--rational"],
-        Path(f"benchmarks/{name}.rational.sgcl")
-        if Path(f"benchmarks/{name}.rational.sgcl").is_file()
-        else Path(f"benchmarks/{name}.sgcl"),
+        Path(f"{path}.rational.sgcl")
+        if Path(f"{path}.rational.sgcl").is_file()
+        else Path(f"{path}.sgcl"),
         expected,
     )
-    dice_rational = bench_tool("Dice (rational)", [dice_path, "-wmc-type", "1"], Path(f"benchmarks/{name}.dice"), expected)
-    prodigy = bench_tool("Prodigy", ["bash", "prodigy.sh"], Path(f"benchmarks/{name}.pgcl"), expected)
-    psi = bench_tool("PSI", psi_path, Path(f"benchmarks/{name}.psi"), expected)
+    dice_rational = bench_tool("Dice (rational)", [dice_path, "-wmc-type", "1"], Path(f"{path}.dice"), expected)
+    prodigy_command = ["poetry", "run", "--directory", prodigy_path, "cli", "--engine", "ginac", "main"]
+    prodigy = bench_tool("Prodigy", prodigy_command, Path(f"{path}.pgcl"), expected)
+    psi = bench_tool("PSI", psi_path, Path(f"{path}.psi"), expected)
     return {
         "genfer": genfer,
         "dice": dice,
@@ -131,13 +133,19 @@ def bench(name):
         "psi": psi,
     }
 
+def env(name, default):
+    if name in os.environ:
+        return os.environ[name]
+    else:
+        print(f"{red}Environment variable `{name}` is not set!{reset} Defaulting to `{default}`")
+        return default
 
 if __name__ == "__main__":
     start = time.time()
-    genfer_path = os.environ.get("GENFER", "../genfer/target/release/genfer")
-    prodigy_path = "prodigy"
-    dice_path = os.environ.get("DICE", "dice")
-    psi_path = os.environ.get("PSI", "psi")
+    genfer_path = env("GENFER", "../../../target/release/genfer")
+    prodigy_path = env("PRODIGY", "Prodigy")
+    dice_path = env("DICE", "dice")
+    psi_path = env("PSI", "psi")
     own_path = Path(sys.argv[0]).parent
     os.chdir(own_path)
     all_results = {}
