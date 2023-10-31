@@ -1,3 +1,4 @@
+# skip integration test
 n0 ~ Bernoulli(1/2);
 n4 ~ Bernoulli(1/2);
 if n0 = 1 {

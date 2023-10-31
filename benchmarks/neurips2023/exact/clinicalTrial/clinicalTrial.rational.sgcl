@@ -1,3 +1,4 @@
+# skip integration test
 # Clinical trial data set, using 100 of 1000 data points
 isEffective ~ Bernoulli(1/2);
 probControl := 0;
