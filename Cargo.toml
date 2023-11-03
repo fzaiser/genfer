@@ -5,6 +5,7 @@ edition = "2021"
 default-run = "genfer"
 authors = ["Fabian Zaiser"]
 description = "Exact Bayesian Inference for Discrete Probabilistic Programs via Generating Functions"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
