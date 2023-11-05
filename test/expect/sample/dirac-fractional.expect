@@ -5,5 +5,5 @@ Total measure:             Z = 1.0
 Expected value:            E = 0.5
 Standard deviation:        σ = 1.0202127648613718e-8
 Variance:                  V = 2.0816681711721688e-16
-Skewness (3rd std moment): S = -2.8088955232223686e306
+Skewness (3rd std moment): S = NaN
 Kurtosis (4th std moment): K = inf
