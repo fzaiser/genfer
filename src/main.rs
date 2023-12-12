@@ -88,7 +88,19 @@ struct CliArgs {
     json: Option<PathBuf>,
 }
 
-pub fn main() {
+fn main() {
+    // Use a constant stack size of 32 kilobytes. On some OSes, for example
+    // MacOS, the default stack size is too small to run some examples such as
+    // digitRecognition.
+    const STACK_SIZE: usize = 32 * 1024 * 1024;
+    let child = std::thread::Builder::new()
+        .stack_size(STACK_SIZE)
+        .spawn(run)
+        .unwrap();
+    child.join().unwrap();
+}
+
+pub fn run() {
     let args = CliArgs::parse();
     let contents = std::fs::read_to_string(&args.file_name).unwrap();
     let program = parser::parse_program(&contents);
