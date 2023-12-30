@@ -1,0 +1,60 @@
+nat population1;
+nat population2;
+nat tmp;
+
+population1 := poisson(46.26);
+population2 := poisson(5.14);
+
+tmp := iid(bernoulli(0.1), population1);
+population2 := population2 + tmp;
+population1 := iid(bernoulli(0.23724), population1);
+population2 := iid(bernoulli(0.2636), population2);
+tmp := poisson(209.34);
+population1 := population1 + tmp;
+tmp := poisson(23.26);
+population2 := population2 + tmp;
+tmp := iid(bernoulli(0.2), population1);
+observe (35 = tmp);
+tmp := iid(bernoulli(0.2), population2);
+observe (3 = tmp);
+
+tmp := iid(bernoulli(0.1), population1);
+population2 := population2 + tmp;
+population1 := iid(bernoulli(0.23724), population1);
+population2 := iid(bernoulli(0.2636), population2);
+tmp := poisson(378.72);
+population1 := population1 + tmp;
+tmp := poisson(42.08);
+population2 := population2 + tmp;
+tmp := iid(bernoulli(0.2), population1);
+observe (83 = tmp);
+tmp := iid(bernoulli(0.2), population2);
+observe (6 = tmp);
+
+tmp := iid(bernoulli(0.1), population1);
+population2 := population2 + tmp;
+population1 := iid(bernoulli(0.23724), population1);
+population2 := iid(bernoulli(0.2636), population2);
+tmp := poisson(270.72);
+population1 := population1 + tmp;
+tmp := poisson(30.08);
+population2 := population2 + tmp;
+tmp := iid(bernoulli(0.2), population1);
+observe (78 = tmp);
+tmp := iid(bernoulli(0.2), population2);
+observe (10 = tmp);
+
+tmp := iid(bernoulli(0.1), population1);
+population2 := population2 + tmp;
+population1 := iid(bernoulli(0.23724), population1);
+population2 := iid(bernoulli(0.2636), population2);
+tmp := poisson(270.72);
+population1 := population1 + tmp;
+tmp := poisson(8.56);
+population2 := population2 + tmp;
+tmp := iid(bernoulli(0.2), population1);
+observe (58 = tmp);
+tmp := iid(bernoulli(0.2), population2);
+observe (4 = tmp);
+
+?Ex[population2]

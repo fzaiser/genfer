@@ -1,0 +1,10 @@
+firstCoin ~ Bernoulli(1/2);
+secondCoin ~ Bernoulli(1/2);
+if firstCoin=1 && secondCoin = 1 {
+    bothHeads := 1;
+} else {
+    bothHeads := 0;
+}
+observe bothHeads = 0;
+
+return firstCoin;

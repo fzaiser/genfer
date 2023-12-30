@@ -521,8 +521,8 @@ impl<T: Number> TaylorPoly<T> {
                 degrees_p1,
             );
         }
-        if let Some((c, m, Var(v))) = subst.extract_linear() {
-            if c.is_zero() {
+        if let Some((c, m, Var(w))) = subst.extract_linear() {
+            if v == w && c.is_zero() {
                 let mut factor = T::one();
                 let mut result = self
                     .coeffs

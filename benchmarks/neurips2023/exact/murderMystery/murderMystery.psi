@@ -1,0 +1,7 @@
+// flags: --dp
+def main(){
+    aliceDunnit := flip(3/10);
+    withGun := if aliceDunnit { flip(3/100) } else { flip(4/5) };
+    observe(withGun == true);
+    return aliceDunnit;
+}

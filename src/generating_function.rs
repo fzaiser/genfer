@@ -63,6 +63,10 @@ impl<T: Number> GenFun<T> {
         Self::constant(T::one())
     }
 
+    pub fn from_u32(n: u32) -> GenFun<T> {
+        Self::constant(T::from(n))
+    }
+
     pub fn from_ratio(ratio: PosRatio) -> GenFun<T> {
         Self::constant(T::from_ratio(ratio.numer, ratio.denom))
     }
@@ -549,9 +553,9 @@ impl<T: Number> GeneratingFunctionKind<T> {
                     let y = TaylorPoly::var_at_zero(Var(0), degree_p1 + 1);
                     let numerator = y.exp() - TaylorPoly::one();
                     let mut numerator_array = numerator.into_array();
-                    numerator_array.slice_axis_inplace(ndarray::Axis(0), (1..).into());
-                    let numerator_shifted = TaylorPoly::new(numerator_array, vec![degree_p1]);
-                    numerator_shifted.subst_var(Var(0), &x)
+                    numerator_array.slice_axis_inplace(ndarray::Axis(0), (1..).into()); // divide by y
+                    let fraction = TaylorPoly::new(numerator_array, vec![degree_p1]);
+                    fraction.subst_var(Var(0), &x)
                 } else {
                     let numerator = x.exp() - TaylorPoly::one();
                     (numerator / x).truncate_to_degree_p1(degree_p1)
@@ -1002,7 +1006,19 @@ pub fn central_to_standardized_moments<T: FloatNumber>(central_moments: &[T]) ->
         .iter()
         .skip(1)
         .enumerate()
-        .map(|(i, x)| x.clone() / sigma.pow((i + 3) as u32))
+        .map(|(i, x)| {
+            if x.is_zero() && !variance.is_nan() && !variance.is_zero() {
+                x.clone()
+            } else {
+                let sigma_power = if i % 2 == 0 {
+                    sigma.pow((i + 3) as u32)
+                } else {
+                    // Special case to avoid square roots (useful for rational computations)
+                    variance.pow(((i + 3) / 2) as u32)
+                };
+                x.clone() / sigma_power
+            }
+        })
         .collect();
     (variance, result)
 }

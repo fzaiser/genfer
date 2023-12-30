@@ -1,0 +1,6 @@
+evidence ~ Bernoulli(0.5);
+coin ~ Bernoulli(0.5);
+if evidence = 1 {
+    observe coin = 1;
+}
+return evidence;

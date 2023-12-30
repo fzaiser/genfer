@@ -6,6 +6,15 @@ use std::process::Command;
 use expect_test::expect_file;
 use walkdir::WalkDir;
 
+fn has_skip_in_first_line(input_path: &Path) -> bool {
+    let first_line = BufReader::new(File::open(input_path).unwrap())
+        .lines()
+        .next()
+        .unwrap()
+        .unwrap();
+    first_line.contains("skip integration test")
+}
+
 fn find_flags_in_first_line(input_path: &Path) -> Vec<String> {
     let first_line = BufReader::new(File::open(input_path).unwrap())
         .lines()
@@ -31,6 +40,10 @@ fn check_output(input_file: impl AsRef<Path>, expected_output_file: impl AsRef<P
         .env("RUST_BACKTRACE", "1")
         .arg(input_path)
         .arg("--no-timing");
+    if has_skip_in_first_line(input_path) {
+        println!("Skipping {input_path:?}.");
+        return;
+    }
     find_flags_in_first_line(input_path).iter().for_each(|f| {
         command.arg(f);
     });
@@ -48,8 +61,8 @@ fn check_output(input_file: impl AsRef<Path>, expected_output_file: impl AsRef<P
 }
 
 fn check_dir(dir: &str) {
-    let test_expect_dir = format!("{}/test/expect/{dir}", env!("CARGO_MANIFEST_DIR"));
-    for entry in WalkDir::new(test_expect_dir) {
+    let mut count = 0;
+    for entry in WalkDir::new(dir) {
         let entry = entry.unwrap();
         let path = entry.path();
         if path.is_dir() {
@@ -61,48 +74,60 @@ fn check_dir(dir: &str) {
             println!("Testing {} ...", path.display());
             let expect_path = path.with_extension("expect");
             check_output(path, &expect_path);
+            count += 1;
         }
     }
+    assert!(count > 0, "No tests were run in {dir}!");
+}
+
+fn check_test_dir(dir: &str) {
+    let test_expect_dir = format!("{}/test/expect/{dir}", env!("CARGO_MANIFEST_DIR"));
+    check_dir(&test_expect_dir)
+}
+
+fn check_benchmarks_dir(dir: &str) {
+    let benchmark_dir = format!("{}/benchmarks/{dir}", env!("CARGO_MANIFEST_DIR"));
+    check_dir(&benchmark_dir)
 }
 
 #[test]
 fn expect_tests_sample() {
-    check_dir("sample");
+    check_test_dir("sample");
 }
 
 #[test]
 fn expect_tests_observe() {
-    check_dir("observe");
+    check_test_dir("observe");
 }
 
 #[test]
 fn expect_tests_if() {
-    check_dir("if");
+    check_test_dir("if");
 }
 
 #[test]
 fn expect_tests_assign() {
-    check_dir("assign");
+    check_test_dir("assign");
 }
 
 #[test]
 fn expect_tests_normalize() {
-    check_dir("normalize");
+    check_test_dir("normalize");
 }
 
 #[test]
 fn expect_tests_examples() {
-    check_dir("examples");
+    check_test_dir("examples");
 }
 
 #[test]
 fn expect_tests_former_bugs() {
-    check_dir("former_bugs");
+    check_test_dir("former_bugs");
 }
 
 #[test]
 fn expect_tests_real_world() {
-    check_dir("real_world");
+    check_test_dir("real_world");
 }
 
 #[test]
@@ -110,5 +135,15 @@ fn expect_tests_slow() {
     if std::env::var("RUN_SLOW_TESTS").is_err() {
         return;
     }
-    check_dir("slow");
+    check_test_dir("slow");
+}
+
+#[test]
+fn neurips_benchmarks_approx_comparison() {
+    check_benchmarks_dir("neurips2023/approx");
+}
+
+#[test]
+fn neurips_benchmarks_exact_comparison() {
+    check_benchmarks_dir("neurips2023/exact/");
 }

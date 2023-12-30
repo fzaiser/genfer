@@ -166,7 +166,7 @@ impl<T: IntervalNumber> Mul for Interval<T> {
 
     #[inline]
     fn mul(self, rhs: Self) -> Self::Output {
-        if self.is_zero() || rhs.is_zero() {
+        if (self.is_zero() && rhs.is_finite()) || (self.is_finite() && rhs.is_zero()) {
             return Self::zero();
         }
         if self.is_one() {
@@ -201,17 +201,35 @@ impl<T: IntervalNumber> Div for Interval<T> {
 
     #[inline]
     fn div(self, rhs: Self) -> Self::Output {
-        if self.is_zero() {
+        if self.is_nan() || rhs.is_nan() {
+            return Self::nan();
+        }
+        if self.is_zero() && !rhs.is_zero() {
             return self;
         }
         if rhs.is_one() {
             return self;
         }
+        let (mut lo, mut hi) = (T::infinity(), -T::infinity());
+        if rhs.contains(&T::zero()) {
+            if T::zero() <= self.lo {
+                hi = T::infinity();
+            } else {
+                lo = -T::infinity();
+            }
+            if self.hi <= T::zero() {
+                lo = -T::infinity();
+            } else {
+                hi = T::infinity();
+            }
+        }
         let a = self.lo.clone() / rhs.lo.clone();
         let b = self.lo / rhs.hi.clone();
         let c = self.hi.clone() / rhs.lo;
         let d = self.hi / rhs.hi;
-        Self::widen(a.min(&b).min(&c).min(&d), a.max(&b).max(&c).max(&d))
+        let lo = lo.min(&a).min(&b).min(&c).min(&d);
+        let hi = hi.max(&a).max(&b).max(&c).max(&d);
+        Self::widen(lo, hi)
     }
 }
 

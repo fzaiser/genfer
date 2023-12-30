@@ -1,0 +1,23 @@
+isEffective ~ Bernoulli(1/2);
+probIfTreated ~ UniformCont(0, 1);
+if isEffective = 1 {
+    probIfControl ~ UniformCont(0, 1);
+} else {
+    probIfControl := probIfTreated;
+}
+
+# Control group:
+observe 0 ~ Bernoulli(probIfControl);
+observe 0 ~ Bernoulli(probIfControl);
+observe 1 ~ Bernoulli(probIfControl);
+observe 0 ~ Bernoulli(probIfControl);
+observe 0 ~ Bernoulli(probIfControl);
+
+# Treated group:
+observe 1 ~ Bernoulli(probIfTreated);
+observe 0 ~ Bernoulli(probIfTreated);
+observe 1 ~ Bernoulli(probIfTreated);
+observe 1 ~ Bernoulli(probIfTreated);
+observe 1 ~ Bernoulli(probIfTreated);
+
+return isEffective;

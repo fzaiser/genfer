@@ -6,7 +6,7 @@ Expected value:            E = 0.8901098901098902
 Standard deviation:        σ = 0.31275273562104833
 Variance:                  V = 0.09781427363844936
 Skewness (3rd std moment): S = -2.4946857096883974
-Kurtosis (4th std moment): K = 7.223456790123446
+Kurtosis (4th std moment): K = 7.223456790123448
 
 Computing probabilities up to 2...
 Unnormalized: p(0)     = 0.10000000000000002

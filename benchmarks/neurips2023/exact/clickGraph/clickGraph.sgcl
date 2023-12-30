@@ -1,0 +1,58 @@
+similarityAll ~ UniformCont(0, 1);
+
+# i = 0
+if 1 ~ Bernoulli(similarityAll) {
+    beta1 ~ UniformCont(0, 1);
+    beta2 := beta1;
+} else {
+    beta1 ~ UniformCont(0, 1);
+    beta2 ~ UniformCont(0, 1);
+}
+observe 1 ~ Bernoulli(beta1);
+observe 1 ~ Bernoulli(beta2);
+
+# i = 1
+if 1 ~ Bernoulli(similarityAll) {
+    beta1 ~ UniformCont(0, 1);
+    beta2 := beta1;
+} else {
+    beta1 ~ UniformCont(0, 1);
+    beta2 ~ UniformCont(0, 1);
+}
+observe 1 ~ Bernoulli(beta1);
+observe 1 ~ Bernoulli(beta2);
+
+# i = 2
+if 1 ~ Bernoulli(similarityAll) {
+    beta1 ~ UniformCont(0, 1);
+    beta2 := beta1;
+} else {
+    beta1 ~ UniformCont(0, 1);
+    beta2 ~ UniformCont(0, 1);
+}
+observe 1 ~ Bernoulli(beta1);
+observe 1 ~ Bernoulli(beta2);
+
+# i = 3
+if 1 ~ Bernoulli(similarityAll) {
+    beta1 ~ UniformCont(0, 1);
+    beta2 := beta1;
+} else {
+    beta1 ~ UniformCont(0, 1);
+    beta2 ~ UniformCont(0, 1);
+}
+observe 0 ~ Bernoulli(beta1);
+observe 0 ~ Bernoulli(beta2);
+
+# i = 4
+if 1 ~ Bernoulli(similarityAll) {
+    beta1 ~ UniformCont(0, 1);
+    beta2 := beta1;
+} else {
+    beta1 ~ UniformCont(0, 1);
+    beta2 ~ UniformCont(0, 1);
+}
+observe 0 ~ Bernoulli(beta1);
+observe 0 ~ Bernoulli(beta2);
+
+return similarityAll;

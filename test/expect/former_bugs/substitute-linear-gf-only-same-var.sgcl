@@ -1,0 +1,3 @@
+a := 0;
+b ~ UniformCont(0, 1);
+return b;

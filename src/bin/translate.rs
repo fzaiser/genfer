@@ -239,6 +239,17 @@ impl Translate for WebPpl<'_> {
                     write!(self.f, "Binomial({{n: {n}, p: {p}}})")
                 }
             }
+            Categorical(rs) => {
+                write!(self.f, "Categorical({{ ps: [")?;
+                for i in 0..rs.len() {
+                    write!(self.f, "{i}, ")?;
+                }
+                write!(self.f, "], vs: [")?;
+                for r in rs {
+                    write!(self.f, "{r}, ")?;
+                }
+                write!(self.f, "] }})")
+            }
             NegBinomialVarSuccesses(_, _) | NegBinomial(_, _) => {
                 panic!("Negative binomial distribution is not supported by WebPPL")
             }
@@ -655,6 +666,13 @@ impl<'a> Translate for Anglican<'a> {
             Distribution::BernoulliVarProb(v) => write!(self.f, "(bernoulli {v})"),
             Distribution::BinomialVarTrials(n, p) => write!(self.f, "(binomial {n} {})", p.round()),
             Distribution::Binomial(n, p) => write!(self.f, "(binomial {n} {})", p.round()),
+            Distribution::Categorical(rs) => {
+                write!(self.f, "(categorical [")?;
+                for (i, r) in rs.iter().enumerate() {
+                    write!(self.f, "[{i} {}] ", r.round())?;
+                }
+                write!(self.f, "])")
+            }
             Distribution::NegBinomialVarSuccesses(_, _) | Distribution::NegBinomial(_, _) => {
                 panic!("Negative binomial distribution is not supported by Anglican")
             }

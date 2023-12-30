@@ -79,6 +79,12 @@ impl From<u64> for PosRatio {
     }
 }
 
+impl From<u32> for PosRatio {
+    fn from(n: u32) -> Self {
+        Self::from(u64::from(n))
+    }
+}
+
 impl Display for PosRatio {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.denom == 1 {
@@ -182,6 +188,7 @@ pub enum Distribution {
     BernoulliVarProb(Var),
     BinomialVarTrials(Var, PosRatio),
     Binomial(Natural, PosRatio),
+    Categorical(Vec<PosRatio>),
     NegBinomialVarSuccesses(Var, PosRatio),
     NegBinomial(Natural, PosRatio),
     Geometric(PosRatio),
@@ -221,6 +228,7 @@ impl Distribution {
             }
             Bernoulli(_) | BernoulliVarProb(_) => (0..=1).into(),
             Binomial(n, _) => (0..=n.0).into(),
+            Categorical(rs) => (0..rs.len() as u32).into(),
             BinomialVarTrials(..)
             | NegBinomialVarSuccesses(..)
             | NegBinomial(..)
@@ -301,6 +309,14 @@ impl Distribution {
                     + GenFun::from_ratio(p.complement()))
                 .pow(n.0);
                 binomial * base
+            }
+            Categorical(rs) => {
+                let mut categorical = GenFun::zero();
+                for r in rs.iter().rev() {
+                    categorical *= GenFun::var(v);
+                    categorical += GenFun::from_ratio(*r);
+                }
+                categorical * base
             }
             NegBinomialVarSuccesses(w, p) => {
                 let subst = GenFun::from_ratio(*p)
@@ -408,6 +424,7 @@ impl Distribution {
             Dirac(_)
             | Bernoulli(_)
             | Binomial(_, _)
+            | Categorical(_)
             | NegBinomial(_, _)
             | Geometric(_)
             | Poisson(_)
@@ -431,6 +448,19 @@ impl Display for Distribution {
             BernoulliVarProb(v) => write!(f, "Bernoulli({v})"),
             BinomialVarTrials(n, p) => write!(f, "Binomial({n}, {p})"),
             Binomial(n, p) => write!(f, "Binomial({n}, {p})"),
+            Categorical(rs) => {
+                write!(f, "Categorical(")?;
+                let mut first = true;
+                for r in rs {
+                    if first {
+                        first = false;
+                    } else {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{r}")?;
+                }
+                write!(f, ")")
+            }
             NegBinomialVarSuccesses(r, p) => write!(f, "NegBinomial({r}, {p})"),
             NegBinomial(r, p) => write!(f, "NegBinomial({r}, {p})"),
             Geometric(p) => write!(f, "Geometric({p})"),
@@ -811,7 +841,6 @@ impl Statement {
                 let v = *v;
                 let mut gf = translation.gf;
                 let mut var_info = translation.var_info;
-                assert!(var_info[v.id()].is_discrete());
                 let var = GenFun::var(v);
                 let mut v_exp = if *add_previous_value { 1 } else { 0 };
                 let mut new_support = if *add_previous_value {
@@ -820,25 +849,41 @@ impl Statement {
                     SupportSet::zero()
                 };
                 let w_subst = if let Some((factor, w)) = addend {
-                    assert!(var_info[w.id()].is_discrete());
                     let other_support = var_info[w.id()].clone();
                     new_support += other_support * factor.0;
                     if v == *w {
                         v_exp += factor.0;
                         None
-                    } else {
+                    } else if var_info[w.id()].is_discrete() {
                         Some((*w, GenFun::var(*w) * var.pow(factor.0)))
+                    } else {
+                        assert!(
+                            !var_info[v.id()].is_discrete() || !*add_previous_value,
+                            "cannot add a continuous to a discrete variable"
+                        );
+                        Some((
+                            *w,
+                            GenFun::var(*w) + var.clone() * GenFun::from_u32(factor.0),
+                        ))
                     }
                 } else {
                     None
                 };
-                gf = gf.substitute_var(v, var.pow(v_exp));
+                if var_info[v.id()].is_discrete() {
+                    gf = gf.substitute_var(v, var.pow(v_exp));
+                } else {
+                    gf = gf.substitute_var(v, var.clone() * GenFun::from_u32(v_exp));
+                }
                 if let Some((w, w_subst)) = w_subst {
                     gf = gf.substitute_var(w, w_subst);
                 }
                 new_support += SupportSet::from(offset.0);
                 var_info[v.id()] = new_support;
-                let gf = gf * var.pow(offset.0);
+                let gf = if var_info[v.id()].is_discrete() {
+                    gf * var.pow(offset.0)
+                } else {
+                    gf * (var * GenFun::from_u32(offset.0)).exp()
+                };
                 GfTranslation { var_info, gf }
             }
             Decrement { .. } => todo!(),
@@ -985,6 +1030,8 @@ impl Statement {
                     write!(f, "{var}")?;
                     if offset != &Natural(0) {
                         writeln!(f, " + {offset};")?;
+                    } else {
+                        writeln!(f, ";")?;
                     }
                 } else {
                     writeln!(f, "{offset};")?;
