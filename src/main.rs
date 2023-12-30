@@ -88,8 +88,8 @@ struct CliArgs {
     json: Option<PathBuf>,
 }
 
-fn main() {
-    // Use a constant stack size of 32 kilobytes. On some OSes, for example
+pub fn main() {
+    // Use a constant stack size of 32 MB. On some OSes, for example
     // MacOS, the default stack size is too small to run some examples such as
     // digitRecognition.
     const STACK_SIZE: usize = 32 * 1024 * 1024;
