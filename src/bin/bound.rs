@@ -57,6 +57,8 @@ fn run_program(program: &Program, args: &CliArgs) {
     for constraint in ctx.constraints() {
         println!("  {constraint}");
     }
+    println!("Python:");
+    println!("{}", ctx.output_python(&result.bound));
     println!("SMT:");
     println!("{}", ctx.output_smt());
     let time_constraint_gen = start.elapsed();

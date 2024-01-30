@@ -549,9 +549,11 @@ impl BoundCtx {
                     bound: self.new_bound(shape, &finite_supports),
                     var_supports: invariant_supports,
                 };
+                println!("Invariant: {}", invariant);
                 self.assert_le(&loop_entry.bound, &invariant.bound);
                 let idx = self.fresh_sym_var_idx();
                 let c = SymExpr::var(idx);
+                println!("Invariant-c: {c}");
                 self.nonlinear_param_vars.push(idx);
                 self.add_constraint(c.clone().must_ge(SymExpr::zero()));
                 self.add_constraint(c.clone().must_le(SymExpr::one()));
@@ -587,6 +589,82 @@ impl BoundCtx {
             var_supports: vec![SupportSet::zero(); self.program_var_count],
         };
         self.bound_statements(init, &program.stmts)
+    }
+
+    pub fn output_python(&self, bound: &GeometricBound) -> String {
+        use std::fmt::Write;
+        let mut out = String::new();
+        writeln!(out, "import numpy as np").unwrap();
+        writeln!(out, "from scipy.optimize import *").unwrap();
+        writeln!(out).unwrap();
+        writeln!(out, "nvars = {}", self.sym_var_count).unwrap();
+        writeln!(out, "bounds = Bounds(").unwrap();
+        write!(out, "  [").unwrap();
+        for i in 0..self.sym_var_count {
+            if self.nonlinear_param_vars.contains(&i) {
+                write!(out, "0, ").unwrap();
+            } else {
+                write!(out, "-np.inf, ").unwrap();
+            }
+        }
+        writeln!(out, "],").unwrap();
+        write!(out, "  [").unwrap();
+        for i in 0..self.sym_var_count {
+            if self.nonlinear_param_vars.contains(&i) {
+                write!(out, "1, ").unwrap();
+            } else {
+                write!(out, "np.inf, ").unwrap();
+            }
+        }
+        writeln!(out, "])").unwrap();
+        writeln!(out).unwrap();
+        writeln!(out, "def constraint_fun(x):").unwrap();
+        writeln!(out, "  return [").unwrap();
+        for c in &self.constraints {
+            match c {
+                SymConstraint::Eq(_, _) => continue,
+                SymConstraint::Lt(lhs, rhs) | SymConstraint::Le(lhs, rhs) => {
+                    writeln!(out, "    ({}) - ({}),", rhs.to_python(), lhs.to_python()).unwrap();
+                }
+                SymConstraint::Or(_) => continue,
+            }
+        }
+        writeln!(out, "  ]").unwrap();
+        writeln!(out, "constraints = NonlinearConstraint(constraint_fun, 0, np.inf, jac='2-point', hess=BFGS())").unwrap();
+        writeln!(out).unwrap();
+        writeln!(out, "def objective(x):").unwrap();
+        let numer = bound
+            .polynomial
+            .coeffs
+            .iter()
+            .fold(SymExpr::zero(), |acc, c| acc + c.clone());
+        write!(out, "  return ({}) / (", numer.to_python()).unwrap();
+        for e in &bound.geo_params {
+            write!(out, "(1 - {}) * ", e.to_python()).unwrap();
+        }
+        writeln!(out, "1)").unwrap();
+        writeln!(out, "x0 = np.full((nvars,), 0.9)").unwrap();
+        out
+    }
+
+    pub fn output_python_z3(&self) -> String {
+        use std::fmt::Write;
+        let mut out = String::new();
+        writeln!(out, "import z3").unwrap();
+        writeln!(out, "z3.set_option(precision=5)").unwrap();
+        writeln!(out).unwrap();
+        for i in 0..self.sym_var_count {
+            writeln!(out, "x{i} = Real('x{i}')").unwrap();
+        }
+        writeln!(out, "s = Solver()").unwrap();
+        for constraint in &self.constraints {
+            writeln!(out, "s.add({})", constraint.to_python_z3()).unwrap();
+        }
+        for constraint in &self.soft_constraints {
+            writeln!(out, "s.add({})", constraint.to_python_z3()).unwrap();
+        }
+        writeln!(out).unwrap();
+        out
     }
 
     pub fn output_smt(&self) -> String {
@@ -1141,6 +1219,26 @@ impl SymExpr {
         }
     }
 
+    fn to_python(&self) -> String {
+        match self {
+            SymExpr::Constant(c) => c.to_string(),
+            SymExpr::Variable(v) => format!("x[{v}]"),
+            SymExpr::Add(lhs, rhs) => format!("({} + {})", lhs.to_python(), rhs.to_python()),
+            SymExpr::Mul(lhs, rhs) => format!("({} * {})", lhs.to_python(), rhs.to_python()),
+            SymExpr::Pow(lhs, rhs) => format!("({} ** {})", lhs.to_python(), rhs),
+        }
+    }
+
+    fn to_python_z3(&self) -> String {
+        match self {
+            SymExpr::Constant(c) => c.to_string(),
+            SymExpr::Variable(v) => format!("x{v}"),
+            SymExpr::Add(lhs, rhs) => format!("({} + {})", lhs.to_python_z3(), rhs.to_python_z3()),
+            SymExpr::Mul(lhs, rhs) => format!("({} * {})", lhs.to_python_z3(), rhs.to_python_z3()),
+            SymExpr::Pow(lhs, rhs) => format!("({} ^ {})", lhs.to_python_z3(), rhs),
+        }
+    }
+
     fn eval(&self, values: &[f64]) -> f64 {
         match self {
             SymExpr::Constant(c) => *c,
@@ -1312,6 +1410,33 @@ impl SymConstraint {
             SymConstraint::Or(constraints) => {
                 let disjuncts = constraints.iter().map(|c| c.to_z3(ctx)).collect::<Vec<_>>();
                 z3::ast::Bool::or(ctx, &disjuncts.iter().collect::<Vec<_>>())
+            }
+        }
+    }
+
+    fn to_python_z3(&self) -> String {
+        match self {
+            SymConstraint::Eq(lhs, rhs) => {
+                format!("{} == {}", lhs.to_python_z3(), rhs.to_python_z3())
+            }
+            SymConstraint::Lt(lhs, rhs) => {
+                format!("{} < {}", lhs.to_python_z3(), rhs.to_python_z3())
+            }
+            SymConstraint::Le(lhs, rhs) => {
+                format!("{} <= {}", lhs.to_python_z3(), rhs.to_python_z3())
+            }
+            SymConstraint::Or(cs) => {
+                let mut res = "Or(".to_owned();
+                let mut first = true;
+                for c in cs {
+                    if first {
+                        first = false;
+                    } else {
+                        res += ", ";
+                    }
+                    res += &c.to_python_z3();
+                }
+                res + ")"
             }
         }
     }
