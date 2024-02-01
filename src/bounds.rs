@@ -862,6 +862,7 @@ impl BoundCtx {
         &self,
         bound: &GeometricBound,
         timeout: Duration,
+        optimize: bool,
     ) -> Result<GeometricBound, SolverError> {
         fn z3_real_to_f64(real: &z3::ast::Real) -> Option<f64> {
             if let Some((n, d)) = real.as_real() {
@@ -905,31 +906,58 @@ impl BoundCtx {
             z3::SatResult::Unsat => return Err(SolverError::Infeasible),
             z3::SatResult::Sat => {}
         }
-        let model = solver
-            .get_model()
-            .unwrap_or_else(|| panic!("SMT solver's model is not available"));
-        for var in 0..self.sym_var_count() {
-            let val = model
-                .eval(&z3::ast::Real::new_const(&ctx, var as u32), false)
-                .unwrap();
-            let val =
-                z3_real_to_f64(&val).unwrap_or_else(|| panic!("{val} cannot be converted to f64"));
-            println!("{var} -> {val}", var = SymExpr::var(var));
-        }
-        let mut resolved_bound = bound.clone();
-        for coeff in &mut resolved_bound.polynomial.coeffs {
-            let val = model.eval(&coeff.to_z3(&ctx), false).unwrap();
-            let val =
-                z3_real_to_f64(&val).unwrap_or_else(|| panic!("{val} cannot be converted to f64"));
-            *coeff = SymExpr::Constant(val);
-        }
-        for geo_param in &mut resolved_bound.geo_params {
-            let val = model.eval(&geo_param.to_z3(&ctx), false).unwrap();
-            let val =
-                z3_real_to_f64(&val).unwrap_or_else(|| panic!("{val} cannot be converted to f64"));
-            *geo_param = SymExpr::Constant(val);
-        }
-        println!("SMT solution:\n {resolved_bound}");
+        let objective = bound.total_mass();
+        let mut obj_lo = 0.0;
+        let mut obj_hi;
+        let model = loop {
+            let model = solver
+                .get_model()
+                .unwrap_or_else(|| panic!("SMT solver's model is not available"));
+            for var in 0..self.sym_var_count() {
+                let val = model
+                    .eval(&z3::ast::Real::new_const(&ctx, var as u32), false)
+                    .unwrap();
+                let val = z3_real_to_f64(&val)
+                    .unwrap_or_else(|| panic!("{val} cannot be converted to f64"));
+                println!("{var} -> {val}", var = SymExpr::var(var));
+            }
+            let mut resolved_bound = bound.clone();
+            for coeff in &mut resolved_bound.polynomial.coeffs {
+                let val = model.eval(&coeff.to_z3(&ctx), false).unwrap();
+                let val = z3_real_to_f64(&val)
+                    .unwrap_or_else(|| panic!("{val} cannot be converted to f64"));
+                *coeff = SymExpr::Constant(val);
+            }
+            for geo_param in &mut resolved_bound.geo_params {
+                let val = model.eval(&geo_param.to_z3(&ctx), false).unwrap();
+                let val = z3_real_to_f64(&val)
+                    .unwrap_or_else(|| panic!("{val} cannot be converted to f64"));
+                *geo_param = SymExpr::Constant(val);
+            }
+            println!("SMT solution:\n {resolved_bound}");
+            let obj_val =
+                z3_real_to_f64(&model.eval(&objective.to_z3(&ctx), false).unwrap()).unwrap();
+            println!("Total mass (objective): {obj_val}");
+            obj_hi = obj_val;
+            println!("Objective bound: [{obj_lo}, {obj_hi}]");
+            if !optimize || obj_hi - obj_lo < 0.1 * obj_hi {
+                break model;
+            }
+            solver.push();
+            let mid = (obj_lo + obj_hi) / 2.0;
+            solver.assert(&objective.to_z3(&ctx).le(&SymExpr::from(mid).to_z3(&ctx)));
+            loop {
+                match solver.check() {
+                    z3::SatResult::Sat => {
+                        break;
+                    }
+                    z3::SatResult::Unknown | z3::SatResult::Unsat => {
+                        solver.pop(1);
+                        obj_lo = mid;
+                    }
+                }
+            }
+        };
         println!("Optimizing polynomial coefficients...");
         let nonlinear_var_assignment = self
             .nonlinear_param_vars
@@ -1050,6 +1078,17 @@ impl GeometricBound {
                     * inputs[v].clone();
         }
         numerator / denominator
+    }
+
+    fn total_mass(&self) -> SymExpr {
+        let numer = self
+            .polynomial
+            .eval_expr(&vec![1.0; self.polynomial.coeffs.ndim()]);
+        let mut denom = SymExpr::one();
+        for geo_param in &self.geo_params {
+            denom *= SymExpr::one() - geo_param.clone();
+        }
+        numer / denom
     }
 }
 
@@ -1350,6 +1389,12 @@ impl std::ops::Mul for SymExpr {
     }
 }
 
+impl std::ops::MulAssign for SymExpr {
+    fn mul_assign(&mut self, rhs: Self) {
+        *self = self.clone() * rhs;
+    }
+}
+
 impl std::ops::Div for SymExpr {
     type Output = Self;
 
@@ -1622,6 +1667,23 @@ impl SymPolynomial {
             taylor = taylor.subst_var(Var(v), input);
         }
         taylor
+    }
+
+    fn eval_expr_impl(array: &ArrayViewD<SymExpr>, points: &[f64]) -> SymExpr {
+        let nvars = array.ndim();
+        if nvars == 0 {
+            return array.first().unwrap().clone();
+        }
+        let mut res = SymExpr::zero();
+        for c in array.axis_iter(Axis(nvars - 1)) {
+            res *= SymExpr::from(points[nvars - 1]);
+            res += SymPolynomial::eval_expr_impl(&c, points);
+        }
+        res
+    }
+
+    pub fn eval_expr(&self, points: &[f64]) -> SymExpr {
+        SymPolynomial::eval_expr_impl(&self.coeffs.view(), points)
     }
 }
 

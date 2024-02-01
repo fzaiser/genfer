@@ -31,6 +31,9 @@ struct CliArgs {
     /// Timeout for the SMT solver in ms
     #[arg(long, default_value = "30000")]
     timeout: u64,
+    /// Whether to optimize the bound once one is found
+    #[arg(long)]
+    no_optimize: bool,
 }
 
 pub fn main() {
@@ -58,14 +61,18 @@ fn run_program(program: &Program, args: &CliArgs) {
         println!("  {constraint}");
     }
     println!("Python:");
-    println!("{}", ctx.output_python(&result.bound));
+    println!("{}", ctx.output_python_z3());
     println!("SMT:");
     println!("{}", ctx.output_smt());
     let time_constraint_gen = start.elapsed();
     println!("Constraint generation time: {:?}", time_constraint_gen);
     println!("Solving constraints...");
     let start_smt = Instant::now();
-    let solver_result = ctx.solve_z3(&result.bound, Duration::from_millis(args.timeout));
+    let solver_result = ctx.solve_z3(
+        &result.bound,
+        Duration::from_millis(args.timeout),
+        !args.no_optimize,
+    );
     let solver_time = start_smt.elapsed();
     println!("Solver time: {:?}", solver_time);
     match solver_result {
