@@ -34,19 +34,26 @@ struct CliArgs {
     /// Whether to optimize the bound once one is found
     #[arg(long)]
     no_optimize: bool,
+    /// Optionally output an SMT-LIB file at this path
+    #[arg(long)]
+    smt: Option<PathBuf>,
+    /// Optionally output a QEPCAD file (to feed to qepcad via stdin) at this path
+    #[arg(long)]
+    qepcad: Option<PathBuf>,
 }
 
-pub fn main() {
+pub fn main() -> std::io::Result<()> {
     let args = CliArgs::parse();
-    let contents = std::fs::read_to_string(&args.file_name).unwrap();
+    let contents = std::fs::read_to_string(&args.file_name)?;
     let program = parser::parse_program(&contents);
     if args.print_program {
         println!("Parsed program:\n{program}\n");
     }
-    run_program(&program, &args);
+    run_program(&program, &args)?;
+    Ok(())
 }
 
-fn run_program(program: &Program, args: &CliArgs) {
+fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
     let start = Instant::now();
     let mut ctx = BoundCtx::new();
     let supports = BoundCtx::var_supports_program(&program);
@@ -60,10 +67,18 @@ fn run_program(program: &Program, args: &CliArgs) {
     for constraint in ctx.constraints() {
         println!("  {constraint}");
     }
-    println!("Python:");
-    println!("{}", ctx.output_python_z3());
-    println!("SMT:");
-    println!("{}", ctx.output_smt());
+    // println!("Python:");
+    // println!("{}", ctx.output_python_z3());
+    if let Some(path) = &args.smt {
+        println!("Writing SMT file to {path:?}...");
+        let mut out = std::fs::File::create(path)?;
+        ctx.output_smt(&mut out)?;
+    }
+    if let Some(path) = &args.qepcad {
+        println!("Writing QEPCAD commands to {path:?}...");
+        let mut out = std::fs::File::create(path)?;
+        ctx.output_qepcad(&mut out)?;
+    }
     let time_constraint_gen = start.elapsed();
     println!("Constraint generation time: {:?}", time_constraint_gen);
     println!("Solving constraints...");
@@ -117,4 +132,5 @@ fn run_program(program: &Program, args: &CliArgs) {
         },
     }
     println!("Total time: {:?}", start.elapsed());
+    Ok(())
 }

@@ -233,12 +233,12 @@ impl BoundCtx {
         init: Vec<SupportSet>,
     ) -> (Option<usize>, Vec<SupportSet>, Vec<SupportSet>) {
         let (mut loop_entry, mut loop_exit) = Self::var_supports_event(init, cond);
-        // TODO: upper bound of the loop should be the highest constant occurring in the loop or something like that
+        // TODO: upper bound of this for loop should be the highest constant occurring in the loop or something like that
         for i in 0..100 {
             let (new_loop_entry, new_loop_exit) =
                 Self::one_iteration(loop_entry.clone(), loop_exit.clone(), body, cond);
             if loop_entry == new_loop_entry && loop_exit == new_loop_exit {
-                return (Some(i + 1), loop_entry, loop_exit);
+                return (Some(i), loop_entry, loop_exit);
             }
             loop_entry = new_loop_entry;
             loop_exit = new_loop_exit;
@@ -664,26 +664,73 @@ impl BoundCtx {
         out
     }
 
-    pub fn output_smt(&self) -> String {
-        use std::fmt::Write;
-        let mut out = String::new();
-        writeln!(out, "(set-logic QF_NRA)").unwrap();
-        writeln!(out, "(set-option :pp.decimal true)").unwrap();
-        writeln!(out).unwrap();
+    pub fn output_smt<W: std::io::Write>(&self, out: &mut W) -> std::io::Result<()> {
+        writeln!(out, "(set-logic QF_NRA)")?;
+        writeln!(out, "(set-option :pp.decimal true)")?;
+        writeln!(out)?;
         for i in 0..self.sym_var_count() {
-            writeln!(out, "(declare-const {} Real)", SymExpr::var(i)).unwrap();
+            writeln!(out, "(declare-const {} Real)", SymExpr::var(i))?;
         }
-        writeln!(out).unwrap();
+        writeln!(out)?;
         for constraint in &self.constraints {
-            writeln!(out, "(assert {})", constraint).unwrap();
+            writeln!(out, "(assert {})", constraint)?;
         }
         for constraint in &self.soft_constraints {
-            writeln!(out, "(assert-soft {})", constraint).unwrap();
+            writeln!(out, "(assert-soft {})", constraint)?;
         }
-        writeln!(out).unwrap();
-        writeln!(out, "(check-sat)").unwrap();
-        writeln!(out, "(get-model)").unwrap();
-        out
+        writeln!(out)?;
+        writeln!(out, "(check-sat)")?;
+        writeln!(out, "(get-model)")?;
+        Ok(())
+    }
+
+    pub fn output_qepcad<W: std::io::Write>(&self, out: &mut W) -> std::io::Result<()> {
+        // Name:
+        writeln!(out, "[Geometric bounds constraints]")?;
+
+        // List of variables:
+        write!(out, "(")?;
+        let mut first = true;
+        for i in 0..self.sym_var_count {
+            if first {
+                first = false;
+            } else {
+                write!(out, ", ")?;
+            }
+            write!(out, "{}", crate::ppl::Var(i))?;
+        }
+        writeln!(out, ")")?;
+
+        // Number of free variables:
+        writeln!(out, "2")?; // two variables for plotting
+
+        // Formula:
+        for i in 2..self.sym_var_count {
+            writeln!(out, "(E {})", crate::ppl::Var(i))?;
+        }
+        writeln!(out, "[")?;
+        let mut first = true;
+        for c in self.constraints() {
+            if first {
+                first = false;
+            } else {
+                writeln!(out, r" /\")?;
+            }
+            write!(out, "  {}", c.to_qepcad())?;
+        }
+        for c in self.soft_constraints() {
+            writeln!(out, r" /\")?;
+            write!(out, "  {}", c.to_qepcad())?;
+        }
+        writeln!(out, "\n].")?;
+
+        // Commands for various solving stages:
+        writeln!(out, "go")?;
+        writeln!(out, "go")?;
+        writeln!(out, "go")?;
+        writeln!(out, "p-2d-cad 0 1 0 1 0.0001 plot.eps")?; // 2D plot
+        writeln!(out, "go")?;
+        Ok(())
     }
 
     fn new_polynomial(&mut self, shape: Vec<usize>) -> SymPolynomial {

@@ -112,20 +112,8 @@ impl SymExpr {
     pub fn to_z3<'a>(&self, ctx: &'a z3::Context) -> z3::ast::Real<'a> {
         match self {
             SymExpr::Constant(f) => {
-                if !f.is_finite() {
-                    unreachable!("Non-finite f64 in constraint: {f}");
-                }
-                let bits: u64 = f.to_bits();
-                let sign: i64 = if bits >> 63 == 0 { 1 } else { -1 };
-                let mut exponent = ((bits >> 52) & 0x7ff) as i64;
-                let mantissa = if exponent == 0 {
-                    (bits & 0x000f_ffff_ffff_ffff) << 1
-                } else {
-                    (bits & 0x000f_ffff_ffff_ffff) | 0x0010_0000_0000_0000
-                } as i64;
-                // Exponent bias + mantissa shift
-                exponent -= 1023 + 52;
-                let m = z3::ast::Int::from_i64(ctx, sign * mantissa).to_real();
+                let (mantissa, exponent) = f64_to_mantissa_exponent(*f);
+                let m = z3::ast::Int::from_i64(ctx, mantissa).to_real();
                 let two = z3::ast::Int::from_i64(ctx, 2).to_real();
                 let e = z3::ast::Int::from_i64(ctx, exponent).to_real();
                 m * two.power(&e)
@@ -156,6 +144,30 @@ impl SymExpr {
             SymExpr::Add(lhs, rhs) => format!("({} + {})", lhs.to_python_z3(), rhs.to_python_z3()),
             SymExpr::Mul(lhs, rhs) => format!("({} * {})", lhs.to_python_z3(), rhs.to_python_z3()),
             SymExpr::Pow(lhs, rhs) => format!("({} ^ {})", lhs.to_python_z3(), rhs),
+        }
+    }
+
+    pub fn to_qepcad(&self) -> String {
+        match self {
+            SymExpr::Constant(c) => {
+                let (mantissa, exponent) = f64_to_mantissa_exponent(*c);
+                let n = *c as i128;
+                if n as f64 == *c {
+                    if n < 0 {
+                        format!("({n})")
+                    } else {
+                        n.to_string()
+                    }
+                } else if exponent <= 0 && exponent >= -127 {
+                    format!("({mantissa}/{})", (1i128 << (-exponent as i128)))
+                } else {
+                    todo!()
+                }
+            }
+            SymExpr::Variable(v) => format!("{}", crate::ppl::Var(*v)),
+            SymExpr::Add(lhs, rhs) => format!("({} + {})", lhs.to_qepcad(), rhs.to_qepcad()),
+            SymExpr::Mul(lhs, rhs) => format!("({} {})", lhs.to_qepcad(), rhs.to_qepcad()),
+            SymExpr::Pow(lhs, rhs) => format!("({} ^ {})", lhs.to_qepcad(), rhs),
         }
     }
 
@@ -340,6 +352,33 @@ impl SymConstraint {
         }
     }
 
+    pub fn to_qepcad(&self) -> String {
+        match self {
+            SymConstraint::Eq(lhs, rhs) => {
+                format!("{} = {}", lhs.to_qepcad(), rhs.to_qepcad())
+            }
+            SymConstraint::Lt(lhs, rhs) => {
+                format!("{} < {}", lhs.to_qepcad(), rhs.to_qepcad())
+            }
+            SymConstraint::Le(lhs, rhs) => {
+                format!("{} <= {}", lhs.to_qepcad(), rhs.to_qepcad())
+            }
+            SymConstraint::Or(cs) => {
+                let mut res = "[".to_owned();
+                let mut first = true;
+                for c in cs {
+                    if first {
+                        first = false;
+                    } else {
+                        res += r" \/ ";
+                    }
+                    res += &c.to_qepcad();
+                }
+                res + "]"
+            }
+        }
+    }
+
     pub fn to_python_z3(&self) -> String {
         match self {
             SymConstraint::Eq(lhs, rhs) => {
@@ -431,4 +470,27 @@ impl std::fmt::Display for SymConstraint {
             }
         }
     }
+}
+
+fn f64_to_mantissa_exponent(f: f64) -> (i64, i64) {
+    if !f.is_finite() {
+        unreachable!("Non-finite f64 in constraint: {f}");
+    }
+    let i = f as i64;
+    if i as f64 == f {
+        return (i, 0);
+    }
+    let bits: u64 = f.to_bits();
+    let sign: i64 = if bits >> 63 == 0 { 1 } else { -1 };
+    let mut exponent = ((bits >> 52) & 0x7ff) as i64;
+    let mantissa = if exponent == 0 {
+        (bits & 0x000f_ffff_ffff_ffff) << 1
+    } else {
+        (bits & 0x000f_ffff_ffff_ffff) | 0x0010_0000_0000_0000
+    } as i64;
+    let trailing_zeros: i64 = mantissa.trailing_zeros().min(63).into();
+    // Exponent bias + mantissa shift
+    exponent -= 1023 + 52 - trailing_zeros;
+    let mantissa = sign * (mantissa >> trailing_zeros);
+    (mantissa, exponent)
 }
