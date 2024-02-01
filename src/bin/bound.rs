@@ -8,7 +8,7 @@
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use genfer::bounds::{BoundCtx, SolverError};
+use genfer::bounds::ctx::{BoundCtx, SolverError};
 use genfer::number::F64;
 use genfer::parser;
 use genfer::ppl::{Program, Var};
