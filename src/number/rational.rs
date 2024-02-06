@@ -73,7 +73,7 @@ impl Display for Rational {
         match self {
             Self::Frac(r) => write!(f, "{}", *r),
             Self::Special(s) => match s {
-                Special::NaR => write!(f, "NaN"),
+                Special::NaR => write!(f, "(not a rational)"),
                 Special::PosInf => write!(f, "∞"),
                 Special::NegInf => write!(f, "-∞"),
             },

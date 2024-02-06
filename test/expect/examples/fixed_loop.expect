@@ -3,7 +3,7 @@ Support is a subset of: {0, ..., 5}
 Computing moments...
 Total measure:             Z = 1
 Expected value:            E = 5/2
-Standard deviation:        σ = NaN
+Standard deviation:        σ = (not a rational)
 Variance:                  V = 5/4
 Skewness (3rd std moment): S = 0
 Kurtosis (4th std moment): K = 13/5
