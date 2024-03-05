@@ -1,0 +1,6 @@
+Y := 3;
+
+while Y > 2 {
+    Y ~ UniformDisc(0, 4);
+}
+return Y;

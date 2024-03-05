@@ -1,0 +1,23 @@
+# Adapted from Program 1.6 in:
+# Klinkenberg, Lutz et al.: "Generating Functions for Probabilistic Programs" (LOPSTR 2020)
+
+X := 1;
+C := 0;
+while X != 0 {
+    C += 1;
+    if 0 ~ Bernoulli(1/2) {
+        X -= 1;
+    } else {
+        X += 1;
+    }
+}
+return C
+
+#= Original code:
+
+while ( x > 0 ) {
+    {x := x + 1} [ 1/2 ] {x := x - 1};
+    c := c + 1
+}
+
+=#

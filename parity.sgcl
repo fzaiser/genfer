@@ -1,0 +1,12 @@
+X ~ Geometric(0.5);
+E := 0;
+
+while X > 0 unroll 3 {
+    X -= 1;
+    if E = 0 {
+        E := 1;
+    } else {
+        E := 0;
+    }
+}
+return E;

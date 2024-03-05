@@ -10,6 +10,7 @@ else:
 os.environ["GRB_LICENSE_FILE"] = "/home/fabian/gurobi.lic"
 
 model = gp.Model("PolyIneqConstraints")
+model.setParam('NonConvex', 2)
 
 a1 = model.addVar(lb=0.0, ub=1.0, name="a1")
 a2 = model.addVar(lb=0.0, ub=1.0, name="a2")
@@ -28,9 +29,9 @@ model.addConstr(_1ma2mobj == (1.0 - a2) * obj)
 
 model.addConstr(1.0 <= 2 * a2c)
 model.addConstr(h1 * a1 <= 2 * a2c * h0ph1ma1)
-#model.addConstr(h1 == _1mcm1ma1 * _1ma2mobj)
+model.addConstr(h1 == _1mcm1ma1 * _1ma2mobj)
 
-#model.setObjective(1.0 * obj, gp.GRB.MINIMIZE)
+model.setObjective(1.0 * obj, gp.GRB.MINIMIZE)
 
 print(f"Is QCP? {model.isQcp}")
 print(f"Is MIP? {model.isMIP}")

@@ -178,12 +178,21 @@ impl BoundCtx {
                         res[var.id()] += (0..2).into();
                         res
                     }
-                    Distribution::Geometric(_) if !add_previous_value => {
+                    Distribution::Geometric(_) => {
                         res[var.id()] += SupportSet::naturals();
                         res
                     }
                     Distribution::Uniform { start, end } => {
                         res[var.id()] += (start.0..end.0).into();
+                        res
+                    }
+                    Distribution::Binomial(n, _) => {
+                        res[var.id()] += (0..=n.0).into();
+                        res
+                    }
+                    Distribution::BinomialVarTrials(w, _) => {
+                        let w_support = res[w.id()].clone();
+                        res[var.id()] += w_support;
                         res
                     }
                     _ => todo!(),
@@ -522,6 +531,7 @@ impl BoundCtx {
                     pre_loop = self.bound_statements(then_bound, body);
                     rest = self.add_bound_results(rest, else_bound);
                 }
+                let min_degree = 1;
                 let shape = invariant_supports
                     .iter()
                     .map(|s| match s {
@@ -530,7 +540,7 @@ impl BoundCtx {
                             if let Some(end) = end {
                                 *end as usize + 1
                             } else {
-                                1
+                                min_degree
                             }
                         }
                         _ => todo!(),

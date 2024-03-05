@@ -359,9 +359,9 @@ impl std::ops::Add for SupportSet {
                     end: end2,
                 },
             ) => Self::Range {
-                start: start + start2,
+                start: start.saturating_add(start2),
                 end: match (end, end2) {
-                    (Some(x), Some(y)) => Some(x + y),
+                    (Some(x), Some(y)) => x.checked_add(y),
                     _ => None,
                 },
             },

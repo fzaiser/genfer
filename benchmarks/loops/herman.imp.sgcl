@@ -72,7 +72,7 @@ while sum = 1 {
     sum := process1;
     sum += process2;
     sum += process3;
-    count := count + 1;
+    count += 1;
 }
 
 return count;
