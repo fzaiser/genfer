@@ -138,6 +138,13 @@ impl Translate for WebPpl<'_> {
                 }
                 writeln!(self.f, ";")
             }
+            Decrement { var, offset } => {
+                let var = WebPplVar(*var);
+                writeln!(
+                    self.f,
+                    "{var} = ({var} < {offset}) ? 0 : ({var} - {offset});"
+                )
+            }
             IfThenElse { cond, then, els } => {
                 if let Some(event) = stmt.recognize_observe() {
                     if let Event::DataFromDist(data, dist) = event {
@@ -568,6 +575,9 @@ impl<'a> Translate for Anglican<'a> {
                 }
                 write!(self.f, " {offset})")?;
                 Ok(())
+            }
+            Decrement { var, offset } => {
+                write!(self.f, "{var} (if (< {var} {offset}) 0 (- {var} {offset}))")
             }
             IfThenElse { els, .. } => {
                 if let Some(event) = stmt.recognize_observe() {

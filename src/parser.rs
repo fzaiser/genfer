@@ -495,6 +495,12 @@ fn assign<'a>(vars: &mut Vec<&'a str>, input: &'a str) -> IResult<&'a str, State
         let (input, lhs) = identifier(input)?;
         let (input, stmt) = if input.starts_with('~') || input.starts_with("+~") {
             sample(input, vars, lhs)?
+        } else if input.starts_with("-=") {
+            let (input, _) = tag("-=")(input)?;
+            let (input, offset) = natural(input)?;
+            let lhs = find_or_create_var(vars, lhs);
+            let stmt = Statement::Decrement { var: lhs, offset };
+            (input, stmt)
         } else {
             affine_transform(input, vars, lhs)?
         };

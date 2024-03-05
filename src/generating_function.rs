@@ -123,6 +123,14 @@ impl<T: Number> GenFun<T> {
         GeneratingFunctionKind::TaylorCoeff(self.clone(), v, order).into_gf()
     }
 
+    /// Viewing `self` as an infinite power series, shift the coefficients of `v` down by `order`
+    ///
+    /// In other words: Let `p` be the Taylor polynomial of `self` at `v = 0` of order `order`.
+    /// Then the result is: `(self - p) / v^order + p(1)`.
+    pub(crate) fn shift_down_taylor_at_zero(&self, v: Var, order: usize) -> GenFun<T> {
+        GeneratingFunctionKind::ShiftTaylorAtZero(self.clone(), v, order).into_gf()
+    }
+
     pub fn substitute_var(&self, v: Var, val: Self) -> Self {
         GeneratingFunctionKind::Subst(self.clone(), v, val).into_gf()
     }
@@ -306,6 +314,7 @@ enum GeneratingFunctionKind<T> {
     TaylorPolynomial(GenFun<T>, Var, Vec<usize>),
     TaylorCoeffAtZero(GenFun<T>, Var, usize),
     TaylorCoeff(GenFun<T>, Var, usize),
+    ShiftTaylorAtZero(GenFun<T>, Var, usize),
 }
 
 impl<T> GeneratingFunctionKind<T> {
@@ -392,6 +401,11 @@ impl<T> GeneratingFunctionKind<T> {
                 g.fmt_prec(0, f)?;
                 write!(f, " of {v}^{order})")?;
             }
+            GeneratingFunctionKind::ShiftTaylorAtZero(g, v, order) => {
+                write!(f, "shift(")?;
+                g.fmt_prec(0, f)?;
+                write!(f, " of {v} by {order})")?;
+            }
         }
         if cur_prec < parent_prec {
             write!(f, ")")?;
@@ -417,7 +431,8 @@ impl<T> GeneratingFunctionKind<T> {
             Self::TaylorCoeffAtZero(g, v, _) => g.used_vars_with(cache).remove(*v),
             Self::Derivative(g, _, _)
             | Self::TaylorPolynomial(g, _, _)
-            | Self::TaylorCoeff(g, _, _) => g.used_vars_with(cache),
+            | Self::TaylorCoeff(g, _, _)
+            | Self::ShiftTaylorAtZero(g, _, _) => g.used_vars_with(cache),
         }
     }
 
@@ -433,7 +448,8 @@ impl<T> GeneratingFunctionKind<T> {
             | Derivative(..)
             | TaylorPolynomial(..)
             | TaylorCoeffAtZero(..)
-            | TaylorCoeff(..) => 10,
+            | TaylorCoeff(..)
+            | ShiftTaylorAtZero(..) => 10,
             Add(..) | Neg(_) | Polynomial(..) => 0,
             Mul(..) | Div(..) => 1,
             Pow(..) => 2,
@@ -505,6 +521,9 @@ impl<T: Number> GeneratingFunctionKind<T> {
             Self::TaylorCoeff(g, v, order) => g
                 .simplify_with(cache)
                 .map(|p| p.taylor_expansion_of_coeff(*v, *order)),
+            Self::ShiftTaylorAtZero(g, v, order) => {
+                g.simplify_with(cache).map(|p| p.shift_down(*v, *order))
+            }
         }
     }
 
@@ -603,6 +622,21 @@ impl<T: Number> GeneratingFunctionKind<T> {
                 let taylor = g.eval_with(inputs, degree_p1 + *order, cache);
                 let result = taylor.taylor_expansion_of_coeff(*v, *order);
                 result.truncate_to_degree_p1(degree_p1)
+            }
+            Self::ShiftTaylorAtZero(g, v, order) => {
+                if inputs[v.id()].is_zero() {
+                    let taylor = g.eval_with(&inputs, degree_p1 + *order, cache);
+                    taylor
+                        .shift_down(*v, *order)
+                        .truncate_to_degree_p1(degree_p1)
+                } else {
+                    let first_taylor_terms = g.taylor_polynomial_at_zero(*v, (0..*order).collect());
+                    let additional_mass_on_zero =
+                        first_taylor_terms.substitute_var(*v, GenFun::one());
+                    let h = (g.clone() - first_taylor_terms) / GenFun::var(*v).pow(*order as u32)
+                        + additional_mass_on_zero;
+                    h.eval_with(inputs, degree_p1, cache)
+                }
             }
         }
     }
@@ -765,6 +799,7 @@ impl<T: Number> GeneratingFunctionKind<T> {
             Self::TaylorCoeff(g, v, order) => {
                 g.to_computation().taylor_coeffs(*v, *order).coeff(*order)
             }
+            Self::ShiftTaylorAtZero(..) => todo!(),
         }
     }
 }

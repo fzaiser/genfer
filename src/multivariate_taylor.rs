@@ -504,6 +504,31 @@ impl<T: Number> TaylorPoly<T> {
         Self::new(result, degrees_p1)
     }
 
+    /// Shift the coefficients of `v` down by `n`, accumulating the ones that would be pushed out at zero.
+    ///
+    /// For example shifting `2 + 3 * v + v^2` down by 1 yields `5 + v`.
+    pub fn shift_down(&self, Var(v): Var, n: usize) -> Self {
+        self.check_invariants();
+        assert!(v < self.num_vars() && n < self.len_of(Var(v)));
+        if v >= self.coeffs.ndim() {
+            return self.clone();
+        }
+        let mut degrees_p1 = self.degrees_p1.clone();
+        degrees_p1[v] = degrees_p1[v].saturating_sub(n);
+        let result = if self.coeffs.len_of(Axis(v)) <= n + 1 {
+            let result = self.coeffs.sum_axis(Axis(v)).to_owned();
+            result.insert_axis(Axis(v))
+        } else {
+            let mut result = self.coeffs.slice_axis(Axis(v), Slice::from(n..)).to_owned();
+            *&mut result.index_axis_mut(Axis(v), 0) += &self
+                .coeffs
+                .slice_axis(Axis(v), Slice::from(..n))
+                .sum_axis(Axis(v));
+            result
+        };
+        Self::new(result, degrees_p1)
+    }
+
     /// Substitutes a Taylor expansion for a variable of this Taylor expansion.
     /// The substitution must have the same order as this Taylor expansion.
     pub fn subst_var(&self, Var(v): Var, subst: &Self) -> Self {

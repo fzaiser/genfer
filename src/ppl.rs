@@ -796,6 +796,10 @@ pub enum Statement {
         addend: Option<(Natural, Var)>,
         offset: Natural,
     },
+    Decrement {
+        var: Var,
+        offset: Natural,
+    },
     IfThenElse {
         cond: Event,
         then: Vec<Statement>,
@@ -875,6 +879,19 @@ impl Statement {
                 } else {
                     gf * (var * GenFun::from_u32(offset.0)).exp()
                 };
+                GfTranslation { var_info, gf }
+            }
+            Decrement { var, offset } => {
+                let v = *var;
+                let gf = translation.gf;
+                let mut var_info = translation.var_info;
+                assert!(
+                    var_info[v.id()].is_discrete(),
+                    "cannot decrement continuous variables"
+                );
+                let new_support = var_info[v.id()].saturating_sub(offset.0);
+                var_info[v.id()] = new_support;
+                let gf = gf.shift_down_taylor_at_zero(v, offset.0 as usize);
                 GfTranslation { var_info, gf }
             }
             IfThenElse { cond, then, els } => {
@@ -1025,6 +1042,7 @@ impl Statement {
                 }
                 Ok(())
             }
+            Decrement { var, offset } => writeln!(f, "{var} -= {offset};"),
             IfThenElse { cond, then, els } => {
                 if let Some(event) = self.recognize_observe() {
                     return writeln!(f, "observe {event};");
@@ -1062,7 +1080,7 @@ impl Statement {
 
     pub fn uses_observe(&self) -> bool {
         match self {
-            Sample { .. } | Assign { .. } => false,
+            Sample { .. } | Assign { .. } | Decrement { .. } => false,
             IfThenElse { then, els, .. } => {
                 then.iter().any(Statement::uses_observe) || els.iter().any(Statement::uses_observe)
             }
@@ -1085,6 +1103,7 @@ impl Statement {
             } else {
                 VarRange::empty()
             }),
+            Decrement { var: v, offset: _ } => VarRange::new(*v),
             IfThenElse { cond, then, els } => cond
                 .used_vars()
                 .union(&VarRange::union_all(then.iter().map(Statement::used_vars)))
