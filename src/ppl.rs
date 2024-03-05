@@ -947,9 +947,7 @@ impl Statement {
             let rest = &given_vars[1..];
             let mut var_info = translation.var_info.clone();
             let support = var_info[v.id()].clone();
-            let range = support
-                .finite_nonempty_range()
-                .unwrap_or_else(|| panic!("Cannot normalize with respect to variable `{v}`, because its value could not be proven to be bounded."));
+            let range = support.finite_nonempty_range().unwrap_or_else(|| panic!("Cannot normalize with respect to variable `{v}`, because its value could not be proven to be bounded."));
             let mut gf = GenFun::zero();
             for i in range {
                 let summand =
