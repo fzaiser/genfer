@@ -327,7 +327,7 @@ fn print_probs<T: IntervalNumber + Into<f64>>(
         limit
     } else if total.is_zero() {
         1
-    } else if let Some(range) = var_info.finite_range() {
+    } else if let Some(range) = var_info.finite_nonempty_range() {
         *range.end() as usize + 1
     } else {
         // Markov's inequality ensures that P(X >= limit) <= 1 / 4.0^4 = 1 / 256.
@@ -372,7 +372,7 @@ fn print_probs<T: IntervalNumber + Into<f64>>(
         }
         mass_missing -= p.clone();
     }
-    if let Some(range) = var_info.finite_range() {
+    if let Some(range) = var_info.finite_nonempty_range() {
         if (*range.end() as usize) < limit {
             mass_missing = Interval::zero();
         }

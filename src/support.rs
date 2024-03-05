@@ -5,10 +5,10 @@ use num_traits::Zero;
 use crate::number::{IntervalNumber, Rational};
 
 /// Support set of a random variable (overapproximated as a range)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum SupportSet {
     Empty,
-    Range { start: u32, end: Option<u32> },
+    Range { start: u32, end: Option<u32> }, // TODO: should be ExtendedNat
     Interval { start: Rational, end: Rational },
 }
 impl SupportSet {
@@ -108,7 +108,7 @@ impl SupportSet {
         }
     }
 
-    pub fn saturating_sub(self, other: u32) -> Self {
+    pub fn saturating_sub(&self, other: u32) -> Self {
         match self {
             Self::Empty => Self::Empty,
             Self::Range { start, end } => Self::Range {
@@ -116,13 +116,13 @@ impl SupportSet {
                 end: end.map(|x| x.saturating_sub(other)),
             },
             Self::Interval { start, end } => Self::Interval {
-                start: (start - other.into()).max(&Rational::zero()),
-                end: (end - other.into()).max(&Rational::zero()),
+                start: (start.clone() - other.into()).max(&Rational::zero()),
+                end: (end.clone() - other.into()).max(&Rational::zero()),
             },
         }
     }
 
-    pub fn finite_range(&self) -> Option<std::ops::RangeInclusive<u32>> {
+    pub fn finite_nonempty_range(&self) -> Option<std::ops::RangeInclusive<u32>> {
         match self {
             Self::Empty | Self::Interval { .. } => None,
             Self::Range { start, end } => Some(*start..=(*end)?),
@@ -145,6 +145,124 @@ impl SupportSet {
 
     pub fn nonneg_reals() -> SupportSet {
         Self::interval(Rational::zero(), Rational::infinity())
+    }
+
+    pub fn join_vecs(lhs: &[Self], rhs: &[Self]) -> Vec<Self> {
+        assert_eq!(lhs.len(), rhs.len());
+        lhs.iter().zip(rhs.iter()).map(|(x, y)| x.join(y)).collect()
+    }
+
+    pub fn is_subset_of(&self, other: &SupportSet) -> bool {
+        match (self, other) {
+            (Self::Empty, _) => true,
+            (_, Self::Empty) => false,
+            (
+                Self::Range { start, end },
+                Self::Range {
+                    start: start2,
+                    end: end2,
+                },
+            ) => start >= start2 && (end2.is_none() || (end.is_some() && end <= end2)),
+            (
+                Self::Interval { start, end },
+                Self::Interval {
+                    start: start2,
+                    end: end2,
+                },
+            ) => start >= start2 && end <= end2,
+            (
+                Self::Range { start, end },
+                Self::Interval {
+                    start: start2,
+                    end: end2,
+                },
+            ) => {
+                &Rational::from(*start) >= start2
+                    && end.is_some()
+                    && &Rational::from(end.unwrap()) <= end2
+            }
+            (Self::Interval { .. }, Self::Range { .. }) => false,
+        }
+    }
+
+    pub fn vec_is_subset_of(lhs: &[Self], rhs: &[Self]) -> bool {
+        assert_eq!(lhs.len(), rhs.len());
+        lhs.iter().zip(rhs.iter()).all(|(x, y)| x.is_subset_of(y))
+    }
+
+    #[inline]
+    pub fn retain_only(&mut self, set: impl Iterator<Item = u32>) {
+        let mut set = set.collect::<Vec<_>>();
+        set.sort_unstable();
+        *self = self.retain_only_impl(&set);
+    }
+
+    fn retain_only_impl(&self, set: &[u32]) -> Self {
+        match self {
+            Self::Empty => Self::Empty,
+            Self::Range { start, end } => {
+                if set.is_empty() {
+                    return Self::Empty;
+                }
+                let mut i = 0;
+                while i < set.len() && set[i] < *start {
+                    i += 1;
+                }
+                if i == set.len() {
+                    return Self::Empty;
+                }
+                let start = set[i];
+                let mut j = set.len() - 1;
+                while j > i && set[j] > end.unwrap_or(u32::MAX) {
+                    j -= 1;
+                }
+                if set[j] < start {
+                    return Self::Empty;
+                }
+                let end = Some(set[j]);
+                Self::Range { start, end }
+            }
+            Self::Interval { .. } => self.clone(),
+        }
+    }
+
+    #[inline]
+    pub fn remove_all(&mut self, set: impl Iterator<Item = u32>) {
+        let mut set = set.collect::<Vec<_>>();
+        set.sort_unstable();
+        self.remove_all_impl(&set);
+    }
+
+    fn remove_all_impl(&mut self, set: &[u32]) {
+        match self {
+            Self::Empty => {}
+            Self::Range { start, end } => {
+                if set.is_empty() {
+                    return;
+                }
+                for v in set {
+                    if v == start {
+                        *start = v + 1;
+                    }
+                }
+                if let Some(end) = end {
+                    for v in set.iter().rev() {
+                        if v == end {
+                            if v == &0 {
+                                *end = 0;
+                                *start = 1; // to ensure *end < *start --> result is set to empty later
+                            } else {
+                                *end = v - 1;
+                            }
+                        }
+                    }
+                }
+                if *start > end.unwrap_or(u32::MAX) {
+                    *self = Self::Empty;
+                }
+            }
+            Self::Interval { .. } => {}
+        }
     }
 }
 
@@ -241,9 +359,9 @@ impl std::ops::Add for SupportSet {
                     end: end2,
                 },
             ) => Self::Range {
-                start: start + start2,
+                start: start.saturating_add(start2),
                 end: match (end, end2) {
-                    (Some(x), Some(y)) => Some(x + y),
+                    (Some(x), Some(y)) => x.checked_add(y),
                     _ => None,
                 },
             },

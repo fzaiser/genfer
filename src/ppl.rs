@@ -553,8 +553,8 @@ impl Event {
             Event::InSet(var, set) => gf_in_set(*var, set, gf),
             Event::VarComparison(v1, comp, v2) => {
                 let (scrutinee, other, reversed, range) = match (
-                    var_info[v1.id()].finite_range(),
-                    var_info[v2.id()].finite_range(),
+                    var_info[v1.id()].finite_nonempty_range(),
+                    var_info[v2.id()].finite_nonempty_range(),
                 ) {
                     (None, None) => panic!("Cannot compare two variables with infinite support."),
                     (None, Some(r)) => (*v2, *v1, false, r),
@@ -695,7 +695,11 @@ impl Event {
     }
 
     pub fn complement(self) -> Event {
-        Event::Complement(Box::new(self))
+        if let Event::Complement(e) = self {
+            *e
+        } else {
+            Event::Complement(Box::new(self))
+        }
     }
 
     pub fn and(self, other: Event) -> Event {
@@ -717,10 +721,18 @@ impl Event {
     }
 
     pub fn intersection(es: Vec<Event>) -> Event {
-        if es.len() == 1 {
-            es[0].clone()
+        let mut conjuncts = Vec::new();
+        for e in es {
+            if let Event::Intersection(mut es) = e {
+                conjuncts.append(&mut es);
+            } else {
+                conjuncts.push(e);
+            }
+        }
+        if conjuncts.len() == 1 {
+            conjuncts.pop().unwrap()
         } else {
-            Event::Intersection(es)
+            Event::Intersection(conjuncts)
         }
     }
 
@@ -924,7 +936,7 @@ impl Statement {
             let rest = &given_vars[1..];
             let mut var_info = translation.var_info.clone();
             let support = var_info[v.id()].clone();
-            let range = support.finite_range().unwrap_or_else(|| panic!("Cannot normalize with respect to variable `{v}`, because its value could not be proven to be bounded."));
+            let range = support.finite_nonempty_range().unwrap_or_else(|| panic!("Cannot normalize with respect to variable `{v}`, because its value could not be proven to be bounded."));
             let mut gf = GenFun::zero();
             for i in range {
                 let summand =
