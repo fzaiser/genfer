@@ -2,7 +2,6 @@ use std::borrow::Borrow;
 use std::fmt::Display;
 
 use crate::{
-    generating_function::GenFun,
     number::{Number, Rational},
     support::SupportSet,
 };
@@ -176,12 +175,6 @@ impl VarRange {
 }
 
 #[derive(Clone, Debug)]
-pub struct GfTranslation<T> {
-    pub var_info: Vec<SupportSet>,
-    pub gf: GenFun<T>,
-}
-
-#[derive(Clone, Debug)]
 pub enum Distribution {
     Dirac(PosRatio),
     Bernoulli(PosRatio),
@@ -213,7 +206,7 @@ pub enum Distribution {
 }
 
 impl Distribution {
-    fn support(&self) -> SupportSet {
+    pub fn support(&self) -> SupportSet {
         use Distribution::*;
         match self {
             Dirac(a) => {
@@ -241,181 +234,6 @@ impl Distribution {
                 Rational::from_ratio(start.numer, start.denom),
                 Rational::from_ratio(end.numer, end.denom),
             ),
-        }
-    }
-
-    #[allow(clippy::too_many_lines)]
-    fn transform_gf<T: Number>(
-        &self,
-        v: Var,
-        translation: GfTranslation<T>,
-        add_previous_value: bool,
-    ) -> GfTranslation<T> {
-        use Distribution::*;
-        let base = if add_previous_value {
-            translation.gf.clone()
-        } else {
-            marginalize_out(v, &translation.gf, &translation.var_info)
-        };
-        let mut new_var_info = translation.var_info.clone();
-        if v.id() == new_var_info.len() {
-            new_var_info.push(SupportSet::zero());
-        }
-        assert!(v.id() < new_var_info.len());
-        if !add_previous_value {
-            new_var_info[v.id()] = SupportSet::zero();
-        }
-        new_var_info[v.id()] += self.support();
-        let gf = &translation.gf;
-        let gf = match self {
-            Dirac(a) => {
-                let dirac = if let Some(a) = a.as_integer() {
-                    GenFun::var(v).pow(a)
-                } else {
-                    (GenFun::var(v) * GenFun::from_ratio(*a)).exp()
-                };
-                dirac * base
-            }
-            Bernoulli(p) => {
-                let bernoulli =
-                    GenFun::from_ratio(*p) * GenFun::var(v) + GenFun::from_ratio(p.complement());
-                bernoulli * base
-            }
-            BernoulliVarProb(w) => {
-                let prob_times_gf = if translation.var_info[w.id()].is_discrete() {
-                    gf.derive(*w, 1) * GenFun::var(*w)
-                } else {
-                    gf.derive(*w, 1)
-                };
-                let prob_times_base = if add_previous_value {
-                    prob_times_gf
-                } else {
-                    marginalize_out(v, &prob_times_gf, &translation.var_info)
-                };
-                let v_term = if new_var_info[v.id()].is_discrete() {
-                    GenFun::var(v)
-                } else {
-                    GenFun::var(v).exp()
-                };
-                base + (v_term - GenFun::one()) * prob_times_base
-            }
-            BinomialVarTrials(w, p) => {
-                let subst =
-                    GenFun::from_ratio(*p) * GenFun::var(v) + GenFun::from_ratio(p.complement());
-                Self::compound_dist(gf, &base, v, *w, add_previous_value, true, subst)
-            }
-            Binomial(n, p) => {
-                let binomial = (GenFun::from_ratio(*p) * GenFun::var(v)
-                    + GenFun::from_ratio(p.complement()))
-                .pow(n.0);
-                binomial * base
-            }
-            Categorical(rs) => {
-                let mut categorical = GenFun::zero();
-                for r in rs.iter().rev() {
-                    categorical *= GenFun::var(v);
-                    categorical += GenFun::from_ratio(*r);
-                }
-                categorical * base
-            }
-            NegBinomialVarSuccesses(w, p) => {
-                let subst = GenFun::from_ratio(*p)
-                    / (GenFun::one() - GenFun::from_ratio(p.complement()) * GenFun::var(v));
-                Self::compound_dist(gf, &base, v, *w, add_previous_value, true, subst)
-            }
-            NegBinomial(n, p) => {
-                let geometric = GenFun::from_ratio(*p)
-                    / (GenFun::one() - GenFun::from_ratio(p.complement()) * GenFun::var(v));
-                geometric.pow(n.0) * base
-            }
-            Geometric(p) => {
-                let geometric = GenFun::from_ratio(*p)
-                    / (GenFun::one() - GenFun::from_ratio(p.complement()) * GenFun::var(v));
-                geometric * base
-            }
-            Poisson(lambda) => {
-                let poisson =
-                    (GenFun::from_ratio(*lambda) * (GenFun::var(v) - GenFun::one())).exp();
-                poisson * base
-            }
-            PoissonVarRate(lambda, w) => {
-                let w_discrete = translation.var_info[w.id()].is_discrete();
-                let subst = if w_discrete {
-                    (GenFun::from_ratio(*lambda) * (GenFun::var(v) - GenFun::one())).exp()
-                } else {
-                    GenFun::from_ratio(*lambda) * (GenFun::var(v) - GenFun::one())
-                };
-                Self::compound_dist(gf, &base, v, *w, add_previous_value, w_discrete, subst)
-            }
-            Uniform { start, end } => {
-                let mut uniform = GenFun::zero();
-                assert!(end.0 > start.0, "Uniform distribution cannot have length 0");
-                let length = end.0 - start.0;
-                let weight = GenFun::from_ratio(PosRatio::new(1, u64::from(length)));
-                for _ in 0..length {
-                    uniform = weight.clone() + GenFun::var(v) * uniform;
-                }
-                uniform *= GenFun::var(v).pow(start.0);
-                uniform * base
-            }
-            Exponential { rate } => {
-                let beta = GenFun::from_ratio(*rate);
-                let exponential = beta.clone() / (beta - GenFun::var(v));
-                exponential * base
-            }
-            Gamma { shape, rate } => {
-                let beta = GenFun::from_ratio(*rate);
-                let gamma = if let Some(shape) = shape.as_integer() {
-                    // Optimized representation avoiding logarithms for integer exponents
-                    (beta.clone() / (beta - GenFun::var(v))).pow(shape)
-                } else {
-                    (GenFun::from_ratio(*shape) * (beta.log() - (beta - GenFun::var(v)).log()))
-                        .exp()
-                };
-                gamma * base
-            }
-            UniformCont { start, end } => {
-                let width =
-                    T::from_ratio(end.numer, end.denom) - T::from_ratio(start.numer, start.denom);
-                let x = GenFun::constant(width) * GenFun::var(v);
-                let uniform =
-                    GenFun::uniform_mgf(x) * (GenFun::from_ratio(*start) * GenFun::var(v)).exp();
-                uniform * base
-            }
-        };
-        GfTranslation {
-            gf,
-            var_info: new_var_info,
-        }
-    }
-
-    fn compound_dist<T: Number>(
-        gf: &GenFun<T>,
-        base: &GenFun<T>,
-        sampled_var: Var,
-        param_var: Var,
-        add_previous_value: bool,
-        param_var_discrete: bool,
-        subst: GenFun<T>,
-    ) -> GenFun<T> {
-        if sampled_var == param_var {
-            if add_previous_value {
-                let substitution = if param_var_discrete {
-                    GenFun::var(param_var) * subst
-                } else {
-                    GenFun::var(param_var) + subst
-                };
-                gf.substitute_var(param_var, substitution)
-            } else {
-                gf.substitute_var(param_var, subst)
-            }
-        } else {
-            let substitution = if param_var_discrete {
-                GenFun::var(param_var) * subst
-            } else {
-                GenFun::var(param_var) + subst
-            };
-            base.substitute_var(param_var, substitution)
         }
     }
 
@@ -474,28 +292,6 @@ impl Display for Distribution {
     }
 }
 
-fn marginalize_out<T: Number>(v: Var, gf: &GenFun<T>, var_info: &[SupportSet]) -> GenFun<T> {
-    if v.id() >= var_info.len() {
-        // This can only be a temporary variable of index n, where n is the number of variables.
-        // This is introduced for observe c ~ D(X_i) statements for the temporary variable X_n ~ D(X_i).
-        assert!(v.id() == var_info.len());
-        // In this case, the variable is discrete because we only support discrete observations.
-        gf.substitute_var(v, GenFun::one())
-    } else if var_info[v.id()].is_discrete() {
-        gf.substitute_var(v, GenFun::one())
-    } else {
-        gf.substitute_var(v, GenFun::zero())
-    }
-}
-
-fn marginalize_all<T: Number>(gf: GenFun<T>, var_info: &[SupportSet]) -> GenFun<T> {
-    let mut result = gf;
-    for v in 0..var_info.len() {
-        result = marginalize_out(Var(v), &result, var_info);
-    }
-    result
-}
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Comparison {
     Eq,
@@ -535,93 +331,6 @@ impl Event {
         }
     }
 
-    pub fn transform_gf<T>(&self, translation: GfTranslation<T>) -> GfTranslation<T>
-    where
-        T: Number,
-    {
-        fn gf_in_set<T: Number>(var: Var, set: &[Natural], gf: GenFun<T>) -> GenFun<T> {
-            if let &[order] = &set {
-                let order = order.0;
-                gf.taylor_coeff_at_zero(var, order as usize) * GenFun::var(var).pow(order)
-            } else {
-                gf.taylor_polynomial_at_zero(var, set.iter().map(|n| n.0 as usize).collect())
-            }
-        }
-        let var_info = translation.var_info.clone();
-        let gf = translation.gf.clone();
-        let gf = match self {
-            Event::InSet(var, set) => gf_in_set(*var, set, gf),
-            Event::VarComparison(v1, comp, v2) => {
-                let (scrutinee, other, reversed, range) = match (
-                    var_info[v1.id()].finite_nonempty_range(),
-                    var_info[v2.id()].finite_nonempty_range(),
-                ) {
-                    (None, None) => panic!("Cannot compare two variables with infinite support."),
-                    (None, Some(r)) => (*v2, *v1, false, r),
-                    (Some(r), None) => (*v1, *v2, true, r),
-                    (Some(r1), Some(r2)) => {
-                        if r1.end() - r1.start() <= r2.end() - r2.start() {
-                            (*v1, *v2, true, r1)
-                        } else {
-                            (*v2, *v1, false, r2)
-                        }
-                    }
-                };
-                let mut result = GenFun::zero();
-                for i in range {
-                    let gf_scrutinee_eq_i = gf_in_set(scrutinee, &[Natural(i)], gf.clone());
-                    let summand = match (comp, reversed) {
-                        (Comparison::Eq, _) => gf_in_set(other, &[Natural(i)], gf_scrutinee_eq_i),
-                        (Comparison::Lt, false) => gf_in_set(
-                            other,
-                            &(0..i).map(Natural).collect::<Vec<_>>(),
-                            gf_scrutinee_eq_i,
-                        ),
-                        (Comparison::Lt, true) => {
-                            gf_scrutinee_eq_i.clone()
-                                - gf_in_set(
-                                    other,
-                                    &(0..=i).map(Natural).collect::<Vec<_>>(),
-                                    gf_scrutinee_eq_i,
-                                )
-                        }
-                        (Comparison::Le, false) => gf_in_set(
-                            other,
-                            &(0..=i).map(Natural).collect::<Vec<_>>(),
-                            gf_scrutinee_eq_i,
-                        ),
-                        (Comparison::Le, true) => {
-                            gf_scrutinee_eq_i.clone()
-                                - gf_in_set(
-                                    other,
-                                    &(0..i).map(Natural).collect::<Vec<_>>(),
-                                    gf_scrutinee_eq_i,
-                                )
-                        }
-                    };
-                    result += summand;
-                }
-                result
-            }
-            Event::DataFromDist(data, dist) => {
-                if let Some(factor) = self.recognize_const_prob() {
-                    GenFun::constant(factor) * gf
-                } else {
-                    Event::transform_gf_data_from_dist(*data, dist, &var_info, gf)
-                }
-            }
-            Event::Complement(e) => gf - e.transform_gf(translation).gf,
-            Event::Intersection(es) => {
-                let mut translation = translation;
-                for e in es {
-                    translation = e.transform_gf(translation);
-                }
-                translation.gf
-            }
-        };
-        GfTranslation { var_info, gf }
-    }
-
     pub fn recognize_const_prob<T: Number>(&self) -> Option<T> {
         match self {
             Event::InSet(..) | Event::VarComparison(..) => None,
@@ -643,53 +352,6 @@ impl Event {
                     result *= e.recognize_const_prob()?;
                 }
                 Some(result)
-            }
-        }
-    }
-
-    fn transform_gf_data_from_dist<T: Number>(
-        data: Natural,
-        dist: &Distribution,
-        var_info: &[SupportSet],
-        gf: GenFun<T>,
-    ) -> GenFun<T> {
-        match dist {
-            Distribution::BernoulliVarProb(var) => {
-                let prob_times_gf = if var_info[var.id()].is_discrete() {
-                    gf.derive(*var, 1) * GenFun::var(*var)
-                } else {
-                    gf.derive(*var, 1)
-                };
-                match data.0 {
-                    0 => gf - prob_times_gf,
-                    1 => prob_times_gf,
-                    _ => GenFun::zero(),
-                }
-            }
-            Distribution::BinomialVarTrials(var, p) => {
-                let order = data.0 as usize;
-                let replacement = GenFun::from_ratio(p.complement()) * GenFun::var(*var);
-                gf.taylor_coeff(*var, order)
-                    .substitute_var(*var, replacement)
-                    * (GenFun::from_ratio(*p) * GenFun::var(*var)).pow(data.0)
-            }
-            _ => {
-                // TODO: this can be optimized for distributions that only have constant parameters.
-                // In that case, we should just multiply by the probability mass function.
-                let new_var = Var(gf.used_vars().num_vars());
-                let new_translation = Statement::Sample {
-                    var: new_var,
-                    distribution: dist.clone(),
-                    add_previous_value: false,
-                }
-                .transform_gf(GfTranslation {
-                    var_info: var_info.to_vec(),
-                    gf,
-                });
-                let gf = new_translation
-                    .gf
-                    .taylor_coeff_at_zero(new_var, data.0 as usize);
-                marginalize_out(new_var, &gf, &new_translation.var_info)
             }
         }
     }
@@ -816,172 +478,6 @@ pub enum Statement {
 }
 
 impl Statement {
-    #[allow(clippy::too_many_lines)]
-    pub fn transform_gf<T>(&self, translation: GfTranslation<T>) -> GfTranslation<T>
-    where
-        T: Number,
-    {
-        use Statement::*;
-        match self {
-            Sample {
-                var: v,
-                distribution,
-                add_previous_value,
-            } => distribution.transform_gf(*v, translation, *add_previous_value),
-            Assign {
-                var: v,
-                add_previous_value,
-                addend,
-                offset,
-            } => {
-                let v = *v;
-                let mut gf = translation.gf;
-                let mut var_info = translation.var_info;
-                let var = GenFun::var(v);
-                let mut v_exp = if *add_previous_value { 1 } else { 0 };
-                let mut new_support = if *add_previous_value {
-                    var_info[v.id()].clone()
-                } else {
-                    SupportSet::zero()
-                };
-                let w_subst = if let Some((factor, w)) = addend {
-                    let other_support = var_info[w.id()].clone();
-                    new_support += other_support * factor.0;
-                    if v == *w {
-                        v_exp += factor.0;
-                        None
-                    } else if var_info[w.id()].is_discrete() {
-                        Some((*w, GenFun::var(*w) * var.pow(factor.0)))
-                    } else {
-                        assert!(
-                            !var_info[v.id()].is_discrete() || !*add_previous_value,
-                            "cannot add a continuous to a discrete variable"
-                        );
-                        Some((
-                            *w,
-                            GenFun::var(*w) + var.clone() * GenFun::from_u32(factor.0),
-                        ))
-                    }
-                } else {
-                    None
-                };
-                if var_info[v.id()].is_discrete() {
-                    gf = gf.substitute_var(v, var.pow(v_exp));
-                } else {
-                    gf = gf.substitute_var(v, var.clone() * GenFun::from_u32(v_exp));
-                }
-                if let Some((w, w_subst)) = w_subst {
-                    gf = gf.substitute_var(w, w_subst);
-                }
-                new_support += SupportSet::from(offset.0);
-                var_info[v.id()] = new_support;
-                let gf = if var_info[v.id()].is_discrete() {
-                    gf * var.pow(offset.0)
-                } else {
-                    gf * (var * GenFun::from_u32(offset.0)).exp()
-                };
-                GfTranslation { var_info, gf }
-            }
-            Decrement { var, offset } => {
-                let v = *var;
-                let gf = translation.gf;
-                let mut var_info = translation.var_info;
-                assert!(
-                    var_info[v.id()].is_discrete(),
-                    "cannot decrement continuous variables"
-                );
-                let new_support = var_info[v.id()].saturating_sub(offset.0);
-                var_info[v.id()] = new_support;
-                let gf = gf.shift_down_taylor_at_zero(v, offset.0 as usize);
-                GfTranslation { var_info, gf }
-            }
-            IfThenElse { cond, then, els } => {
-                if let Some(factor) = cond.recognize_const_prob::<T>() {
-                    // In this case we can avoid path explosion by multiplying with factor
-                    // AFTER transforming the if- and else-branches:
-                    let translation_then = Self::transform_gf_program(then, translation.clone());
-                    let translation_else = Self::transform_gf_program(els, translation);
-                    GfTranslation {
-                        var_info: join_var_infos(
-                            &translation_then.var_info,
-                            &translation_else.var_info,
-                        ),
-                        gf: GenFun::constant(factor.clone()) * translation_then.gf
-                            + GenFun::constant(T::one() - factor) * translation_else.gf,
-                    }
-                } else {
-                    let var_info = translation.var_info.clone();
-                    let gf = translation.gf.clone();
-                    let then_before = cond.transform_gf(translation);
-                    let else_before = GfTranslation {
-                        var_info,
-                        gf: gf - then_before.gf.clone(),
-                    };
-                    let then_after = Self::transform_gf_program(then, then_before);
-                    let else_after = Self::transform_gf_program(els, else_before);
-                    GfTranslation {
-                        var_info: join_var_infos(&then_after.var_info, &else_after.var_info),
-                        gf: then_after.gf + else_after.gf,
-                    }
-                }
-            }
-            Fail => GfTranslation {
-                var_info: translation.var_info,
-                gf: GenFun::zero(),
-            },
-            Normalize {
-                given_vars,
-                stmts: block,
-            } => Statement::normalize_with_vars(given_vars, block, translation),
-        }
-    }
-
-    fn normalize_with_vars<T: Number>(
-        given_vars: &[Var],
-        block: &[Statement],
-        translation: GfTranslation<T>,
-    ) -> GfTranslation<T> {
-        if given_vars.is_empty() {
-            let total_before = marginalize_all(translation.gf.clone(), &translation.var_info);
-            let translation = Self::transform_gf_program(block, translation);
-            let total_after = marginalize_all(translation.gf.clone(), &translation.var_info);
-            GfTranslation {
-                var_info: translation.var_info,
-                gf: total_before / total_after * translation.gf,
-            }
-        } else {
-            let v = given_vars[0];
-            let rest = &given_vars[1..];
-            let mut var_info = translation.var_info.clone();
-            let support = var_info[v.id()].clone();
-            let range = support.finite_nonempty_range().unwrap_or_else(|| panic!("Cannot normalize with respect to variable `{v}`, because its value could not be proven to be bounded."));
-            let mut gf = GenFun::zero();
-            for i in range {
-                let summand =
-                    translation.gf.taylor_coeff_at_zero(v, i as usize) * GenFun::var(v).pow(i);
-                let summand = GfTranslation {
-                    var_info: translation.var_info.clone(),
-                    gf: summand,
-                };
-                let result = Self::normalize_with_vars(rest, block, summand);
-                gf += result.gf;
-                var_info = join_var_infos(&var_info, &result.var_info);
-            }
-            GfTranslation { var_info, gf }
-        }
-    }
-
-    fn transform_gf_program<T>(program: &[Statement], start: GfTranslation<T>) -> GfTranslation<T>
-    where
-        T: Number,
-    {
-        let mut current = start;
-        for stmt in program {
-            current = stmt.transform_gf(current);
-        }
-        current
-    }
-
     fn fmt_block(
         stmts: &[Statement],
         indent: usize,
@@ -1124,21 +620,6 @@ impl Display for Statement {
     }
 }
 
-fn join_var_infos(var_info_then: &[SupportSet], var_info_else: &[SupportSet]) -> Vec<SupportSet> {
-    let mut var_info = Vec::new();
-    let len = var_info_then.len().max(var_info_else.len());
-    for i in 0..len {
-        match (var_info_then.get(i), var_info_else.get(i)) {
-            (Some(set), None) | (None, Some(set)) => var_info.push(set.clone()),
-            (Some(set1), Some(set2)) => {
-                var_info.push(set1.join(set2));
-            }
-            (None, None) => panic!("This should not happen"),
-        }
-    }
-    var_info
-}
-
 #[derive(Clone, Debug)]
 pub struct Program {
     pub stmts: Vec<Statement>,
@@ -1156,15 +637,6 @@ impl Program {
 
     pub fn used_vars(&self) -> VarRange {
         VarRange::union_all(self.stmts.iter().map(Statement::used_vars))
-    }
-
-    pub fn transform_gf<T>(&self, gf: GenFun<T>) -> GfTranslation<T>
-    where
-        T: Number,
-    {
-        let num_vars = self.used_vars().num_vars();
-        let var_info = vec![SupportSet::zero(); num_vars];
-        Statement::transform_gf_program(&self.stmts, GfTranslation { var_info, gf })
     }
 }
 

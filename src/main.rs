@@ -12,14 +12,15 @@ use std::time::{Duration, Instant};
 
 use genfer::generating_function::{
     central_to_standardized_moments, moments_taylor, moments_to_central_moments, probs_taylor,
-    GenFun,
 };
 use genfer::interval::Interval;
 use genfer::number::{
     BigFloat, FloatNumber, IntervalNumber, MultiPrecFloat, Number, Rational, F64, PRECISION,
 };
-use genfer::parser;
-use genfer::ppl::{GfTranslation, Program};
+use genfer::ppl::Program;
+use genfer::semantics::gf::GfTranslation;
+use genfer::semantics::Transformer;
+use genfer::{parser, semantics};
 use num_traits::{One, Zero};
 
 use clap::Parser;
@@ -198,7 +199,7 @@ fn run_program<T: IntervalNumber + Into<f64>>(program: &Program, args: &CliArgs)
 
 fn translate_program_to_gf<T: Number>(program: &Program, args: &CliArgs) -> GfTranslation<T> {
     let start = Instant::now();
-    let translation = program.transform_gf::<T>(GenFun::one());
+    let translation = semantics::gf::GfTransformer::default().semantics(program);
     let translation = if args.no_simplify_gf {
         translation
     } else {

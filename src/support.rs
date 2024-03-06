@@ -147,11 +147,6 @@ impl SupportSet {
         Self::interval(Rational::zero(), Rational::infinity())
     }
 
-    pub fn join_vecs(lhs: &[Self], rhs: &[Self]) -> Vec<Self> {
-        assert_eq!(lhs.len(), rhs.len());
-        lhs.iter().zip(rhs.iter()).map(|(x, y)| x.join(y)).collect()
-    }
-
     pub fn is_subset_of(&self, other: &SupportSet) -> bool {
         match (self, other) {
             (Self::Empty, _) => true,
