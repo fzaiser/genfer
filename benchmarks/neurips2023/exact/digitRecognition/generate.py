@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Generates the PSI and SGCL code for this model with the parameters and observations in `data/``
+# Generates the PSI and SGCL code for this model with the parameters and observations in `data/`
 
 import os
 from pathlib import Path

@@ -93,6 +93,7 @@ if(tmp = 1) {{
 "
     )?;
 
+    #[allow(clippy::needless_range_loop)]
     for i in 0..priors.len() {
         writeln!(sgcl, "if y = {i} {{")?;
         writeln!(prodigy, "if(y = {i}) {{")?;

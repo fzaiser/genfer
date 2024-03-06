@@ -155,7 +155,7 @@ impl SupportSet {
     pub fn is_subset_of(&self, other: &SupportSet) -> bool {
         match (self, other) {
             (Self::Empty, _) => true,
-            (_, Self::Empty) => false,
+            (_, Self::Empty) | (Self::Interval { .. }, Self::Range { .. }) => false,
             (
                 Self::Range { start, end },
                 Self::Range {
@@ -181,7 +181,6 @@ impl SupportSet {
                     && end.is_some()
                     && &Rational::from(end.unwrap()) <= end2
             }
-            (Self::Interval { .. }, Self::Range { .. }) => false,
         }
     }
 
@@ -235,7 +234,7 @@ impl SupportSet {
 
     fn remove_all_impl(&mut self, set: &[u32]) {
         match self {
-            Self::Empty => {}
+            Self::Empty | Self::Interval { .. } => {}
             Self::Range { start, end } => {
                 if set.is_empty() {
                     return;
@@ -261,7 +260,6 @@ impl SupportSet {
                     *self = Self::Empty;
                 }
             }
-            Self::Interval { .. } => {}
         }
     }
 }

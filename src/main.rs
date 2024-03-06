@@ -4,6 +4,7 @@
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::cast_possible_truncation)]
 #![allow(clippy::cast_sign_loss)]
+#![allow(clippy::format_collect)]
 
 use std::cmp::Ordering;
 use std::path::PathBuf;
@@ -468,13 +469,13 @@ fn print_elapsed_message(start: Instant, text: &str, args: &CliArgs) {
         let elapsed = start.elapsed().as_secs_f64();
         print!("{text}");
         if elapsed < 0.001 {
-            println!("{elapsed:.6}s")
+            println!("{elapsed:.6}s");
         } else if elapsed < 0.01 {
-            println!("{elapsed:.5}s")
+            println!("{elapsed:.5}s");
         } else if elapsed < 0.1 {
-            println!("{elapsed:.4}s")
+            println!("{elapsed:.4}s");
         } else {
-            println!("{elapsed:.3}s")
+            println!("{elapsed:.3}s");
         }
     }
 }

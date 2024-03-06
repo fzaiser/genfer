@@ -520,10 +520,12 @@ impl<T: Number> TaylorPoly<T> {
             result.insert_axis(Axis(v))
         } else {
             let mut result = self.coeffs.slice_axis(Axis(v), Slice::from(n..)).to_owned();
-            *&mut result.index_axis_mut(Axis(v), 0) += &self
-                .coeffs
-                .slice_axis(Axis(v), Slice::from(..n))
-                .sum_axis(Axis(v));
+            result.index_axis_mut(Axis(v), 0).add_assign(
+                &self
+                    .coeffs
+                    .slice_axis(Axis(v), Slice::from(..n))
+                    .sum_axis(Axis(v)),
+            );
             result
         };
         Self::new(result, degrees_p1)

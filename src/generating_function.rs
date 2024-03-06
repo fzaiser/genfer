@@ -527,6 +527,7 @@ impl<T: Number> GeneratingFunctionKind<T> {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     fn eval(
         &self,
         inputs: &[T],
@@ -625,7 +626,7 @@ impl<T: Number> GeneratingFunctionKind<T> {
             }
             Self::ShiftTaylorAtZero(g, v, order) => {
                 if inputs[v.id()].is_zero() {
-                    let taylor = g.eval_with(&inputs, degree_p1 + *order, cache);
+                    let taylor = g.eval_with(inputs, degree_p1 + *order, cache);
                     taylor
                         .shift_down(*v, *order)
                         .truncate_to_degree_p1(degree_p1)

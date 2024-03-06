@@ -816,6 +816,7 @@ pub enum Statement {
 }
 
 impl Statement {
+    #[allow(clippy::too_many_lines)]
     pub fn transform_gf<T>(&self, translation: GfTranslation<T>) -> GfTranslation<T>
     where
         T: Number,
@@ -1032,10 +1033,10 @@ impl Statement {
                         write!(f, "{coeff} * ")?;
                     }
                     write!(f, "{var}")?;
-                    if offset != &Natural(0) {
-                        writeln!(f, " + {offset};")?;
-                    } else {
+                    if offset == &Natural(0) {
                         writeln!(f, ";")?;
+                    } else {
+                        writeln!(f, " + {offset};")?;
                     }
                 } else {
                     writeln!(f, "{offset};")?;

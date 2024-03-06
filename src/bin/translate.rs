@@ -4,6 +4,7 @@
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::enum_glob_use)]
 #![allow(clippy::float_cmp)]
+#![allow(clippy::format_collect)]
 
 use std::fmt::Write;
 use std::path::PathBuf;
