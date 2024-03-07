@@ -79,6 +79,17 @@ impl VarSupport {
         }
     }
 
+    pub fn is_subset_of(&self, other: &VarSupport) -> bool {
+        match (self, other) {
+            (VarSupport::Empty(_), _) => true,
+            (_, VarSupport::Empty(_)) => false,
+            (VarSupport::Prod(this), VarSupport::Prod(other)) => {
+                debug_assert_eq!(this.len(), other.len());
+                this.iter().zip(other).all(|(x, y)| x.is_subset_of(y))
+            }
+        }
+    }
+
     pub fn join(&self, other: &VarSupport) -> VarSupport {
         match (self, other) {
             (VarSupport::Empty(_), res) | (res, VarSupport::Empty(_)) => res.clone(),
@@ -189,6 +200,10 @@ impl Transformer for SupportTransformer {
                 let else_res = self.transform_statements(els, else_res);
                 then_res.join(&else_res)
             }
+            Statement::While { cond, body, .. } => {
+                let (_, _loop_entry, loop_exit) = self.analyze_while(cond, body, init);
+                loop_exit
+            }
             Statement::Fail => VarSupport::empty(init.num_vars()),
             Statement::Normalize { given_vars, stmts } => {
                 self.transform_normalize(given_vars, stmts, init)
@@ -214,6 +229,100 @@ impl SupportTransformer {
         }
         result.update(v, |s| *s += dist.support());
         result
+    }
+
+    fn analyze_while(
+        &mut self,
+        cond: &Event,
+        body: &[Statement],
+        init: VarSupport,
+    ) -> (Option<usize>, VarSupport, VarSupport) {
+        let (mut loop_entry, mut loop_exit) = self.transform_event(cond, init);
+        // TODO: upper bound of this for loop should be the highest constant occurring in the loop or something like that
+        for i in 0..100 {
+            let (new_loop_entry, new_loop_exit) =
+                self.one_iteration(loop_entry.clone(), loop_exit.clone(), body, cond);
+            if loop_entry == new_loop_entry && loop_exit == new_loop_exit {
+                return (Some(i), loop_entry, loop_exit);
+            }
+            loop_entry = new_loop_entry;
+            loop_exit = new_loop_exit;
+        }
+        // The number of widening steps needed is at most the number of variables:
+        for _ in 0..loop_entry.num_vars() + 1 {
+            let (new_loop_entry, new_loop_exit) =
+                self.one_iteration(loop_entry.clone(), loop_exit.clone(), body, cond);
+            if new_loop_entry.is_subset_of(&loop_entry) && new_loop_exit.is_subset_of(&loop_exit) {
+                assert_eq!(loop_exit, new_loop_exit);
+                return (None, loop_entry, loop_exit);
+            }
+            for v in 0..loop_entry.num_vars() {
+                let v = Var(v);
+                match (&loop_entry[v], &new_loop_entry[v]) {
+                    (
+                        SupportSet::Range { start, end },
+                        SupportSet::Range {
+                            start: new_start,
+                            end: new_end,
+                        },
+                    ) => {
+                        if end.is_some() && new_end.is_none() {
+                            unreachable!();
+                        }
+                        if (new_end.is_some() && new_end < end) || new_start < start {
+                            panic!("More iterations needed");
+                        }
+                        if new_end > end {
+                            loop_entry.set(v, (*start..).into());
+                        }
+                    }
+                    _ => {
+                        dbg!(v, &loop_entry[v], &new_loop_entry[v]);
+                        unreachable!("Unexpected variable supports")
+                    }
+                }
+                match (&loop_exit[v], &new_loop_exit[v]) {
+                    (
+                        SupportSet::Range { start, end },
+                        SupportSet::Range {
+                            start: new_start,
+                            end: new_end,
+                        },
+                    ) => {
+                        if end.is_some() && new_end.is_none() {
+                            unreachable!();
+                        }
+                        if (new_end.is_some() && new_end < end) || new_start < start {
+                            panic!("More iterations needed");
+                        }
+                        if new_end > end {
+                            loop_exit.set(v, (*start..).into());
+                        }
+                    }
+                    _ => unreachable!("Unexpected variable supports"),
+                }
+            }
+        }
+        let (new_loop_entry, new_loop_exit) =
+            self.one_iteration(loop_entry.clone(), loop_exit.clone(), body, cond);
+        assert!(
+            new_loop_entry.is_subset_of(&loop_entry) && new_loop_exit.is_subset_of(&loop_exit),
+            "Widening failed."
+        );
+        (None, loop_entry, loop_exit)
+    }
+
+    fn one_iteration(
+        &mut self,
+        loop_entry: VarSupport,
+        loop_exit: VarSupport,
+        body: &[Statement],
+        cond: &Event,
+    ) -> (VarSupport, VarSupport) {
+        let after_loop = self.transform_statements(body, loop_entry);
+        let (repeat_supports, exit_supports) = self.transform_event(cond, after_loop);
+        let loop_exit = loop_exit.join(&exit_supports);
+        (repeat_supports, loop_exit)
     }
 
     pub fn transform_normalize(

@@ -178,6 +178,18 @@ impl Translate for WebPpl<'_> {
                 }
                 Ok(())
             }
+            While {
+                cond,
+                unroll: _,
+                body,
+            } => {
+                write!(self.f, "while (")?;
+                self.fmt_event(cond)?;
+                writeln!(self.f, ") {{")?;
+                self.fmt_block(body, indent + 2)?;
+                let indent_str = " ".repeat(indent);
+                writeln!(self.f, "{indent_str}}}")
+            }
             Fail => writeln!(self.f, "condition(false);"),
             Normalize { given_vars, stmts } => {
                 let indent_str = " ".repeat(indent);
@@ -616,6 +628,7 @@ impl<'a> Translate for Anglican<'a> {
                 self.fmt_block(rest, indent + 2)?;
                 write!(self.f, "{indent_str})")
             }
+            While { .. } => todo!(),
             Fail => write!(self.f, "_ (observe (flip 1.0) false)"),
             Normalize { given_vars, stmts } => {
                 for v in 0..self.num_vars {

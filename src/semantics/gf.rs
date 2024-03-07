@@ -249,6 +249,22 @@ impl<T: Number> Transformer for GfTransformer<T> {
                     then_after.join(else_after)
                 }
             }
+            While { cond, unroll, body } => {
+                eprintln!("WARNING: support for while loops is EXPERIMENTAL");
+                println!("WARNING: results are APPROXIMATE due to presence of loops: exact inference is only possible for loop-free programs");
+                const DEFAULT_UNROLL: usize = 8;
+                let mut result = GfTranslation::zero(init.var_info.num_vars());
+                let var_info = self
+                    .support
+                    .transform_statement(stmt, init.var_info.clone());
+                let mut rest = init;
+                for _ in 0..unroll.unwrap_or(DEFAULT_UNROLL) {
+                    let (loop_enter, loop_exit) = self.transform_event(cond, rest);
+                    result = result.join(loop_exit);
+                    rest = self.transform_statements(&body, loop_enter);
+                }
+                GfTranslation { var_info, ..result }
+            }
             Fail => GfTranslation::zero(init.var_info.num_vars()),
             Normalize {
                 given_vars,

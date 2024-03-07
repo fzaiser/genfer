@@ -1,0 +1,11 @@
+X := 1;
+Y := 0;
+while X > 0 unroll 20 {
+    if 0 ~ Bernoulli(0.5) {
+        X += 1;
+    } else {
+        X -= 1;
+    }
+    Y += 1;
+}
+return Y

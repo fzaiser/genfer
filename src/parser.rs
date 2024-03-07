@@ -550,6 +550,17 @@ fn loop_block<'a>(vars: &mut Vec<&'a str>, input: &'a str) -> IResult<&'a str, V
     }))(input)
 }
 
+fn while_loop<'a>(vars: &mut Vec<&'a str>, input: &'a str) -> IResult<&'a str, Statement> {
+    let (input, _) = keyword("while")(input)?;
+    cut(context("while loop", |input| {
+        let (input, cond) = event(vars, input)?;
+        let (input, unroll) = opt(preceded(preceded(ws, keyword("unroll")), natural))(input)?;
+        let unroll = unroll.map(|n| n.0 as usize);
+        let (input, body) = block(vars, input)?;
+        Ok((input, Statement::While { cond, unroll, body }))
+    }))(input)
+}
+
 fn ws(mut input: &str) -> IResult<&str, ()> {
     loop {
         input = input.trim_start();
@@ -595,6 +606,9 @@ fn statement<'a>(vars: &mut Vec<&'a str>, input: &'a str) -> IResult<&'a str, Ve
             (input, vec![stmt])
         } else if keyword("loop")(input).is_ok() {
             loop_block(vars, input)?
+        } else if keyword("while")(input).is_ok() {
+            let (input, stmt) = while_loop(vars, input)?;
+            (input, vec![stmt])
         } else if keyword("fail")(input).is_ok() {
             let (input, stmt) = fail(input)?;
             (input, vec![stmt])

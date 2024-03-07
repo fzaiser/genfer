@@ -467,6 +467,11 @@ pub enum Statement {
         then: Vec<Statement>,
         els: Vec<Statement>,
     },
+    While {
+        cond: Event,
+        unroll: Option<usize>,
+        body: Vec<Statement>,
+    },
     Fail,
     Normalize {
         /// Variables that are fixed (not marginalized) for the normalization
@@ -561,6 +566,16 @@ impl Statement {
                 }
                 Ok(())
             }
+            While { cond, unroll, body } => {
+                let indent_str = " ".repeat(indent);
+                write!(f, "while {cond} ")?;
+                if let Some(unroll) = unroll {
+                    write!(f, "unroll {unroll} ")?;
+                }
+                writeln!(f, "{{")?;
+                Self::fmt_block(body, indent + 2, f)?;
+                writeln!(f, "{indent_str}}}")
+            }
             Fail => writeln!(f, "fail;"),
             Normalize { given_vars, stmts } => {
                 let indent_str = " ".repeat(indent);
@@ -581,6 +596,7 @@ impl Statement {
             IfThenElse { then, els, .. } => {
                 then.iter().any(Statement::uses_observe) || els.iter().any(Statement::uses_observe)
             }
+            While { body, .. } => body.iter().any(Statement::uses_observe),
             Fail => true,
             Normalize { stmts, .. } => stmts.iter().any(Statement::uses_observe),
         }
@@ -606,6 +622,13 @@ impl Statement {
                 .union(&VarRange::union_all(then.iter().map(Statement::used_vars)))
                 .union(&VarRange::union_all(els.iter().map(Statement::used_vars))),
             Fail => VarRange::empty(),
+            While {
+                cond,
+                body,
+                unroll: _,
+            } => cond
+                .used_vars()
+                .union(&VarRange::union_all(body.iter().map(Statement::used_vars))),
             Normalize {
                 given_vars: _,
                 stmts,

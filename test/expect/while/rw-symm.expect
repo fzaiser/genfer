@@ -1,0 +1,44 @@
+WARNING: results are APPROXIMATE due to presence of loops: exact inference is only possible for loop-free programs
+Support is a subset of: {1, ...}
+
+Computing moments...
+Total measure:             Z = 0.8238029479980469
+Expected value:            E = 3.2776504364335164
+Standard deviation:        σ = 3.990352144253472
+Variance:                  V = 15.92291023514828
+Skewness (3rd std moment): S = 2.122934438873482
+Kurtosis (4th std moment): K = 7.030500325769189
+
+Computing probabilities up to 31...
+p(0) = 0.0
+p(1) = 0.5
+p(2) = 0.0
+p(3) = 0.125
+p(4) = 0.0
+p(5) = 0.0625
+p(6) = 0.0
+p(7) = 0.0390625
+p(8) = 0.0
+p(9) = 0.02734375
+p(10) = 0.0
+p(11) = 0.0205078125
+p(12) = 0.0
+p(13) = 0.01611328125
+p(14) = 0.0
+p(15) = 0.013092041015625
+p(16) = 0.0
+p(17) = 0.0109100341796875
+p(18) = 0.0
+p(19) = 0.009273529052734375
+p(20) = 0.0
+p(21) = 0.0
+p(22) = 0.0
+p(23) = 0.0
+p(24) = 0.0
+p(25) = 0.0
+p(26) = 0.0
+p(27) = 0.0
+p(28) = 0.0
+p(29) = 0.0
+p(30) = 0.0
+p(n) <= 1.5785983631388947e-16 for all n >= 31
