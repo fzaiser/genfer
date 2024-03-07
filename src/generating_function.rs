@@ -8,7 +8,7 @@ use crate::{
     multivariate_taylor::{fmt_polynomial, TaylorPoly},
     number::{FloatNumber, Number},
     ppl::{PosRatio, Var, VarRange},
-    support::SupportSet,
+    semantics::support::VarSupport,
     symbolic::SymGenFun,
 };
 
@@ -911,17 +911,17 @@ fn fold_coeffs<T, R>(
 pub fn probs_taylor<T: Number>(
     pgf: &GenFun<T>,
     v: Var,
-    var_info: &[SupportSet],
+    var_info: &VarSupport,
     max_n: usize,
 ) -> Vec<T> {
     assert!(
-        var_info[v.id()].is_discrete(),
+        var_info[v].is_discrete(),
         "Can only compute probabilities for discrete variables"
     );
-    let num_vars = var_info.len();
+    let num_vars = var_info.num_vars();
     let mut substs = (0..num_vars)
         .map(|i| {
-            if var_info[i].is_discrete() {
+            if var_info[Var(i)].is_discrete() {
                 T::one()
             } else {
                 T::zero()
@@ -944,13 +944,13 @@ pub fn probs_taylor<T: Number>(
 pub fn moments_taylor<T: Number>(
     pgf: &GenFun<T>,
     v: Var,
-    var_info: &[SupportSet],
+    var_info: &VarSupport,
     limit: usize,
 ) -> (T, Vec<T>) {
-    let num_vars = var_info.len();
+    let num_vars = var_info.num_vars();
     let substs = (0..num_vars)
         .map(|i| {
-            if var_info[i].is_discrete() {
+            if var_info[Var(i)].is_discrete() {
                 T::one()
             } else {
                 T::zero()
@@ -966,7 +966,7 @@ pub fn moments_taylor<T: Number>(
         result.push(expansion.coefficient(&index) * factor.clone());
         factor *= T::from((i + 1) as u32);
     }
-    if var_info[v.id()].is_discrete() {
+    if var_info[v].is_discrete() {
         factorial_moments_to_moments(&result)
     } else {
         let total = result[0].clone();

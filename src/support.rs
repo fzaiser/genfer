@@ -195,26 +195,21 @@ impl SupportSet {
         match self {
             Self::Empty => Self::Empty,
             Self::Range { start, end } => {
-                if set.is_empty() {
-                    return Self::Empty;
+                let mut new_start = None;
+                let mut new_end = None;
+                for v in set {
+                    if start <= v && v <= &end.unwrap_or(u32::MAX) {
+                        if new_start.is_none() {
+                            new_start = Some(*v);
+                        }
+                        new_end = Some(*v);
+                    }
                 }
-                let mut i = 0;
-                while i < set.len() && set[i] < *start {
-                    i += 1;
+                if let (Some(start), end) = (new_start, new_end) {
+                    Self::Range { start, end }
+                } else {
+                    Self::empty()
                 }
-                if i == set.len() {
-                    return Self::Empty;
-                }
-                let start = set[i];
-                let mut j = set.len() - 1;
-                while j > i && set[j] > end.unwrap_or(u32::MAX) {
-                    j -= 1;
-                }
-                if set[j] < start {
-                    return Self::Empty;
-                }
-                let end = Some(set[j]);
-                Self::Range { start, end }
             }
             Self::Interval { .. } => self.clone(),
         }

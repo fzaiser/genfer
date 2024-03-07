@@ -2,7 +2,7 @@ use std::{cmp::Ordering, fmt::Display, rc::Rc};
 
 use crate::{
     generating_function::factorial_moments_to_moments, number::Number, ppl::Var,
-    support::SupportSet, univariate_taylor::TaylorExpansion,
+    semantics::support::VarSupport, univariate_taylor::TaylorExpansion,
 };
 
 use num_traits::{One, Zero};
@@ -234,7 +234,7 @@ impl<T: Number> std::ops::DivAssign for SymGenFun<T> {
 pub fn probs_symbolic<T: Number>(
     pgf: &SymGenFun<T>,
     v: Var,
-    var_info: &[SupportSet],
+    var_info: &VarSupport,
     n: usize,
 ) -> Vec<T> {
     let var = TaylorExpansion::var(T::zero(), n);
@@ -243,7 +243,7 @@ pub fn probs_symbolic<T: Number>(
         |w| {
             if w == v {
                 var.clone()
-            } else if var_info[w.id()].is_discrete() {
+            } else if var_info[w].is_discrete() {
                 TaylorExpansion::one()
             } else {
                 TaylorExpansion::zero()
@@ -256,10 +256,10 @@ pub fn probs_symbolic<T: Number>(
 pub fn moments_symbolic<T: Number>(
     pgf: &SymGenFun<T>,
     v: Var,
-    var_info: &[SupportSet],
+    var_info: &VarSupport,
     limit: usize,
 ) -> (T, Vec<T>) {
-    let var = if var_info[v.id()].is_discrete() {
+    let var = if var_info[v].is_discrete() {
         TaylorExpansion::var(T::one(), limit)
     } else {
         TaylorExpansion::var(T::zero(), limit)
@@ -269,7 +269,7 @@ pub fn moments_symbolic<T: Number>(
         |w| {
             if w == v {
                 var.clone()
-            } else if var_info[w.id()].is_discrete() {
+            } else if var_info[w].is_discrete() {
                 TaylorExpansion::one()
             } else {
                 TaylorExpansion::zero()
@@ -282,7 +282,7 @@ pub fn moments_symbolic<T: Number>(
         result.push(taylor.coeff(i) * factor.clone());
         factor *= T::from((i + 1) as u32);
     }
-    if var_info[v.id()].is_discrete() {
+    if var_info[v].is_discrete() {
         factorial_moments_to_moments(&result)
     } else {
         let total = result[0].clone();

@@ -149,7 +149,7 @@ fn run_program_intervals<T: IntervalNumber + Into<f64>>(program: &Program, args:
         print_moments_and_probs_interval(
             |limit| moments_symbolic(&gf, program.result, &var_info, limit),
             |limit| probs_symbolic(&gf, program.result, &var_info, limit),
-            &var_info[program.result.id()],
+            &var_info[program.result],
             uses_observe,
             args,
             inference_start,
@@ -159,7 +159,7 @@ fn run_program_intervals<T: IntervalNumber + Into<f64>>(program: &Program, args:
         print_moments_and_probs_interval(
             |limit| moments_taylor(&gf, program.result, &var_info, limit),
             |limit| probs_taylor(&gf, program.result, &var_info, limit),
-            &var_info[program.result.id()],
+            &var_info[program.result],
             uses_observe,
             args,
             inference_start,
@@ -178,7 +178,7 @@ fn run_program<T: IntervalNumber + Into<f64>>(program: &Program, args: &CliArgs)
         print_moments_and_probs(
             |limit| moments_symbolic(&gf, program.result, &var_info, limit),
             |limit| probs_symbolic(&gf, program.result, &var_info, limit),
-            &var_info[program.result.id()],
+            &var_info[program.result],
             uses_observe,
             args,
             inference_start,
@@ -188,7 +188,7 @@ fn run_program<T: IntervalNumber + Into<f64>>(program: &Program, args: &CliArgs)
         print_moments_and_probs(
             |limit| moments_taylor(&gf, program.result, &var_info, limit),
             |limit| probs_taylor(&gf, program.result, &var_info, limit),
-            &var_info[program.result.id()],
+            &var_info[program.result],
             uses_observe,
             args,
             inference_start,

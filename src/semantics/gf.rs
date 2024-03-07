@@ -4,26 +4,26 @@ use crate::ppl::{Comparison, Distribution, Event, Natural, PosRatio, Program, St
 use crate::{generating_function::GenFun, number::Number, support::SupportSet};
 
 use super::{
-    support::{join_var_infos, SupportTransformer},
+    support::{SupportTransformer, VarSupport},
     Transformer,
 };
 
 #[derive(Clone, Debug)]
 pub struct GfTranslation<T> {
-    pub var_info: Vec<SupportSet>,
+    pub var_info: VarSupport,
     pub gf: GenFun<T>,
 }
 impl<T: Number> GfTranslation<T> {
-    fn bottom() -> Self {
+    fn zero(num_vars: usize) -> Self {
         GfTranslation {
-            var_info: vec![],
+            var_info: VarSupport::empty(num_vars),
             gf: GenFun::zero(),
         }
     }
 
     fn join(self, other: GfTranslation<T>) -> GfTranslation<T> {
         GfTranslation {
-            var_info: join_var_infos(&self.var_info, &other.var_info),
+            var_info: self.var_info.join(&other.var_info),
             gf: self.gf + other.gf,
         }
     }
@@ -71,8 +71,8 @@ impl<T: Number> Transformer for GfTransformer<T> {
             Event::InSet(var, set) => gf_in_set(*var, set, gf),
             Event::VarComparison(v1, comp, v2) => {
                 let (scrutinee, other, reversed, range) = match (
-                    var_info[v1.id()].finite_nonempty_range(),
-                    var_info[v2.id()].finite_nonempty_range(),
+                    var_info[v1].finite_nonempty_range(),
+                    var_info[v2].finite_nonempty_range(),
                 ) {
                     (None, None) => panic!("Cannot compare two variables with infinite support."),
                     (None, Some(r)) => (*v2, *v1, false, r),
@@ -141,13 +141,14 @@ impl<T: Number> Transformer for GfTransformer<T> {
                 then_result.gf
             }
         };
+        let (then_info, else_info) = self.support.transform_event(event, var_info);
         (
             GfTranslation {
-                var_info: init.var_info.clone(),
+                var_info: then_info,
                 gf: gf.clone(),
             },
             GfTranslation {
-                var_info: init.var_info,
+                var_info: else_info,
                 gf: init.gf - gf,
             },
         )
@@ -189,11 +190,11 @@ impl<T: Number> Transformer for GfTransformer<T> {
                     if v == *w {
                         v_exp += factor.0;
                         None
-                    } else if var_info[w.id()].is_discrete() {
+                    } else if var_info[w].is_discrete() {
                         Some((*w, GenFun::var(*w) * var.pow(factor.0)))
                     } else {
                         assert!(
-                            !var_info[v.id()].is_discrete() || !*add_previous_value,
+                            !var_info[v].is_discrete() || !*add_previous_value,
                             "cannot add a continuous to a discrete variable"
                         );
                         Some((
@@ -204,7 +205,7 @@ impl<T: Number> Transformer for GfTransformer<T> {
                 } else {
                     None
                 };
-                if var_info[v.id()].is_discrete() {
+                if var_info[v].is_discrete() {
                     gf = gf.substitute_var(v, var.pow(v_exp));
                 } else {
                     gf = gf.substitute_var(v, var.clone() * GenFun::from_u32(v_exp));
@@ -213,7 +214,7 @@ impl<T: Number> Transformer for GfTransformer<T> {
                     gf = gf.substitute_var(w, w_subst);
                 }
                 let var_info = self.support.transform_statement(stmt, var_info);
-                let gf = if var_info[v.id()].is_discrete() {
+                let gf = if var_info[v].is_discrete() {
                     gf * var.pow(offset.0)
                 } else {
                     gf * (var * GenFun::from_u32(offset.0)).exp()
@@ -225,7 +226,7 @@ impl<T: Number> Transformer for GfTransformer<T> {
                 let gf = init.gf;
                 let var_info = init.var_info;
                 assert!(
-                    var_info[v.id()].is_discrete(),
+                    var_info[v].is_discrete(),
                     "cannot decrement continuous variables"
                 );
                 let var_info = self.support.transform_statement(stmt, var_info);
@@ -248,7 +249,7 @@ impl<T: Number> Transformer for GfTransformer<T> {
                     then_after.join(else_after)
                 }
             }
-            Fail => GfTranslation::bottom(),
+            Fail => GfTranslation::zero(init.var_info.num_vars()),
             Normalize {
                 given_vars,
                 stmts: block,
@@ -330,7 +331,7 @@ impl<T: Number> GfTransformer<T> {
                 bernoulli * base
             }
             BernoulliVarProb(w) => {
-                let prob_times_gf = if translation.var_info[w.id()].is_discrete() {
+                let prob_times_gf = if translation.var_info[w].is_discrete() {
                     gf.derive(*w, 1) * GenFun::var(*w)
                 } else {
                     gf.derive(*w, 1)
@@ -340,7 +341,7 @@ impl<T: Number> GfTransformer<T> {
                 } else {
                     marginalize_out(v, &prob_times_gf, &translation.var_info)
                 };
-                let v_term = if new_var_info[v.id()].is_discrete() {
+                let v_term = if new_var_info[v].is_discrete() {
                     GenFun::var(v)
                 } else {
                     GenFun::var(v).exp()
@@ -387,7 +388,7 @@ impl<T: Number> GfTransformer<T> {
                 poisson * base
             }
             PoissonVarRate(lambda, w) => {
-                let w_discrete = translation.var_info[w.id()].is_discrete();
+                let w_discrete = translation.var_info[w].is_discrete();
                 let subst = if w_discrete {
                     (GenFun::from_ratio(*lambda) * (GenFun::var(v) - GenFun::one())).exp()
                 } else {
@@ -441,12 +442,12 @@ impl<T: Number> GfTransformer<T> {
         &mut self,
         data: Natural,
         dist: &Distribution,
-        var_info: &[SupportSet],
+        var_info: &VarSupport,
         gf: GenFun<T>,
     ) -> GenFun<T> {
         match dist {
             Distribution::BernoulliVarProb(var) => {
-                let prob_times_gf = if var_info[var.id()].is_discrete() {
+                let prob_times_gf = if var_info[var].is_discrete() {
                     gf.derive(*var, 1) * GenFun::var(*var)
                 } else {
                     gf.derive(*var, 1)
@@ -474,7 +475,7 @@ impl<T: Number> GfTransformer<T> {
                     add_previous_value: false,
                 };
                 let translation = GfTranslation {
-                    var_info: var_info.to_vec(),
+                    var_info: var_info.clone(),
                     gf,
                 };
                 let new_translation = self.transform_statement(&sample_stmt, translation);
@@ -503,14 +504,14 @@ impl<T: Number> GfTransformer<T> {
         } else {
             let v = given_vars[0];
             let rest = &given_vars[1..];
-            let support = translation.var_info[v.id()].clone();
+            let support = translation.var_info[v].clone();
             let range = support.finite_nonempty_range().unwrap_or_else(|| panic!("Cannot normalize with respect to variable `{v}`, because its value could not be proven to be bounded."));
-            let mut joined = GfTranslation::bottom();
+            let mut joined = GfTranslation::zero(translation.var_info.num_vars());
             for i in range {
                 let summand =
                     translation.gf.taylor_coeff_at_zero(v, i as usize) * GenFun::var(v).pow(i);
                 let mut new_var_info = translation.var_info.clone();
-                new_var_info[v.id()] = SupportSet::from(i);
+                new_var_info.set(v, SupportSet::from(i));
                 let summand = GfTranslation {
                     var_info: new_var_info,
                     gf: summand,
@@ -523,23 +524,23 @@ impl<T: Number> GfTransformer<T> {
     }
 }
 
-fn marginalize_out<T: Number>(v: Var, gf: &GenFun<T>, var_info: &[SupportSet]) -> GenFun<T> {
-    if v.id() >= var_info.len() {
+fn marginalize_out<T: Number>(v: Var, gf: &GenFun<T>, var_info: &VarSupport) -> GenFun<T> {
+    if v.id() >= var_info.num_vars() {
         // This can only be a temporary variable of index n, where n is the number of variables.
         // This is introduced for observe c ~ D(X_i) statements for the temporary variable X_n ~ D(X_i).
-        assert!(v.id() == var_info.len());
+        assert!(v.id() == var_info.num_vars());
         // In this case, the variable is discrete because we only support discrete observations.
         gf.substitute_var(v, GenFun::one())
-    } else if var_info[v.id()].is_discrete() {
+    } else if var_info[v].is_discrete() {
         gf.substitute_var(v, GenFun::one())
     } else {
         gf.substitute_var(v, GenFun::zero())
     }
 }
 
-fn marginalize_all<T: Number>(gf: GenFun<T>, var_info: &[SupportSet]) -> GenFun<T> {
+fn marginalize_all<T: Number>(gf: GenFun<T>, var_info: &VarSupport) -> GenFun<T> {
     let mut result = gf;
-    for v in 0..var_info.len() {
+    for v in 0..var_info.num_vars() {
         result = marginalize_out(Var(v), &result, var_info);
     }
     result

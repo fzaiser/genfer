@@ -1,4 +1,4 @@
-Support is a subset of: {0, ...}
+Support is a subset of: {0, ..., 10}
 
 Computing moments...
 Total measure:             Z = 0.9999916917756316
@@ -31,5 +31,5 @@ Unnormalized: p(9)     = 0.00019094925324389798
 Normalized:   p(9) / Z = 0.0001909508397063176
 Unnormalized: p(10)     = 0.000038189850648779595
 Normalized:   p(10) / Z = 0.000038190167941263515
-Unnormalized: p(n)     <= 3.38772521320252e-16 for all n >= 11
-Normalized:   p(n) / Z <= 3.387753359417535e-16 for all n >= 11
+Unnormalized: p(n)     <= 0.0 for all n >= 11
+Normalized:   p(n) / Z <= 0.0 for all n >= 11
