@@ -2,7 +2,7 @@ use std::ops::{Range, RangeFrom, RangeInclusive};
 
 use num_traits::Zero;
 
-use crate::number::{IntervalNumber, Rational};
+use crate::number::{Number, Rational};
 
 /// Support set of a random variable (overapproximated as a range)
 #[derive(Clone, Debug, PartialEq)]

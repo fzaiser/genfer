@@ -201,6 +201,13 @@ impl<T: Number> Number for TaylorExpansion<T> {
         }
         res
     }
+
+    fn max(&self, other: &Self) -> Self {
+        match (self, other) {
+            (Self::Constant(a), Self::Constant(b)) => Self::Constant(a.max(b)),
+            _ => panic!("Maximum can only be applied to constant Taylor expansions."),
+        }
+    }
 }
 
 #[allow(unused)]

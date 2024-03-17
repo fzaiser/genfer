@@ -2,24 +2,24 @@ WARNING: results are APPROXIMATE due to presence of loops: exact inference is on
 Support is a subset of: {1, ...}
 
 Computing moments...
-Total measure:             Z = 0.96807861328125
-Expected value:            E = 1.6616228484963118
-Standard deviation:        σ = 1.390723085648989
-Variance:                  V = 1.9341107009570453
-Skewness (3rd std moment): S = 2.2437328861418697
-Kurtosis (4th std moment): K = 7.5166511359649455
+Total measure:             Z ∈ [0.9680786132812499, 1.0]
+Expected value:            E ∈ [1.6616228484963118, inf]
+Standard deviation:        σ ∈ [0.0, inf]
+Variance:                  V ∈ [0.0, inf]
+Skewness (3rd std moment): S ∈ [NaN, NaN]
+Kurtosis (4th std moment): K ∈ [NaN, NaN]
 
 Computing probabilities up to 12...
-p(0) = 0.0
-p(1) = 0.75
-p(2) = 0.0
-p(3) = 0.140625
-p(4) = 0.0
-p(5) = 0.052734375
-p(6) = 0.0
-p(7) = 0.02471923828125
-p(8) = 0.0
-p(9) = 0.0
-p(10) = 0.0
-p(11) = 0.0
-p(n) <= 4.510281037539699e-17 for all n >= 12
+p(0) ∈ [0.0, 0.03192138671875]
+p(1) ∈ [0.7499999999999999, 0.7819213867187501]
+p(2) ∈ [0.0, 0.03192138671875]
+p(3) ∈ [0.14062499999999997, 0.17254638671875003]
+p(4) ∈ [0.0, 0.03192138671875]
+p(5) ∈ [0.05273437499999999, 0.08465576171875001]
+p(6) ∈ [0.0, 0.03192138671875]
+p(7) ∈ [0.024719238281249997, 0.05664062500000001]
+p(8) ∈ [0.0, 0.03192138671875]
+p(9) ∈ [0.0, 0.03192138671875]
+p(10) ∈ [0.0, 0.03192138671875]
+p(11) ∈ [0.0, 0.03192138671875]
+p(n) <= 0.03192138671875056 for all n >= 12

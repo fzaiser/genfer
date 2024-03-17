@@ -64,14 +64,32 @@ impl Number for F64 {
     fn pow(&self, exp: u32) -> Self {
         f64::powi(self.0, exp.try_into().unwrap()).into()
     }
-}
 
-impl FloatNumber for F64 {
+    #[inline]
+    fn min(&self, other: &Self) -> Self {
+        if self < other {
+            self.clone()
+        } else {
+            other.clone()
+        }
+    }
+
+    #[inline]
+    fn max(&self, other: &Self) -> Self {
+        if self > other {
+            self.clone()
+        } else {
+            other.clone()
+        }
+    }
+
     #[inline]
     fn abs(&self) -> Self {
         Self(self.0.abs())
     }
+}
 
+impl FloatNumber for F64 {
     #[inline]
     fn sqrt(&self) -> Self {
         Self(self.0.sqrt())

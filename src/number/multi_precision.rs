@@ -218,16 +218,34 @@ impl Number for MultiPrecFloat {
     fn pow(&self, exp: u32) -> Self {
         Self(Rc::new(self.0.as_ref().clone().pow(exp)))
     }
-}
 
-impl FloatNumber for MultiPrecFloat {
+    #[inline]
+    fn min(&self, other: &Self) -> Self {
+        if self < other {
+            self.clone()
+        } else {
+            other.clone()
+        }
+    }
+
+    #[inline]
+    fn max(&self, other: &Self) -> Self {
+        if self > other {
+            self.clone()
+        } else {
+            other.clone()
+        }
+    }
+
     fn abs(&self) -> Self {
         if self.is_zero() {
             return self.clone();
         }
         Self(Rc::new(self.0.as_ref().clone().abs()))
     }
+}
 
+impl FloatNumber for MultiPrecFloat {
     fn sqrt(&self) -> Self {
         if self.is_zero() || self.is_one() {
             return self.clone();

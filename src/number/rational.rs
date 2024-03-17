@@ -358,9 +358,25 @@ impl Number for Rational {
             Self::Frac(r) => Self::Frac(Rc::new(rug::Rational::from(r.as_ref().pow(exp)))),
         }
     }
-}
 
-impl FloatNumber for Rational {
+    #[inline]
+    fn min(&self, other: &Self) -> Self {
+        if self < other {
+            self.clone()
+        } else {
+            other.clone()
+        }
+    }
+
+    #[inline]
+    fn max(&self, other: &Self) -> Self {
+        if self > other {
+            self.clone()
+        } else {
+            other.clone()
+        }
+    }
+
     fn abs(&self) -> Self {
         match self {
             Self::Frac(r) => Self::Frac(Rc::new(rug::Rational::from(r.as_ref()).abs())),
@@ -370,7 +386,9 @@ impl FloatNumber for Rational {
             },
         }
     }
+}
 
+impl FloatNumber for Rational {
     fn sqrt(&self) -> Self {
         match self {
             Self::Frac(r) => match r.cmp0() {

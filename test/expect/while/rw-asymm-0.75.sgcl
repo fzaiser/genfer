@@ -1,3 +1,4 @@
+# flags: --limit 12
 X := 1;
 Y := 0;
 while X > 0 {

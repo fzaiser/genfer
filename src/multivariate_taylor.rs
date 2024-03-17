@@ -65,6 +65,10 @@ impl<T> TaylorPoly<T> {
         self.coeffs
     }
 
+    pub fn is_constant(&self) -> bool {
+        self.coeffs.len() == 1
+    }
+
     pub fn len_of(&self, Var(v): Var) -> usize {
         self.check_invariants();
         if v < self.degrees_p1.len() {
@@ -234,7 +238,7 @@ impl<T: Number> TaylorPoly<T> {
 
     pub fn var(Var(v): Var, x: T, len: usize) -> Self {
         let mut shape = vec![1; v + 1];
-        shape[v] = 2;
+        shape[v] = len.min(2);
         let mut coeffs = ArrayD::zeros(shape);
         *coeffs.index_axis_mut(Axis(v), 0).first_mut().unwrap() = x;
         if len > 1 {

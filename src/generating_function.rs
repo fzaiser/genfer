@@ -87,6 +87,10 @@ impl<T: Number> GenFun<T> {
         GeneratingFunctionKind::Pow(self.clone(), n).into_gf()
     }
 
+    pub fn max(&self, g: &Self) -> GenFun<T> {
+        GeneratingFunctionKind::Max(self.clone(), g.clone()).into_gf()
+    }
+
     pub fn uniform_mgf(g: Self) -> GenFun<T> {
         GeneratingFunctionKind::UniformMgf(g).into_gf()
     }
@@ -315,6 +319,7 @@ enum GeneratingFunctionKind<T> {
     TaylorCoeffAtZero(GenFun<T>, Var, usize),
     TaylorCoeff(GenFun<T>, Var, usize),
     ShiftTaylorAtZero(GenFun<T>, Var, usize),
+    Max(GenFun<T>, GenFun<T>),
 }
 
 impl<T> GeneratingFunctionKind<T> {
@@ -369,6 +374,13 @@ impl<T> GeneratingFunctionKind<T> {
                 a.fmt_prec(cur_prec + 1, f)?;
                 write!(f, "^{b}")?;
             }
+            Self::Max(g, h) => {
+                write!(f, "max(")?;
+                g.fmt_prec(0, f)?;
+                write!(f, ", ")?;
+                h.fmt_prec(0, f)?;
+                write!(f, ")")?;
+            }
             Self::UniformMgf(a) => {
                 write!(f, "uniform_mgf(")?;
                 a.fmt_prec(0, f)?;
@@ -417,7 +429,7 @@ impl<T> GeneratingFunctionKind<T> {
         match self {
             Self::Var(v) => VarRange::new(*v),
             Self::Const(_) => VarRange::empty(),
-            Self::Add(a, b) | Self::Mul(a, b) | Self::Div(a, b) => {
+            Self::Add(a, b) | Self::Mul(a, b) | Self::Div(a, b) | Self::Max(a, b) => {
                 a.used_vars_with(cache).union(&b.used_vars_with(cache))
             }
             Self::Neg(a) | Self::Exp(a) | Self::Log(a) | Self::Pow(a, _) | Self::UniformMgf(a) => {
@@ -443,6 +455,7 @@ impl<T> GeneratingFunctionKind<T> {
             | Const(_)
             | Exp(_)
             | Log(_)
+            | Max(..)
             | UniformMgf(_)
             | Subst(..)
             | Derivative(..)
@@ -492,7 +505,11 @@ impl<T: Number> GeneratingFunctionKind<T> {
                 }
                 _ => None,
             },
-            Self::Polynomial(_) | Self::Exp(_) | Self::Log(_) | Self::UniformMgf(_) => None,
+            Self::Polynomial(_)
+            | Self::Exp(_)
+            | Self::Log(_)
+            | Self::Max(..)
+            | Self::UniformMgf(_) => None,
             Self::Pow(g, n) => g.simplify_with(cache).map(|p| p.pow(*n)),
             Self::Subst(g, v, subst) => {
                 match (g.simplify_with(cache), subst.simplify_with(cache)) {
@@ -566,6 +583,14 @@ impl<T: Number> GeneratingFunctionKind<T> {
             }
             Self::Exp(g) => g.eval_with(inputs, degree_p1, cache).exp(),
             Self::Log(g) => g.eval_with(inputs, degree_p1, cache).log(),
+            Self::Max(g, h) => {
+                let s = g.eval_with(inputs, degree_p1, cache);
+                let t = h.eval_with(inputs, degree_p1, cache);
+                // Maximum should only happen for constants
+                debug_assert!(s.is_constant());
+                debug_assert!(t.is_constant());
+                TaylorPoly::from(s.constant_term().max(&t.constant_term()))
+            }
             Self::Pow(g, n) => g.eval_with(inputs, degree_p1, cache).pow(*n),
             Self::UniformMgf(g) => {
                 let x = g.eval_with(inputs, degree_p1, cache);
@@ -757,6 +782,7 @@ impl<T: Number> GeneratingFunctionKind<T> {
             Self::Exp(g) => g.to_computation().exp(),
             Self::Log(g) => g.to_computation().log(),
             Self::Pow(g, exp) => g.to_computation().pow(*exp),
+            Self::Max(g, h) => g.to_computation().max(&h.to_computation()),
             Self::UniformMgf(g) => {
                 let g_comp = g.to_computation();
                 // TODO: this will yield to a division 0 / 0 if g_comp is 0.

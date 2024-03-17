@@ -1,3 +1,4 @@
+# flags: --limit 31
 X := 1;
 Y := 0;
 while X > 0 unroll 20 {

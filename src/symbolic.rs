@@ -159,6 +159,10 @@ impl<T: Number> Number for SymGenFun<T> {
     fn pow(&self, exp: u32) -> Self {
         SymGenFun::new(SymGenFunKind::pow(self.root.clone(), exp))
     }
+
+    fn max(&self, other: &Self) -> Self {
+        SymGenFun::new(SymGenFunKind::max(self.root.clone(), other.root.clone()))
+    }
 }
 
 impl<T: Number + Display> Display for SymGenFun<T> {
@@ -304,12 +308,13 @@ enum SymGenFunKind<T> {
     Exp(Rc<SymGenFunKind<T>>),
     Log(Rc<SymGenFunKind<T>>),
     Pow(Rc<SymGenFunKind<T>>, u32),
+    Max(Rc<SymGenFunKind<T>>, Rc<SymGenFunKind<T>>),
 }
 
 impl<T> SymGenFunKind<T> {
     fn precedence(&self) -> usize {
         match self {
-            Variable(_) | Lit(_) | Exp(_) | Log(_) => 10,
+            Variable(_) | Lit(_) | Exp(_) | Log(_) | Max(..) => 10,
             Add(_, _) => 0,
             Mul(_, _) | Div(_, _) => 1,
             Pow(_, _) => 2,
@@ -356,12 +361,12 @@ impl<T> SymGenFunKind<T> {
                 lhs.clone().evaluate_with(lit_map, var_map, cache)
                     / rhs.clone().evaluate_with(lit_map, var_map, cache)
             }
-            Exp(arg) => arg.clone().evaluate_with(lit_map, var_map, cache).exp(),
-            Log(arg) => arg.clone().evaluate_with(lit_map, var_map, cache).log(),
-            Pow(base, exp) => base
-                .clone()
+            Exp(arg) => arg.evaluate_with(lit_map, var_map, cache).exp(),
+            Log(arg) => arg.evaluate_with(lit_map, var_map, cache).log(),
+            Pow(base, exp) => base.evaluate_with(lit_map, var_map, cache).pow(*exp),
+            Max(lhs, rhs) => lhs
                 .evaluate_with(lit_map, var_map, cache)
-                .pow(*exp),
+                .max(&rhs.clone().evaluate_with(lit_map, var_map, cache)),
         };
         cache.insert(key, (self.clone(), result.clone()));
         result
@@ -596,6 +601,10 @@ impl<T> SymGenFunKind<T> {
         }
     }
 
+    fn max(lhs: Rc<SymGenFunKind<T>>, rhs: Rc<SymGenFunKind<T>>) -> Rc<SymGenFunKind<T>> {
+        Rc::new(Max(lhs, rhs))
+    }
+
     fn substitute(
         term: &Rc<SymGenFunKind<T>>,
         map: &impl Fn(Var) -> Option<Rc<SymGenFunKind<T>>>,
@@ -679,6 +688,15 @@ impl<T> SymGenFunKind<T> {
                     Self::pow(a2, *exp)
                 }
             }
+            Max(a, b) => {
+                let a2 = Self::substitute_with(a, map, cache);
+                let b2 = Self::substitute_with(b, map, cache);
+                if same_ref(a, &a2) && same_ref(b, &b2) {
+                    term.clone()
+                } else {
+                    Self::max(a2, b2)
+                }
+            }
         };
         // Only cache the result if it is shared (speed-up by almost an order of magnitude in some cases)
         if Rc::strong_count(term) > 1 {
@@ -755,6 +773,9 @@ impl<T> SymGenFunKind<T> {
                 let tmp = Self::mul(tmp, da);
                 Self::mul(tmp, a_exp_minus_1)
             }
+            Max(..) => {
+                panic!("Maximum shouldn't be differentiated.")
+            }
         };
         // Only cache the result if it is shared
         if Rc::strong_count(term) > 1 {
@@ -807,6 +828,9 @@ impl<T> SymGenFunKind<T> {
             Exp(a) => Self::taylor_coeffs_with(a, var, x, order, cache).exp(),
             Log(a) => Self::taylor_coeffs_with(a, var, x, order, cache).log(),
             Pow(a, exp) => Self::taylor_coeffs_with(a, var, x, order, cache).pow(*exp),
+            Max(..) => {
+                panic!("Maximum shouldn't be differentiated.")
+            }
         };
         // Only cache the result if it is shared (speed-up by almost an order of magnitude in some cases)
         if Rc::strong_count(term) > 1 {
@@ -861,6 +885,9 @@ fn node_fmt<T: Number + Display>(
         Pow(a, exp) => {
             node_fmt(a, cur_precedence + 1, f)?;
             write!(f, "^{exp}")?;
+        }
+        Max(..) => {
+            panic!("Maximum shouldn't be differentiated.")
         }
     }
     if cur_precedence < parent_precedence {
