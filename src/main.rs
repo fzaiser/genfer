@@ -67,6 +67,9 @@ struct CliArgs {
     /// Represent generating functions symbolically (instead of Taylor series)
     #[arg(short, long)]
     symbolic: bool,
+    /// Number of iterations to unroll unbounded loops without an `unroll` annotation
+    #[arg(short = 'u', long)]
+    default_unroll: Option<usize>,
     /// Print the parsed probabilistic program
     #[arg(long)]
     print_program: bool,
@@ -212,7 +215,9 @@ fn run_program<T: IntervalNumber + Into<f64>>(program: &Program, args: &CliArgs)
 
 fn translate_program_to_gf<T: Number>(program: &Program, args: &CliArgs) -> GfTranslation<T> {
     let start = Instant::now();
-    let translation = semantics::gf::GfTransformer::default().semantics(program);
+    let translation = semantics::gf::GfTransformer::default()
+        .with_default_unroll(args.default_unroll)
+        .semantics(program);
     let translation = if args.no_simplify_gf {
         translation
     } else {
