@@ -305,7 +305,7 @@ fn print_moments_and_probs_interval<T: IntervalNumber + Into<f64>>(
         .map(|x| x.ensure_lower_bound(T::zero()))
         .collect::<Vec<_>>();
     if !rest.is_zero() {
-        for x in moments.iter_mut() {
+        for x in &mut moments {
             *x = x.union(&T::infinity());
         }
     }
@@ -348,7 +348,7 @@ fn print_moments_and_probs_interval<T: IntervalNumber + Into<f64>>(
             )
             .expect("failed to write JSON file");
         } else {
-            eprintln!("Could not write JSON file because results are only bounds due to the presence of loops.")
+            eprintln!("Could not write JSON file because results are only bounds due to the presence of loops.");
         }
     }
 }

@@ -299,7 +299,7 @@ impl<T: Number> Transformer for GfTransformer<T> {
                 for _ in 0..unroll.unwrap_or(self.default_unroll) {
                     let (loop_enter, loop_exit) = self.transform_event(cond, rest);
                     result = result.join(loop_exit);
-                    rest = self.transform_statements(&body, loop_enter);
+                    rest = self.transform_statements(body, loop_enter);
                 }
                 let new_rest = marginalize_all(rest.gf, &var_info);
                 let rest = rest.rest + new_rest;

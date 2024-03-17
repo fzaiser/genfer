@@ -249,7 +249,7 @@ impl SupportTransformer {
             loop_exit = new_loop_exit;
         }
         // The number of widening steps needed is at most the number of variables:
-        for _ in 0..loop_entry.num_vars() + 1 {
+        for _ in 0..=loop_entry.num_vars() {
             let (new_loop_entry, new_loop_exit) =
                 self.one_iteration(loop_entry.clone(), loop_exit.clone(), body, cond);
             if new_loop_entry.is_subset_of(&loop_entry) && new_loop_exit.is_subset_of(&loop_exit) {

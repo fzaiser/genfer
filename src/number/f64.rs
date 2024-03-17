@@ -68,18 +68,18 @@ impl Number for F64 {
     #[inline]
     fn min(&self, other: &Self) -> Self {
         if self < other {
-            self.clone()
+            *self
         } else {
-            other.clone()
+            *other
         }
     }
 
     #[inline]
     fn max(&self, other: &Self) -> Self {
         if self > other {
-            self.clone()
+            *self
         } else {
-            other.clone()
+            *other
         }
     }
 
