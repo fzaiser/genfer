@@ -12,9 +12,10 @@ use genfer::bounds::ctx::{BoundCtx, SolverError};
 use genfer::number::F64;
 use genfer::parser;
 use genfer::ppl::{Program, Var};
+use genfer::semantics::support::VarSupport;
+use genfer::semantics::Transformer;
 
 use clap::Parser;
-use genfer::semantics::support::VarSupport;
 use num_traits::{One, Zero};
 
 #[allow(clippy::struct_excessive_bools)]
@@ -57,7 +58,7 @@ pub fn main() -> std::io::Result<()> {
 fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
     let start = Instant::now();
     let mut ctx = BoundCtx::new();
-    let result = ctx.bound_program(program);
+    let result = ctx.semantics(program);
     match &result.var_supports {
         VarSupport::Empty(_) => println!("Support: empty"),
         VarSupport::Prod(supports) => {

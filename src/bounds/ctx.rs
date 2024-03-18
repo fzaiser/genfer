@@ -35,6 +35,275 @@ pub struct BoundCtx {
     soft_constraints: Vec<SymConstraint>,
 }
 
+impl Default for BoundCtx {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Transformer for BoundCtx {
+    type Domain = BoundResult;
+
+    fn init(&mut self, program: &Program) -> Self::Domain {
+        self.program_var_count = program.used_vars().num_vars();
+        let init_bound = GeometricBound {
+            polynomial: SymPolynomial::one(),
+            geo_params: vec![SymExpr::zero(); self.program_var_count],
+        };
+        BoundResult {
+            bound: init_bound,
+            var_supports: self.support.init(program),
+        }
+    }
+
+    fn transform_event(
+        &mut self,
+        event: &Event,
+        init: Self::Domain,
+    ) -> (Self::Domain, Self::Domain) {
+        match event {
+            Event::InSet(v, set) => {
+                let alpha = init.bound.geo_params[v.id()].clone();
+                let one_minus_alpha_v =
+                    SymPolynomial::one() - SymPolynomial::var(*v) * alpha.clone();
+                let mut then_bound = GeometricBound {
+                    polynomial: SymPolynomial::zero(),
+                    geo_params: init.bound.geo_params.clone(),
+                };
+                then_bound.geo_params[v.id()] = SymExpr::zero();
+                let mut then_res = BoundResult {
+                    bound: then_bound,
+                    var_supports: init.var_supports.clone(),
+                };
+                let mut else_res = init;
+                (then_res.var_supports, else_res.var_supports) =
+                    self.support.transform_event(event, else_res.var_supports);
+                for Natural(n) in set {
+                    let mut coeff = SymPolynomial::zero();
+                    for i in 0..=*n {
+                        coeff += else_res.bound.polynomial.coeff_of_var_power(*v, i as usize)
+                            * alpha.clone().pow((n - i) as i32);
+                    }
+                    let monomial = coeff.clone() * SymPolynomial::var_power(*v, *n);
+                    then_res.bound.polynomial += monomial.clone();
+                    else_res.bound.polynomial -= monomial.clone() * one_minus_alpha_v.clone();
+                }
+                (then_res, else_res)
+            }
+            Event::DataFromDist(data, dist) => {
+                if let Distribution::Bernoulli(p) = dist {
+                    let p_compl = p.complement();
+                    let p = F64::from_ratio(p.numer, p.denom).into();
+                    let p_compl = F64::from_ratio(p_compl.numer, p_compl.denom).into();
+                    let (then, els) = match data.0 {
+                        0 => (p_compl, p),
+                        1 => (p, p_compl),
+                        _ => (0.0, 1.0),
+                    };
+                    let mut then_res = init.clone();
+                    let mut else_res = init;
+                    then_res.bound.polynomial *= SymExpr::from(then);
+                    else_res.bound.polynomial *= SymExpr::from(els);
+                    (then_res, else_res)
+                } else {
+                    todo!()
+                }
+            }
+            Event::VarComparison(..) => todo!(),
+            Event::Complement(event) => {
+                let (then_res, else_res) = self.transform_event(event, init);
+                (else_res, then_res)
+            }
+            Event::Intersection(events) => {
+                let mut else_res = BoundResult {
+                    bound: GeometricBound::zero(init.bound.geo_params.len()),
+                    var_supports: VarSupport::Empty(init.var_supports.num_vars()),
+                };
+                let mut then_res = init;
+                for event in events {
+                    let (new_then, new_else) = self.transform_event(event, then_res);
+                    then_res = new_then;
+                    else_res = self.add_bound_results(else_res, new_else);
+                }
+                (then_res, else_res)
+            }
+        }
+    }
+
+    fn transform_statement(&mut self, stmt: &Statement, init: Self::Domain) -> Self::Domain {
+        let direct_var_supports = if cfg!(debug_assertions) {
+            Some(
+                self.support
+                    .transform_statement(stmt, init.var_supports.clone()),
+            )
+        } else {
+            None
+        };
+        let result = match stmt {
+            Statement::Sample {
+                var,
+                distribution,
+                add_previous_value,
+            } => {
+                let new_var_info = SupportTransformer::transform_distribution(
+                    distribution,
+                    *var,
+                    init.var_supports.clone(),
+                    *add_previous_value,
+                );
+                let mut res = if *add_previous_value {
+                    init
+                } else {
+                    init.marginalize(*var)
+                };
+                match distribution {
+                    Distribution::Bernoulli(p) => {
+                        let p = F64::from_ratio(p.numer, p.denom).to_f64();
+                        res.bound.polynomial *=
+                            SymPolynomial::var(*var) * SymExpr::from(p) + (1.0 - p).into();
+                    }
+                    Distribution::Geometric(p) if !add_previous_value => {
+                        let p = F64::from_ratio(p.numer, p.denom).to_f64();
+                        res.bound.polynomial *= SymExpr::from(p);
+                        res.bound.geo_params[var.id()] = SymExpr::from(1.0 - p);
+                    }
+                    Distribution::Uniform { start, end } => {
+                        let mut factor = SymPolynomial::zero();
+                        let len = f64::from(end.0 - start.0);
+                        for i in start.0..end.0 {
+                            factor += SymPolynomial::var_power(*var, i) / len.into();
+                        }
+                        res.bound.polynomial *= factor;
+                    }
+                    _ => todo!(),
+                };
+                res.var_supports = new_var_info;
+                res
+            }
+            Statement::Assign {
+                var,
+                add_previous_value,
+                addend,
+                offset,
+            } => {
+                if let (None, Natural(n)) = (addend, offset) {
+                    let mut new_bound = if *add_previous_value {
+                        init
+                    } else {
+                        init.marginalize(*var)
+                    };
+                    new_bound.bound.polynomial *= SymPolynomial::var_power(*var, *n);
+                    new_bound.var_supports = self
+                        .support
+                        .transform_statement(stmt, new_bound.var_supports);
+                    new_bound
+                } else {
+                    todo!()
+                }
+            }
+            Statement::Decrement { var, offset } => {
+                let mut cur = init;
+                let alpha = cur.bound.geo_params[var.id()].clone();
+                for _ in 0..offset.0 {
+                    let polynomial = cur.bound.polynomial;
+                    let (p0, shifted) = polynomial.extract_zero_and_shift_left(*var);
+                    let other = p0
+                        * (SymPolynomial::one()
+                            + (SymPolynomial::one() - SymPolynomial::var(*var)) * alpha.clone());
+                    cur.bound.polynomial = shifted + other;
+                }
+                cur.var_supports = self.support.transform_statement(stmt, cur.var_supports);
+                cur
+            }
+            Statement::IfThenElse { cond, then, els } => {
+                let (then_res, else_res) = self.transform_event(cond, init);
+                let then_res = self.transform_statements(then, then_res);
+                let else_res = self.transform_statements(els, else_res);
+                self.add_bound_results(then_res, else_res)
+            }
+            Statement::While { cond, unroll, body } => {
+                let mut pre_loop = init;
+                let mut rest = BoundResult {
+                    bound: GeometricBound::zero(self.program_var_count),
+                    var_supports: VarSupport::empty(pre_loop.var_supports.num_vars()),
+                };
+                let unroll_count = unroll.unwrap_or(0);
+                let (iters, invariant_supports, _) =
+                    self.support
+                        .analyze_while(cond, body, pre_loop.var_supports.clone());
+                let unroll_count = if let Some(iters) = iters {
+                    unroll_count.max(iters)
+                } else {
+                    unroll_count
+                };
+                println!("Unrolling {unroll_count} times");
+                for _ in 0..unroll_count {
+                    let (then_bound, else_bound) = self.transform_event(cond, pre_loop.clone());
+                    pre_loop = self.transform_statements(body, then_bound);
+                    rest = self.add_bound_results(rest, else_bound);
+                }
+                let min_degree = 1;
+                let shape = match &invariant_supports {
+                    VarSupport::Empty(num_vars) => vec![0; *num_vars],
+                    VarSupport::Prod(supports) => supports
+                        .iter()
+                        .map(|s| match s {
+                            SupportSet::Empty => 0,
+                            SupportSet::Range { end, .. } => {
+                                if let Some(end) = end {
+                                    *end as usize + 1
+                                } else {
+                                    min_degree
+                                }
+                            }
+                            _ => todo!(),
+                        })
+                        .collect::<Vec<_>>(),
+                };
+                let finite_supports = match &invariant_supports {
+                    VarSupport::Empty(num_vars) => vec![true; *num_vars],
+                    VarSupport::Prod(supports) => supports
+                        .iter()
+                        .map(|s| s.is_empty() || s.finite_nonempty_range().is_some())
+                        .collect::<Vec<_>>(),
+                };
+                let (loop_entry, loop_exit) = self.transform_event(cond, pre_loop);
+                rest = self.add_bound_results(rest, loop_exit);
+                let invariant = BoundResult {
+                    bound: self.new_bound(shape, &finite_supports),
+                    var_supports: invariant_supports,
+                };
+                println!("Invariant: {invariant}");
+                self.assert_le(&loop_entry.bound, &invariant.bound);
+                let idx = self.fresh_sym_var_idx();
+                let c = SymExpr::var(idx);
+                println!("Invariant-c: {c}");
+                self.nonlinear_param_vars.push(idx);
+                self.add_constraint(c.clone().must_ge(SymExpr::zero()));
+                self.add_constraint(c.clone().must_le(SymExpr::one()));
+                self.add_soft_constraint(c.clone().must_lt(SymExpr::one()));
+                let cur_bound = self.transform_statements(&body, invariant.clone());
+                let (post_loop, mut exit) = self.transform_event(cond, cur_bound);
+                self.assert_le(&post_loop.bound, &(invariant.bound.clone() * c.clone()));
+                exit.bound = exit.bound / (SymExpr::one() - c.clone());
+                self.add_bound_results(exit, rest)
+            }
+            Statement::Fail => BoundResult {
+                bound: GeometricBound::zero(self.program_var_count),
+                var_supports: VarSupport::empty(init.var_supports.num_vars()),
+            },
+            Statement::Normalize { .. } => todo!(),
+        };
+        if let Some(direct_var_info) = direct_var_supports {
+            debug_assert_eq!(
+                result.var_supports, direct_var_info,
+                "inconsistent variable support info for:\n{stmt}"
+            );
+        }
+        result
+    }
+}
+
 impl BoundCtx {
     pub fn new() -> Self {
         Self {
@@ -124,274 +393,6 @@ impl BoundCtx {
             bound,
             var_supports,
         }
-    }
-
-    #[allow(clippy::only_used_in_recursion)]
-    pub fn bound_event(&mut self, init: BoundResult, event: &Event) -> (BoundResult, BoundResult) {
-        match event {
-            Event::InSet(v, set) => {
-                let alpha = init.bound.geo_params[v.id()].clone();
-                let one_minus_alpha_v =
-                    SymPolynomial::one() - SymPolynomial::var(*v) * alpha.clone();
-                let mut then_bound = GeometricBound {
-                    polynomial: SymPolynomial::zero(),
-                    geo_params: init.bound.geo_params.clone(),
-                };
-                then_bound.geo_params[v.id()] = SymExpr::zero();
-                let mut then_res = BoundResult {
-                    bound: then_bound,
-                    var_supports: init.var_supports.clone(),
-                };
-                let mut else_res = init;
-                (then_res.var_supports, else_res.var_supports) =
-                    self.support.transform_event(event, else_res.var_supports);
-                for Natural(n) in set {
-                    let mut coeff = SymPolynomial::zero();
-                    for i in 0..=*n {
-                        coeff += else_res.bound.polynomial.coeff_of_var_power(*v, i as usize)
-                            * alpha.clone().pow((n - i) as i32);
-                    }
-                    let monomial = coeff.clone() * SymPolynomial::var_power(*v, *n);
-                    then_res.bound.polynomial += monomial.clone();
-                    else_res.bound.polynomial -= monomial.clone() * one_minus_alpha_v.clone();
-                }
-                (then_res, else_res)
-            }
-            Event::DataFromDist(data, dist) => {
-                if let Distribution::Bernoulli(p) = dist {
-                    let p_compl = p.complement();
-                    let p = F64::from_ratio(p.numer, p.denom).into();
-                    let p_compl = F64::from_ratio(p_compl.numer, p_compl.denom).into();
-                    let (then, els) = match data.0 {
-                        0 => (p_compl, p),
-                        1 => (p, p_compl),
-                        _ => (0.0, 1.0),
-                    };
-                    let mut then_res = init.clone();
-                    let mut else_res = init;
-                    then_res.bound.polynomial *= SymExpr::from(then);
-                    else_res.bound.polynomial *= SymExpr::from(els);
-                    (then_res, else_res)
-                } else {
-                    todo!()
-                }
-            }
-            Event::VarComparison(..) => todo!(),
-            Event::Complement(event) => {
-                let (then_res, else_res) = self.bound_event(init, event);
-                (else_res, then_res)
-            }
-            Event::Intersection(events) => {
-                let mut else_res = BoundResult {
-                    bound: GeometricBound::zero(init.bound.geo_params.len()),
-                    var_supports: VarSupport::Empty(init.var_supports.num_vars()),
-                };
-                let mut then_res = init;
-                for event in events {
-                    let (new_then, new_else) = self.bound_event(then_res, event);
-                    then_res = new_then;
-                    else_res = self.add_bound_results(else_res, new_else);
-                }
-                (then_res, else_res)
-            }
-        }
-    }
-
-    pub fn bound_statement(&mut self, init: BoundResult, stmt: &Statement) -> BoundResult {
-        let direct_var_supports = if cfg!(debug_assertions) {
-            Some(
-                self.support
-                    .transform_statement(stmt, init.var_supports.clone()),
-            )
-        } else {
-            None
-        };
-        let result = match stmt {
-            Statement::Sample {
-                var,
-                distribution,
-                add_previous_value,
-            } => {
-                let new_var_info = SupportTransformer::transform_distribution(
-                    distribution,
-                    *var,
-                    init.var_supports.clone(),
-                    *add_previous_value,
-                );
-                let mut res = if *add_previous_value {
-                    init
-                } else {
-                    init.marginalize(*var)
-                };
-                match distribution {
-                    Distribution::Bernoulli(p) => {
-                        let p = F64::from_ratio(p.numer, p.denom).to_f64();
-                        res.bound.polynomial *=
-                            SymPolynomial::var(*var) * SymExpr::from(p) + (1.0 - p).into();
-                    }
-                    Distribution::Geometric(p) if !add_previous_value => {
-                        let p = F64::from_ratio(p.numer, p.denom).to_f64();
-                        res.bound.polynomial *= SymExpr::from(p);
-                        res.bound.geo_params[var.id()] = SymExpr::from(1.0 - p);
-                    }
-                    Distribution::Uniform { start, end } => {
-                        let mut factor = SymPolynomial::zero();
-                        let len = f64::from(end.0 - start.0);
-                        for i in start.0..end.0 {
-                            factor += SymPolynomial::var_power(*var, i) / len.into();
-                        }
-                        res.bound.polynomial *= factor;
-                    }
-                    _ => todo!(),
-                };
-                res.var_supports = new_var_info;
-                res
-            }
-            Statement::Assign {
-                var,
-                add_previous_value,
-                addend,
-                offset,
-            } => {
-                if let (None, Natural(n)) = (addend, offset) {
-                    let mut new_bound = if *add_previous_value {
-                        init
-                    } else {
-                        init.marginalize(*var)
-                    };
-                    new_bound.bound.polynomial *= SymPolynomial::var_power(*var, *n);
-                    new_bound.var_supports = self
-                        .support
-                        .transform_statement(stmt, new_bound.var_supports);
-                    new_bound
-                } else {
-                    todo!()
-                }
-            }
-            Statement::Decrement { var, offset } => {
-                let mut cur = init;
-                let alpha = cur.bound.geo_params[var.id()].clone();
-                for _ in 0..offset.0 {
-                    let polynomial = cur.bound.polynomial;
-                    let (p0, shifted) = polynomial.extract_zero_and_shift_left(*var);
-                    let other = p0
-                        * (SymPolynomial::one()
-                            + (SymPolynomial::one() - SymPolynomial::var(*var)) * alpha.clone());
-                    cur.bound.polynomial = shifted + other;
-                }
-                cur.var_supports = self.support.transform_statement(stmt, cur.var_supports);
-                cur
-            }
-            Statement::IfThenElse { cond, then, els } => {
-                let (then_res, else_res) = self.bound_event(init, cond);
-                let then_res = self.bound_statements(then_res, then);
-                let else_res = self.bound_statements(else_res, els);
-                self.add_bound_results(then_res, else_res)
-            }
-            Statement::Fail => BoundResult {
-                bound: GeometricBound::zero(self.program_var_count),
-                var_supports: VarSupport::empty(init.var_supports.num_vars()),
-            },
-            Statement::Normalize { .. } => todo!(),
-            Statement::While { cond, unroll, body } => {
-                let mut pre_loop = init;
-                let mut rest = BoundResult {
-                    bound: GeometricBound::zero(self.program_var_count),
-                    var_supports: VarSupport::empty(pre_loop.var_supports.num_vars()),
-                };
-                let unroll_count = unroll.unwrap_or(0);
-                let (iters, invariant_supports, _) =
-                    self.support
-                        .analyze_while(cond, body, pre_loop.var_supports.clone());
-                let unroll_count = if let Some(iters) = iters {
-                    unroll_count.max(iters)
-                } else {
-                    unroll_count
-                };
-                println!("Unrolling {unroll_count} times");
-                for _ in 0..unroll_count {
-                    let (then_bound, else_bound) = self.bound_event(pre_loop.clone(), cond);
-                    pre_loop = self.bound_statements(then_bound, body);
-                    rest = self.add_bound_results(rest, else_bound);
-                }
-                let min_degree = 1;
-                let shape = match &invariant_supports {
-                    VarSupport::Empty(num_vars) => vec![0; *num_vars],
-                    VarSupport::Prod(supports) => supports
-                        .iter()
-                        .map(|s| match s {
-                            SupportSet::Empty => 0,
-                            SupportSet::Range { end, .. } => {
-                                if let Some(end) = end {
-                                    *end as usize + 1
-                                } else {
-                                    min_degree
-                                }
-                            }
-                            _ => todo!(),
-                        })
-                        .collect::<Vec<_>>(),
-                };
-                let finite_supports = match &invariant_supports {
-                    VarSupport::Empty(num_vars) => vec![true; *num_vars],
-                    VarSupport::Prod(supports) => supports
-                        .iter()
-                        .map(|s| s.is_empty() || s.finite_nonempty_range().is_some())
-                        .collect::<Vec<_>>(),
-                };
-                let (loop_entry, loop_exit) = self.bound_event(pre_loop, cond);
-                rest = self.add_bound_results(rest, loop_exit);
-                let invariant = BoundResult {
-                    bound: self.new_bound(shape, &finite_supports),
-                    var_supports: invariant_supports,
-                };
-                println!("Invariant: {invariant}");
-                self.assert_le(&loop_entry.bound, &invariant.bound);
-                let idx = self.fresh_sym_var_idx();
-                let c = SymExpr::var(idx);
-                println!("Invariant-c: {c}");
-                self.nonlinear_param_vars.push(idx);
-                self.add_constraint(c.clone().must_ge(SymExpr::zero()));
-                self.add_constraint(c.clone().must_le(SymExpr::one()));
-                self.add_soft_constraint(c.clone().must_lt(SymExpr::one()));
-                let mut cur_bound = invariant.clone();
-                for stmt in body {
-                    cur_bound = self.bound_statement(cur_bound, stmt);
-                }
-                let (post_loop, mut exit) = self.bound_event(cur_bound, cond);
-                self.assert_le(&post_loop.bound, &(invariant.bound.clone() * c.clone()));
-                exit.bound = exit.bound / (SymExpr::one() - c.clone());
-                self.add_bound_results(exit, rest)
-            }
-        };
-        if let Some(direct_var_info) = direct_var_supports {
-            debug_assert_eq!(
-                result.var_supports, direct_var_info,
-                "inconsistent variable support info for:\n{stmt}"
-            );
-        }
-        result
-    }
-
-    pub fn bound_statements(&mut self, init: BoundResult, stmts: &[Statement]) -> BoundResult {
-        let mut cur = init;
-        for stmt in stmts {
-            cur = self.bound_statement(cur, stmt);
-        }
-        cur
-    }
-
-    pub fn bound_program(&mut self, program: &Program) -> BoundResult {
-        self.program_var_count = program.used_vars().num_vars();
-        let init_bound = GeometricBound {
-            polynomial: SymPolynomial::one(),
-            geo_params: vec![SymExpr::zero(); self.program_var_count],
-        };
-        let init = BoundResult {
-            bound: init_bound,
-            var_supports: VarSupport::zero(self.program_var_count),
-        };
-        self.bound_statements(init, &program.stmts)
     }
 
     pub fn output_python(&self, bound: &GeometricBound) -> String {
@@ -819,11 +820,5 @@ impl BoundCtx {
         let optimized_solution =
             self.solve_lp_for_nonlinear_var_assignment(bound, &nonlinear_var_assignment)?;
         Ok(optimized_solution)
-    }
-}
-
-impl Default for BoundCtx {
-    fn default() -> Self {
-        Self::new()
     }
 }
