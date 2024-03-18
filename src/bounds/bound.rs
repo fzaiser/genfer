@@ -3,6 +3,7 @@ use crate::{
     multivariate_taylor::TaylorPoly,
     number::Number,
     ppl::Var,
+    semantics::support::VarSupport,
     support::SupportSet,
 };
 use num_traits::{One, Zero};
@@ -10,14 +11,14 @@ use num_traits::{One, Zero};
 #[derive(Debug, Clone)]
 pub struct BoundResult {
     pub bound: GeometricBound,
-    pub var_supports: Vec<SupportSet>,
+    pub var_supports: VarSupport,
 }
 
 impl BoundResult {
     pub fn marginalize(self, var: Var) -> BoundResult {
         let mut var_supports = self.var_supports;
-        if !var_supports[var.id()].is_empty() {
-            var_supports[var.id()] = SupportSet::zero();
+        if !var_supports[var].is_empty() {
+            var_supports.set(var, SupportSet::zero());
         }
         BoundResult {
             bound: self.bound.marginalize(var),
@@ -28,13 +29,17 @@ impl BoundResult {
 
 impl std::fmt::Display for BoundResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (i, support) in self.var_supports.iter().enumerate() {
-            writeln!(
-                f,
-                "Support of {var}: {support}",
-                var = Var(i),
-                support = support
-            )?;
+        if let Some(support_vec) = self.var_supports.as_vec() {
+            for (i, support) in support_vec.iter().enumerate() {
+                writeln!(
+                    f,
+                    "Support of {var}: {support}",
+                    var = Var(i),
+                    support = support
+                )?;
+            }
+        } else {
+            writeln!(f, "Support: empty")?;
         }
         writeln!(f, "Bound:\n{bound}", bound = self.bound)
     }

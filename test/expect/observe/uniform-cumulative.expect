@@ -1,4 +1,4 @@
-Support is a subset of: {0, ..., 99}
+Support is a subset of: {0, ..., 98}
 
 Computing moments...
 Total measure:             Z = 0.9900000000000007
@@ -8,7 +8,7 @@ Variance:                  V = 816.6666666666658
 Skewness (3rd std moment): S = -6.235236225609688e-16
 Kurtosis (4th std moment): K = 1.7997551020408036
 
-Computing probabilities up to 100...
+Computing probabilities up to 99...
 Unnormalized: p(0)     = 0.01
 Normalized:   p(0) / Z = 0.010101010101010095
 Unnormalized: p(1)     = 0.01
@@ -207,7 +207,5 @@ Unnormalized: p(97)     = 0.01
 Normalized:   p(97) / Z = 0.010101010101010095
 Unnormalized: p(98)     = 0.01
 Normalized:   p(98) / Z = 0.010101010101010095
-Unnormalized: p(99)     = 0.0
-Normalized:   p(99) / Z = 0.0
-Unnormalized: p(n)     <= 0.0 for all n >= 100
-Normalized:   p(n) / Z <= 0.0 for all n >= 100
+Unnormalized: p(n)     <= 0.0 for all n >= 99
+Normalized:   p(n) / Z <= 0.0 for all n >= 99

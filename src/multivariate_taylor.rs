@@ -65,6 +65,10 @@ impl<T> TaylorPoly<T> {
         self.coeffs
     }
 
+    pub fn is_constant(&self) -> bool {
+        self.coeffs.len() == 1
+    }
+
     pub fn len_of(&self, Var(v): Var) -> usize {
         self.check_invariants();
         if v < self.degrees_p1.len() {
@@ -234,7 +238,7 @@ impl<T: Number> TaylorPoly<T> {
 
     pub fn var(Var(v): Var, x: T, len: usize) -> Self {
         let mut shape = vec![1; v + 1];
-        shape[v] = 2;
+        shape[v] = len.min(2);
         let mut coeffs = ArrayD::zeros(shape);
         *coeffs.index_axis_mut(Axis(v), 0).first_mut().unwrap() = x;
         if len > 1 {
@@ -501,6 +505,33 @@ impl<T: Number> TaylorPoly<T> {
                 factor *= T::from((n + k) as u32) / T::from(k as u32);
                 res.map_mut(|x| *x *= factor.clone());
             });
+        Self::new(result, degrees_p1)
+    }
+
+    /// Shift the coefficients of `v` down by `n`, accumulating the ones that would be pushed out at zero.
+    ///
+    /// For example shifting `2 + 3 * v + v^2` down by 1 yields `5 + v`.
+    pub fn shift_down(&self, Var(v): Var, n: usize) -> Self {
+        self.check_invariants();
+        assert!(v < self.num_vars() && n < self.len_of(Var(v)));
+        if v >= self.coeffs.ndim() {
+            return self.clone();
+        }
+        let mut degrees_p1 = self.degrees_p1.clone();
+        degrees_p1[v] = degrees_p1[v].saturating_sub(n);
+        let result = if self.coeffs.len_of(Axis(v)) <= n + 1 {
+            let result = self.coeffs.sum_axis(Axis(v)).to_owned();
+            result.insert_axis(Axis(v))
+        } else {
+            let mut result = self.coeffs.slice_axis(Axis(v), Slice::from(n..)).to_owned();
+            result.index_axis_mut(Axis(v), 0).add_assign(
+                &self
+                    .coeffs
+                    .slice_axis(Axis(v), Slice::from(..n))
+                    .sum_axis(Axis(v)),
+            );
+            result
+        };
         Self::new(result, degrees_p1)
     }
 
@@ -794,7 +825,7 @@ fn test_2d_subst_var() {
     assert_ne!(
         taylor.subst_var(Var(0), &subst).subst_var(Var(1), &subst),
         taylor.subst_var(Var(1), &subst).subst_var(Var(0), &subst),
-    )
+    );
 }
 
 #[inline]
@@ -1371,6 +1402,7 @@ fn test_exp_mismatched_shapes() {
 }
 
 #[test]
+#[allow(clippy::approx_constant)] // for the constant e occurring
 fn test_2d_exp() {
     use crate::number::F64;
     assert_eq!(TaylorPoly::<F64>::zero().exp(), TaylorPoly::one());
@@ -1401,7 +1433,7 @@ fn test_2d_exp() {
             [403.428_793_492_735_1, 3_227.430_347_941_881],
             [4_034.287_934_927_351, 37_115.449_001_331_63]
         ])
-    )
+    );
 }
 
 #[test]
@@ -1445,9 +1477,13 @@ fn test_2d_log() {
     assert_eq!(
         f.exp().log(),
         taylor!([
-            [1.0, 2.0, 3.000000000000001],
-            [4.0, 4.999999999999999, 6.000000000000007],
-            [6.999999999999999, 8.000000000000002, 8.999999999999991]
+            [1.0, 2.0, 3.000_000_000_000_001],
+            [4.0, 4.999_999_999_999_999, 6.000_000_000_000_007],
+            [
+                6.999_999_999_999_999,
+                8.000_000_000_000_002,
+                8.999_999_999_999_991
+            ]
         ])
     );
     assert_eq!(
@@ -1457,17 +1493,21 @@ fn test_2d_log() {
     assert_eq!(
         f.log() + g.log(),
         taylor!([
-            [1.6094379124341003, 3.2, 1.6800000000000002],
-            [5.4, -3.0799999999999996, -0.06400000000000006],
-            [-0.17999999999999994, 5.952, -4.5416]
+            [1.609_437_912_434_100_3, 3.2, 1.680_000_000_000_000_2],
+            [5.4, -3.079_999_999_999_999_6, -0.064_000_000_000_000_06],
+            [-0.179_999_999_999_999_94, 5.952, -4.5416]
         ])
     );
     assert_eq!(
         (f * g).log(),
         taylor!([
-            [1.6094379124341003, 3.2, 1.6799999999999997],
-            [5.4, -3.080000000000001, -0.06399999999999864],
-            [-0.18000000000000113, 5.952000000000003, -4.5416000000000025]
+            [1.609_437_912_434_100_3, 3.2, 1.679_999_999_999_999_7],
+            [5.4, -3.080_000_000_000_001, -0.063_999_999_999_998_64],
+            [
+                -0.180_000_000_000_001_13,
+                5.952_000_000_000_003,
+                -4.541_600_000_000_002_5
+            ]
         ])
     );
 }

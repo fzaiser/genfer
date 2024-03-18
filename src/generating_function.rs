@@ -8,7 +8,7 @@ use crate::{
     multivariate_taylor::{fmt_polynomial, TaylorPoly},
     number::{FloatNumber, Number},
     ppl::{PosRatio, Var, VarRange},
-    support::SupportSet,
+    semantics::support::VarSupport,
     symbolic::SymGenFun,
 };
 
@@ -87,6 +87,10 @@ impl<T: Number> GenFun<T> {
         GeneratingFunctionKind::Pow(self.clone(), n).into_gf()
     }
 
+    pub fn max(&self, g: &Self) -> GenFun<T> {
+        GeneratingFunctionKind::Max(self.clone(), g.clone()).into_gf()
+    }
+
     pub fn uniform_mgf(g: Self) -> GenFun<T> {
         GeneratingFunctionKind::UniformMgf(g).into_gf()
     }
@@ -121,6 +125,14 @@ impl<T: Number> GenFun<T> {
     /// Coefficient of ε^`order` in the Taylor expansion of `self` wrt `v` at (`v` + ε).
     pub fn taylor_coeff(&self, v: Var, order: usize) -> GenFun<T> {
         GeneratingFunctionKind::TaylorCoeff(self.clone(), v, order).into_gf()
+    }
+
+    /// Viewing `self` as an infinite power series, shift the coefficients of `v` down by `order`
+    ///
+    /// In other words: Let `p` be the Taylor polynomial of `self` at `v = 0` of order `order`.
+    /// Then the result is: `(self - p) / v^order + p(1)`.
+    pub(crate) fn shift_down_taylor_at_zero(&self, v: Var, order: usize) -> GenFun<T> {
+        GeneratingFunctionKind::ShiftTaylorAtZero(self.clone(), v, order).into_gf()
     }
 
     pub fn substitute_var(&self, v: Var, val: Self) -> Self {
@@ -306,6 +318,8 @@ enum GeneratingFunctionKind<T> {
     TaylorPolynomial(GenFun<T>, Var, Vec<usize>),
     TaylorCoeffAtZero(GenFun<T>, Var, usize),
     TaylorCoeff(GenFun<T>, Var, usize),
+    ShiftTaylorAtZero(GenFun<T>, Var, usize),
+    Max(GenFun<T>, GenFun<T>),
 }
 
 impl<T> GeneratingFunctionKind<T> {
@@ -360,6 +374,13 @@ impl<T> GeneratingFunctionKind<T> {
                 a.fmt_prec(cur_prec + 1, f)?;
                 write!(f, "^{b}")?;
             }
+            Self::Max(g, h) => {
+                write!(f, "max(")?;
+                g.fmt_prec(0, f)?;
+                write!(f, ", ")?;
+                h.fmt_prec(0, f)?;
+                write!(f, ")")?;
+            }
             Self::UniformMgf(a) => {
                 write!(f, "uniform_mgf(")?;
                 a.fmt_prec(0, f)?;
@@ -392,6 +413,11 @@ impl<T> GeneratingFunctionKind<T> {
                 g.fmt_prec(0, f)?;
                 write!(f, " of {v}^{order})")?;
             }
+            GeneratingFunctionKind::ShiftTaylorAtZero(g, v, order) => {
+                write!(f, "shift(")?;
+                g.fmt_prec(0, f)?;
+                write!(f, " of {v} by {order})")?;
+            }
         }
         if cur_prec < parent_prec {
             write!(f, ")")?;
@@ -403,7 +429,7 @@ impl<T> GeneratingFunctionKind<T> {
         match self {
             Self::Var(v) => VarRange::new(*v),
             Self::Const(_) => VarRange::empty(),
-            Self::Add(a, b) | Self::Mul(a, b) | Self::Div(a, b) => {
+            Self::Add(a, b) | Self::Mul(a, b) | Self::Div(a, b) | Self::Max(a, b) => {
                 a.used_vars_with(cache).union(&b.used_vars_with(cache))
             }
             Self::Neg(a) | Self::Exp(a) | Self::Log(a) | Self::Pow(a, _) | Self::UniformMgf(a) => {
@@ -417,7 +443,8 @@ impl<T> GeneratingFunctionKind<T> {
             Self::TaylorCoeffAtZero(g, v, _) => g.used_vars_with(cache).remove(*v),
             Self::Derivative(g, _, _)
             | Self::TaylorPolynomial(g, _, _)
-            | Self::TaylorCoeff(g, _, _) => g.used_vars_with(cache),
+            | Self::TaylorCoeff(g, _, _)
+            | Self::ShiftTaylorAtZero(g, _, _) => g.used_vars_with(cache),
         }
     }
 
@@ -428,12 +455,14 @@ impl<T> GeneratingFunctionKind<T> {
             | Const(_)
             | Exp(_)
             | Log(_)
+            | Max(..)
             | UniformMgf(_)
             | Subst(..)
             | Derivative(..)
             | TaylorPolynomial(..)
             | TaylorCoeffAtZero(..)
-            | TaylorCoeff(..) => 10,
+            | TaylorCoeff(..)
+            | ShiftTaylorAtZero(..) => 10,
             Add(..) | Neg(_) | Polynomial(..) => 0,
             Mul(..) | Div(..) => 1,
             Pow(..) => 2,
@@ -476,7 +505,11 @@ impl<T: Number> GeneratingFunctionKind<T> {
                 }
                 _ => None,
             },
-            Self::Polynomial(_) | Self::Exp(_) | Self::Log(_) | Self::UniformMgf(_) => None,
+            Self::Polynomial(_)
+            | Self::Exp(_)
+            | Self::Log(_)
+            | Self::Max(..)
+            | Self::UniformMgf(_) => None,
             Self::Pow(g, n) => g.simplify_with(cache).map(|p| p.pow(*n)),
             Self::Subst(g, v, subst) => {
                 match (g.simplify_with(cache), subst.simplify_with(cache)) {
@@ -505,9 +538,13 @@ impl<T: Number> GeneratingFunctionKind<T> {
             Self::TaylorCoeff(g, v, order) => g
                 .simplify_with(cache)
                 .map(|p| p.taylor_expansion_of_coeff(*v, *order)),
+            Self::ShiftTaylorAtZero(g, v, order) => {
+                g.simplify_with(cache).map(|p| p.shift_down(*v, *order))
+            }
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     fn eval(
         &self,
         inputs: &[T],
@@ -546,6 +583,14 @@ impl<T: Number> GeneratingFunctionKind<T> {
             }
             Self::Exp(g) => g.eval_with(inputs, degree_p1, cache).exp(),
             Self::Log(g) => g.eval_with(inputs, degree_p1, cache).log(),
+            Self::Max(g, h) => {
+                let s = g.eval_with(inputs, degree_p1, cache);
+                let t = h.eval_with(inputs, degree_p1, cache);
+                // Maximum should only happen for constants
+                debug_assert!(s.is_constant());
+                debug_assert!(t.is_constant());
+                TaylorPoly::from(s.constant_term().max(&t.constant_term()))
+            }
             Self::Pow(g, n) => g.eval_with(inputs, degree_p1, cache).pow(*n),
             Self::UniformMgf(g) => {
                 let x = g.eval_with(inputs, degree_p1, cache);
@@ -603,6 +648,21 @@ impl<T: Number> GeneratingFunctionKind<T> {
                 let taylor = g.eval_with(inputs, degree_p1 + *order, cache);
                 let result = taylor.taylor_expansion_of_coeff(*v, *order);
                 result.truncate_to_degree_p1(degree_p1)
+            }
+            Self::ShiftTaylorAtZero(g, v, order) => {
+                if inputs[v.id()].is_zero() {
+                    let taylor = g.eval_with(inputs, degree_p1 + *order, cache);
+                    taylor
+                        .shift_down(*v, *order)
+                        .truncate_to_degree_p1(degree_p1)
+                } else {
+                    let first_taylor_terms = g.taylor_polynomial_at_zero(*v, (0..*order).collect());
+                    let additional_mass_on_zero =
+                        first_taylor_terms.substitute_var(*v, GenFun::one());
+                    let h = (g.clone() - first_taylor_terms) / GenFun::var(*v).pow(*order as u32)
+                        + additional_mass_on_zero;
+                    h.eval_with(inputs, degree_p1, cache)
+                }
             }
         }
     }
@@ -722,6 +782,7 @@ impl<T: Number> GeneratingFunctionKind<T> {
             Self::Exp(g) => g.to_computation().exp(),
             Self::Log(g) => g.to_computation().log(),
             Self::Pow(g, exp) => g.to_computation().pow(*exp),
+            Self::Max(g, h) => g.to_computation().max(&h.to_computation()),
             Self::UniformMgf(g) => {
                 let g_comp = g.to_computation();
                 // TODO: this will yield to a division 0 / 0 if g_comp is 0.
@@ -765,6 +826,7 @@ impl<T: Number> GeneratingFunctionKind<T> {
             Self::TaylorCoeff(g, v, order) => {
                 g.to_computation().taylor_coeffs(*v, *order).coeff(*order)
             }
+            Self::ShiftTaylorAtZero(..) => todo!(),
         }
     }
 }
@@ -875,17 +937,17 @@ fn fold_coeffs<T, R>(
 pub fn probs_taylor<T: Number>(
     pgf: &GenFun<T>,
     v: Var,
-    var_info: &[SupportSet],
+    var_info: &VarSupport,
     max_n: usize,
 ) -> Vec<T> {
     assert!(
-        var_info[v.id()].is_discrete(),
+        var_info[v].is_discrete(),
         "Can only compute probabilities for discrete variables"
     );
-    let num_vars = var_info.len();
+    let num_vars = var_info.num_vars();
     let mut substs = (0..num_vars)
         .map(|i| {
-            if var_info[i].is_discrete() {
+            if var_info[Var(i)].is_discrete() {
                 T::one()
             } else {
                 T::zero()
@@ -908,13 +970,13 @@ pub fn probs_taylor<T: Number>(
 pub fn moments_taylor<T: Number>(
     pgf: &GenFun<T>,
     v: Var,
-    var_info: &[SupportSet],
+    var_info: &VarSupport,
     limit: usize,
 ) -> (T, Vec<T>) {
-    let num_vars = var_info.len();
+    let num_vars = var_info.num_vars();
     let substs = (0..num_vars)
         .map(|i| {
-            if var_info[i].is_discrete() {
+            if var_info[Var(i)].is_discrete() {
                 T::one()
             } else {
                 T::zero()
@@ -930,7 +992,7 @@ pub fn moments_taylor<T: Number>(
         result.push(expansion.coefficient(&index) * factor.clone());
         factor *= T::from((i + 1) as u32);
     }
-    if var_info[v.id()].is_discrete() {
+    if var_info[v].is_discrete() {
         factorial_moments_to_moments(&result)
     } else {
         let total = result[0].clone();

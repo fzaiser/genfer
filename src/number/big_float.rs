@@ -6,7 +6,6 @@ use std::{
 
 use num_traits::{One, Zero};
 
-
 use super::f64::F64;
 use super::number::{FloatNumber, IntervalNumber, Number};
 
@@ -185,9 +184,25 @@ impl Number for BigFloat {
             self.exponent * i64::from(exp),
         )
     }
-}
 
-impl FloatNumber for BigFloat {
+    #[inline]
+    fn min(&self, other: &Self) -> Self {
+        if self < other {
+            *self
+        } else {
+            *other
+        }
+    }
+
+    #[inline]
+    fn max(&self, other: &Self) -> Self {
+        if self > other {
+            *self
+        } else {
+            *other
+        }
+    }
+
     #[inline]
     fn abs(&self) -> Self {
         Self {
@@ -195,7 +210,9 @@ impl FloatNumber for BigFloat {
             exponent: self.exponent,
         }
     }
+}
 
+impl FloatNumber for BigFloat {
     #[inline]
     fn sqrt(&self) -> Self {
         let exponent = self.exponent.div_euclid(2);

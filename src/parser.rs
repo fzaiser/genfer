@@ -310,7 +310,7 @@ fn observe<'a>(vars: &[&'a str], input: &'a str) -> IResult<&'a str, Statement> 
             keyword("observe"),
             cut(|input| {
                 let (input, event) = event(vars, input)?;
-                let (input, _) = cut(semicolon)(input)?;
+                let (input, ()) = cut(semicolon)(input)?;
                 Ok((
                     input,
                     Statement::IfThenElse {
@@ -358,6 +358,7 @@ fn affine_transform<'a>(
     }))(input)
 }
 
+#[allow(clippy::too_many_lines)]
 fn distribution<'a>(vars: &[&'a str], input: &'a str) -> IResult<&'a str, Distribution> {
     let (input, distribution) = identifier(input)?;
     match distribution {
@@ -497,14 +498,14 @@ fn assign<'a>(vars: &mut Vec<&'a str>, input: &'a str) -> IResult<&'a str, State
             sample(input, vars, lhs)?
         } else if input.starts_with("-=") {
             let (input, _) = tag("-=")(input)?;
-            let (input, amount) = natural(input)?;
+            let (input, offset) = natural(input)?;
             let lhs = find_or_create_var(vars, lhs);
-            let stmt = Statement::Decrement { var: lhs, amount };
+            let stmt = Statement::Decrement { var: lhs, offset };
             (input, stmt)
         } else {
             affine_transform(input, vars, lhs)?
         };
-        let (input, _) = cut(semicolon)(input)?;
+        let (input, ()) = cut(semicolon)(input)?;
         Ok((input, stmt))
     })(input)
 }
@@ -593,7 +594,7 @@ fn block<'a>(vars: &mut Vec<&'a str>, input: &'a str) -> IResult<&'a str, Vec<St
 
 fn statement<'a>(vars: &mut Vec<&'a str>, input: &'a str) -> IResult<&'a str, Vec<Statement>> {
     context("statement", |input| {
-        let (input, _) = ws(input)?;
+        let (input, ()) = ws(input)?;
         let (input, stmts) = if keyword("normalize")(input).is_ok() {
             let (input, stmt) = normalize(vars, input)?;
             (input, vec![stmt])
@@ -615,7 +616,7 @@ fn statement<'a>(vars: &mut Vec<&'a str>, input: &'a str) -> IResult<&'a str, Ve
             let (input, stmt) = assign(vars, input)?;
             (input, vec![stmt])
         };
-        let (input, _) = ws(input)?;
+        let (input, ()) = ws(input)?;
         Ok((input, stmts))
     })(input)
 }

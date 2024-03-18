@@ -9,6 +9,6 @@ Skewness (3rd std moment): S = 5.366821142197155
 Kurtosis (4th std moment): K = 29.80276917233439
 
 Computing probabilities up to 2...
-p(0) = 0.9685240323266695
+p(0) = 0.9685240323266694
 p(1) = 0.031475967673330496
 p(n) <= 0.0 for all n >= 2

@@ -1,0 +1,12 @@
+# flags: --limit 12
+X := 1;
+Y := 0;
+while X > 0 {
+    if 0 ~ Bernoulli(0.75) {
+        X += 1;
+    } else {
+        X -= 1;
+    }
+    Y += 1;
+}
+return Y

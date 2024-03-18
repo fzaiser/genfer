@@ -283,9 +283,17 @@ impl<T: IntervalNumber> Number for Interval<T> {
             result
         }
     }
-}
 
-impl<T: IntervalNumber> FloatNumber for Interval<T> {
+    #[inline]
+    fn min(&self, other: &Self) -> Self {
+        Self::exact(self.lo.min(&other.lo), self.hi.min(&other.hi))
+    }
+
+    #[inline]
+    fn max(&self, other: &Self) -> Self {
+        Self::exact(self.lo.max(&other.lo), self.hi.max(&other.hi))
+    }
+
     fn abs(&self) -> Self {
         let result = Self::widen(self.lo.abs(), self.hi.abs());
         if self.contains(&T::zero()) {
@@ -294,7 +302,9 @@ impl<T: IntervalNumber> FloatNumber for Interval<T> {
             result
         }
     }
+}
 
+impl<T: IntervalNumber> FloatNumber for Interval<T> {
     fn sqrt(&self) -> Self {
         let lo = if self.lo < T::zero() {
             T::zero()

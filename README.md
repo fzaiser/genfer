@@ -120,7 +120,8 @@ where `X` is the variable whose posterior distribution will be computed and `<st
 
 Statements take one of the following forms:
 
-* assignment: `X := a * Y + b;` or `X += a * Y + b;` where `a` and `b` are natural numbers and `X` and `Y` are program variables
+* assignment & addition: `X := a * Y + b;` or `X += a * Y + b;` where `a` and `b` are natural numbers and `X` and `Y` are program variables
+* decrementing: `X -= a` where `a` is a natural number and `X` is a discrete variable
 * sampling: `X ~ <distribution>;` where `<distribution>` is one of the supported distributions listed below
 * observations: `observe <event>` where `<event>` is described below. `fail` means observing an event that happens with probability 0.
 * branching: `if <event> { <statements> } else { <statements> }` where `<event>` is described below

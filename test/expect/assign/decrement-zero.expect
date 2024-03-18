@@ -1,0 +1,13 @@
+Support is a subset of: {0}
+
+Computing moments...
+Total measure:             Z = 1
+Expected value:            E = 0
+Standard deviation:        σ = 0
+Variance:                  V = 0
+Skewness (3rd std moment): S = (not a rational)
+Kurtosis (4th std moment): K = (not a rational)
+
+Computing probabilities up to 1...
+p(0) = 1
+p(n) <= 0 for all n >= 1

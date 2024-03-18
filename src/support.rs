@@ -2,7 +2,7 @@ use std::ops::{Range, RangeFrom, RangeInclusive};
 
 use num_traits::Zero;
 
-use crate::number::{IntervalNumber, Rational};
+use crate::number::{Number, Rational};
 
 /// Support set of a random variable (overapproximated as a range)
 #[derive(Clone, Debug, PartialEq)]
@@ -147,15 +147,10 @@ impl SupportSet {
         Self::interval(Rational::zero(), Rational::infinity())
     }
 
-    pub fn join_vecs(lhs: &[Self], rhs: &[Self]) -> Vec<Self> {
-        assert_eq!(lhs.len(), rhs.len());
-        lhs.iter().zip(rhs.iter()).map(|(x, y)| x.join(y)).collect()
-    }
-
     pub fn is_subset_of(&self, other: &SupportSet) -> bool {
         match (self, other) {
             (Self::Empty, _) => true,
-            (_, Self::Empty) => false,
+            (_, Self::Empty) | (Self::Interval { .. }, Self::Range { .. }) => false,
             (
                 Self::Range { start, end },
                 Self::Range {
@@ -181,7 +176,6 @@ impl SupportSet {
                     && end.is_some()
                     && &Rational::from(end.unwrap()) <= end2
             }
-            (Self::Interval { .. }, Self::Range { .. }) => false,
         }
     }
 
@@ -201,26 +195,21 @@ impl SupportSet {
         match self {
             Self::Empty => Self::Empty,
             Self::Range { start, end } => {
-                if set.is_empty() {
-                    return Self::Empty;
+                let mut new_start = None;
+                let mut new_end = None;
+                for v in set {
+                    if start <= v && v <= &end.unwrap_or(u32::MAX) {
+                        if new_start.is_none() {
+                            new_start = Some(*v);
+                        }
+                        new_end = Some(*v);
+                    }
                 }
-                let mut i = 0;
-                while i < set.len() && set[i] < *start {
-                    i += 1;
+                if let (Some(start), end) = (new_start, new_end) {
+                    Self::Range { start, end }
+                } else {
+                    Self::empty()
                 }
-                if i == set.len() {
-                    return Self::Empty;
-                }
-                let start = set[i];
-                let mut j = set.len() - 1;
-                while j > i && set[j] > end.unwrap_or(u32::MAX) {
-                    j -= 1;
-                }
-                if set[j] < start {
-                    return Self::Empty;
-                }
-                let end = Some(set[j]);
-                Self::Range { start, end }
             }
             Self::Interval { .. } => self.clone(),
         }
@@ -235,7 +224,7 @@ impl SupportSet {
 
     fn remove_all_impl(&mut self, set: &[u32]) {
         match self {
-            Self::Empty => {}
+            Self::Empty | Self::Interval { .. } => {}
             Self::Range { start, end } => {
                 if set.is_empty() {
                     return;
@@ -261,7 +250,6 @@ impl SupportSet {
                     *self = Self::Empty;
                 }
             }
-            Self::Interval { .. } => {}
         }
     }
 }

@@ -111,6 +111,11 @@ fn expect_tests_assign() {
 }
 
 #[test]
+fn expect_tests_while() {
+    check_test_dir("while");
+}
+
+#[test]
 fn expect_tests_normalize() {
     check_test_dir("normalize");
 }

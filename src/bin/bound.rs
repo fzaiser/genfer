@@ -14,6 +14,7 @@ use genfer::parser;
 use genfer::ppl::{Program, Var};
 
 use clap::Parser;
+use genfer::semantics::support::VarSupport;
 use num_traits::{One, Zero};
 
 #[allow(clippy::struct_excessive_bools)]
@@ -56,11 +57,15 @@ pub fn main() -> std::io::Result<()> {
 fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
     let start = Instant::now();
     let mut ctx = BoundCtx::new();
-    let supports = BoundCtx::var_supports_program(&program);
-    for (v, support) in supports.iter().enumerate() {
-        println!("Support of {}: {support}", Var(v));
-    }
     let result = ctx.bound_program(program);
+    match &result.var_supports {
+        VarSupport::Empty(_) => println!("Support: empty"),
+        VarSupport::Prod(supports) => {
+            for (v, support) in supports.iter().enumerate() {
+                println!("Support of {}: {support}", Var(v));
+            }
+        }
+    }
     println!("Bound result:");
     println!("{result}");
     println!("Constraints:");
@@ -96,16 +101,16 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
             println!("{z3_bound}");
 
             println!("\nProbability masses:");
-            let mut inputs = vec![F64::one(); supports.len()];
+            let mut inputs = vec![F64::one(); result.var_supports.num_vars()];
             inputs[program.result.id()] = F64::zero();
             let degree_p1 =
-                if let Some(range) = supports[program.result.id()].finite_nonempty_range() {
+                if let Some(range) = result.var_supports[program.result].finite_nonempty_range() {
                     *range.end() as usize + 1
                 } else {
                     100
                 };
             let expansion = z3_bound.evaluate_var(&inputs, program.result, degree_p1);
-            let mut index = vec![0; supports.len()];
+            let mut index = vec![0; result.var_supports.num_vars()];
             for i in 0..degree_p1 {
                 index[program.result.id()] = i;
                 let prob = expansion.coefficient(&index);
@@ -113,9 +118,9 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
             }
 
             println!("\nMoments:");
-            let inputs = vec![F64::one(); supports.len()];
+            let inputs = vec![F64::one(); result.var_supports.num_vars()];
             let expansion = z3_bound.evaluate_var(&inputs, program.result, 5);
-            let mut index = vec![0; supports.len()];
+            let mut index = vec![0; result.var_supports.num_vars()];
             for i in 0..5 {
                 index[program.result.id()] = i;
                 let factorial_moment = expansion.coefficient(&index);

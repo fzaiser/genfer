@@ -34,10 +34,16 @@ pub trait Number:
     fn exp(&self) -> Self;
     fn log(&self) -> Self;
     fn pow(&self, exp: u32) -> Self;
+    fn max(&self, other: &Self) -> Self;
+    fn min(&self, other: &Self) -> Self {
+        -((-self.clone()).max(&(-other.clone())))
+    }
+    fn abs(&self) -> Self {
+        self.max(&Self::zero())
+    }
 }
 
 pub trait FloatNumber: Number {
-    fn abs(&self) -> Self;
     fn sqrt(&self) -> Self;
     fn is_finite(&self) -> bool;
     fn is_nan(&self) -> bool;
@@ -70,22 +76,6 @@ pub trait IntervalNumber: FloatNumber + PartialOrd {
     }
     fn next_up(&self) -> Self;
     fn next_down(&self) -> Self;
-    #[inline]
-    fn min(&self, other: &Self) -> Self {
-        if self < other {
-            self.clone()
-        } else {
-            other.clone()
-        }
-    }
-    #[inline]
-    fn max(&self, other: &Self) -> Self {
-        if self > other {
-            self.clone()
-        } else {
-            other.clone()
-        }
-    }
 }
 
 #[inline]

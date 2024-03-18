@@ -8,6 +8,10 @@ use crate::{
     bounds::{bound::*, sym_expr::*, sym_poly::*},
     number::{Number, F64},
     ppl::{Distribution, Event, Natural, Program, Statement},
+    semantics::{
+        support::{SupportTransformer, VarSupport},
+        Transformer,
+    },
     support::SupportSet,
 };
 
@@ -18,6 +22,7 @@ pub enum SolverError {
 }
 
 pub struct BoundCtx {
+    support: SupportTransformer,
     program_var_count: usize,
     sym_var_count: usize,
     // Variables used nonlinearly, in [0,1)
@@ -29,6 +34,7 @@ pub struct BoundCtx {
 impl BoundCtx {
     pub fn new() -> Self {
         Self {
+            support: SupportTransformer::default(),
             program_var_count: 0,
             sym_var_count: 0,
             nonlinear_param_vars: Vec::new(),
@@ -109,241 +115,11 @@ impl BoundCtx {
 
     pub fn add_bound_results(&mut self, lhs: BoundResult, rhs: BoundResult) -> BoundResult {
         let bound = self.add_bounds(lhs.bound, rhs.bound);
-        let var_supports = SupportSet::join_vecs(&lhs.var_supports, &rhs.var_supports);
+        let var_supports = lhs.var_supports.join(&rhs.var_supports);
         BoundResult {
             bound,
             var_supports,
         }
-    }
-
-    // TODO avoid code duplication with `bound_event`
-    pub fn var_supports_event(
-        init: Vec<SupportSet>,
-        event: &Event,
-    ) -> (Vec<SupportSet>, Vec<SupportSet>) {
-        match event {
-            Event::InSet(v, set) => {
-                let mut then_support = init.clone();
-                then_support[v.id()].retain_only(set.iter().map(|n| n.0));
-                if then_support[v.id()].is_empty() {
-                    for w in 0..then_support.len() {
-                        then_support[w] = SupportSet::empty();
-                    }
-                }
-                let mut else_support = init;
-                else_support[v.id()].remove_all(set.iter().map(|n| n.0));
-                if else_support[v.id()].is_empty() {
-                    for w in 0..else_support.len() {
-                        else_support[w] = SupportSet::empty();
-                    }
-                }
-                (then_support, else_support)
-            }
-            Event::DataFromDist(..) => (init.clone(), init),
-            Event::VarComparison(..) => todo!(),
-            Event::Complement(event) => {
-                let (then_support, else_support) = Self::var_supports_event(init, event);
-                (else_support, then_support)
-            }
-            Event::Intersection(events) => {
-                let mut else_support = vec![SupportSet::empty(); init.len()];
-                let mut then_support = init;
-                for event in events {
-                    let (new_then, new_else) = Self::var_supports_event(then_support, event);
-                    then_support = new_then;
-                    else_support = SupportSet::join_vecs(&new_else, &else_support);
-                }
-                (then_support, else_support)
-            }
-        }
-    }
-
-    // TODO: avoid code duplication with `bound_statement`
-    pub fn var_supports_statement(init: Vec<SupportSet>, stmt: &Statement) -> Vec<SupportSet> {
-        if init.iter().all(|s| s.is_empty()) {
-            return init;
-        }
-        match stmt {
-            Statement::Sample {
-                var,
-                distribution,
-                add_previous_value,
-            } => {
-                let mut res = init;
-                if !*add_previous_value {
-                    res[var.id()] = SupportSet::zero();
-                }
-                match distribution {
-                    Distribution::Bernoulli(_) => {
-                        res[var.id()] += (0..2).into();
-                        res
-                    }
-                    Distribution::Geometric(_) => {
-                        res[var.id()] += SupportSet::naturals();
-                        res
-                    }
-                    Distribution::Uniform { start, end } => {
-                        res[var.id()] += (start.0..end.0).into();
-                        res
-                    }
-                    Distribution::Binomial(n, _) => {
-                        res[var.id()] += (0..=n.0).into();
-                        res
-                    }
-                    Distribution::BinomialVarTrials(w, _) => {
-                        let w_support = res[w.id()].clone();
-                        res[var.id()] += w_support;
-                        res
-                    }
-                    _ => todo!(),
-                }
-            }
-            Statement::Assign {
-                var,
-                add_previous_value,
-                addend,
-                offset,
-            } => {
-                let mut new_support = init[var.id()].clone();
-                if !*add_previous_value {
-                    new_support = SupportSet::zero();
-                }
-                if let Some((factor, w)) = addend {
-                    new_support += init[w.id()].clone() * factor.0;
-                }
-                new_support += SupportSet::point(offset.0);
-                let mut res = init;
-                res[var.id()] = new_support;
-                res
-            }
-            Statement::Decrement { var, amount } => {
-                let mut res = init;
-                res[var.id()] = res[var.id()].saturating_sub(amount.0);
-                res
-            }
-            Statement::IfThenElse { cond, then, els } => {
-                let (then_res, else_res) = Self::var_supports_event(init, cond);
-                let then_res = Self::var_supports_statements(then_res, then);
-                let else_res = Self::var_supports_statements(else_res, els);
-                SupportSet::join_vecs(&else_res, &then_res)
-            }
-            Statement::Fail => vec![SupportSet::empty(); init.len()],
-            Statement::Normalize { .. } => todo!(),
-            Statement::While { cond, body, .. } => {
-                let (_, _loop_entry, loop_exit) = Self::analyze_while_support(cond, body, init);
-                loop_exit
-            }
-        }
-    }
-
-    fn analyze_while_support(
-        cond: &Event,
-        body: &[Statement],
-        init: Vec<SupportSet>,
-    ) -> (Option<usize>, Vec<SupportSet>, Vec<SupportSet>) {
-        let (mut loop_entry, mut loop_exit) = Self::var_supports_event(init, cond);
-        // TODO: upper bound of this for loop should be the highest constant occurring in the loop or something like that
-        for i in 0..100 {
-            let (new_loop_entry, new_loop_exit) =
-                Self::one_iteration(loop_entry.clone(), loop_exit.clone(), body, cond);
-            if loop_entry == new_loop_entry && loop_exit == new_loop_exit {
-                return (Some(i), loop_entry, loop_exit);
-            }
-            loop_entry = new_loop_entry;
-            loop_exit = new_loop_exit;
-        }
-        // The number of widening steps needed is at most the number of variables:
-        for _ in 0..loop_entry.len() + 1 {
-            let (new_loop_entry, new_loop_exit) =
-                Self::one_iteration(loop_entry.clone(), loop_exit.clone(), body, cond);
-            if SupportSet::vec_is_subset_of(&new_loop_entry, &loop_entry)
-                && SupportSet::vec_is_subset_of(&new_loop_exit, &loop_exit)
-            {
-                assert_eq!(loop_exit, new_loop_exit);
-                return (None, loop_entry, loop_exit);
-            }
-            for v in 0..loop_entry.len() {
-                match (&loop_entry[v], &new_loop_entry[v]) {
-                    (
-                        SupportSet::Range { start, end },
-                        SupportSet::Range {
-                            start: new_start,
-                            end: new_end,
-                        },
-                    ) => {
-                        if end.is_some() && new_end.is_none() {
-                            unreachable!();
-                        }
-                        if (new_end.is_some() && new_end < end) || new_start < start {
-                            panic!("More iterations needed");
-                        }
-                        if new_end > end {
-                            loop_entry[v] = (*start..).into();
-                        }
-                    }
-                    _ => {
-                        dbg!(v, &loop_entry[v], &new_loop_entry[v]);
-                        unreachable!("Unexpected variable supports")
-                    }
-                }
-                match (&loop_exit[v], &new_loop_exit[v]) {
-                    (
-                        SupportSet::Range { start, end },
-                        SupportSet::Range {
-                            start: new_start,
-                            end: new_end,
-                        },
-                    ) => {
-                        if end.is_some() && new_end.is_none() {
-                            unreachable!();
-                        }
-                        if (new_end.is_some() && new_end < end) || new_start < start {
-                            panic!("More iterations needed");
-                        }
-                        if new_end > end {
-                            loop_exit[v] = (*start..).into();
-                        }
-                    }
-                    _ => unreachable!("Unexpected variable supports"),
-                }
-            }
-        }
-        let (new_loop_entry, new_loop_exit) =
-            Self::one_iteration(loop_entry.clone(), loop_exit.clone(), body, cond);
-        assert!(
-            SupportSet::vec_is_subset_of(&new_loop_entry, &loop_entry)
-                && SupportSet::vec_is_subset_of(&new_loop_exit, &loop_exit),
-            "Widening failed."
-        );
-        (None, loop_entry, loop_exit)
-    }
-
-    fn one_iteration(
-        loop_entry: Vec<SupportSet>,
-        loop_exit: Vec<SupportSet>,
-        body: &[Statement],
-        cond: &Event,
-    ) -> (Vec<SupportSet>, Vec<SupportSet>) {
-        let after_loop = Self::var_supports_statements(loop_entry, body);
-        let (repeat_supports, exit_supports) = Self::var_supports_event(after_loop, cond);
-        let loop_exit = SupportSet::join_vecs(&exit_supports, &loop_exit);
-        (repeat_supports, loop_exit)
-    }
-
-    pub fn var_supports_statements(init: Vec<SupportSet>, stmts: &[Statement]) -> Vec<SupportSet> {
-        let mut cur = init;
-        for stmt in stmts {
-            cur = Self::var_supports_statement(cur, stmt);
-        }
-        cur
-    }
-
-    pub fn var_supports_program(program: &Program) -> Vec<SupportSet> {
-        let mut supports = vec![SupportSet::zero(); program.used_vars().num_vars()];
-        for stmt in &program.stmts {
-            supports = Self::var_supports_statement(supports, stmt);
-        }
-        supports
     }
 
     #[allow(clippy::only_used_in_recursion)]
@@ -362,19 +138,9 @@ impl BoundCtx {
                     bound: then_bound,
                     var_supports: init.var_supports.clone(),
                 };
-                then_res.var_supports[v.id()].retain_only(set.iter().map(|n| n.0));
-                if then_res.var_supports[v.id()].is_empty() {
-                    for w in 0..then_res.var_supports.len() {
-                        then_res.var_supports[w] = SupportSet::empty();
-                    }
-                }
                 let mut else_res = init;
-                else_res.var_supports[v.id()].remove_all(set.iter().map(|n| n.0));
-                if else_res.var_supports[v.id()].is_empty() {
-                    for w in 0..else_res.var_supports.len() {
-                        else_res.var_supports[w] = SupportSet::empty();
-                    }
-                }
+                (then_res.var_supports, else_res.var_supports) =
+                    self.support.transform_event(event, else_res.var_supports);
                 for Natural(n) in set {
                     let mut coeff = SymPolynomial::zero();
                     for i in 0..=*n {
@@ -414,7 +180,7 @@ impl BoundCtx {
             Event::Intersection(events) => {
                 let mut else_res = BoundResult {
                     bound: GeometricBound::zero(init.bound.geo_params.len()),
-                    var_supports: vec![SupportSet::empty(); init.var_supports.len()],
+                    var_supports: VarSupport::Empty(init.var_supports.num_vars()),
                 };
                 let mut then_res = init;
                 for event in events {
@@ -428,12 +194,26 @@ impl BoundCtx {
     }
 
     pub fn bound_statement(&mut self, init: BoundResult, stmt: &Statement) -> BoundResult {
-        match stmt {
+        let direct_var_supports = if cfg!(debug_assertions) {
+            Some(
+                self.support
+                    .transform_statement(stmt, init.var_supports.clone()),
+            )
+        } else {
+            None
+        };
+        let result = match stmt {
             Statement::Sample {
                 var,
                 distribution,
                 add_previous_value,
             } => {
+                let new_var_info = SupportTransformer::transform_distribution(
+                    distribution,
+                    *var,
+                    init.var_supports.clone(),
+                    *add_previous_value,
+                );
                 let mut res = if *add_previous_value {
                     init
                 } else {
@@ -441,31 +221,27 @@ impl BoundCtx {
                 };
                 match distribution {
                     Distribution::Bernoulli(p) => {
-                        res.var_supports[var.id()] += (0..2).into();
                         let p = F64::from_ratio(p.numer, p.denom).to_f64();
                         res.bound.polynomial *=
                             SymPolynomial::var(*var) * SymExpr::from(p) + (1.0 - p).into();
-                        res
                     }
                     Distribution::Geometric(p) if !add_previous_value => {
-                        res.var_supports[var.id()] += SupportSet::naturals();
                         let p = F64::from_ratio(p.numer, p.denom).to_f64();
                         res.bound.polynomial *= SymExpr::from(p);
                         res.bound.geo_params[var.id()] = SymExpr::from(1.0 - p);
-                        res
                     }
                     Distribution::Uniform { start, end } => {
-                        res.var_supports[var.id()] += (start.0..end.0).into();
                         let mut factor = SymPolynomial::zero();
                         let len = f64::from(end.0 - start.0);
                         for i in start.0..end.0 {
                             factor += SymPolynomial::var_power(*var, i) / len.into();
                         }
                         res.bound.polynomial *= factor;
-                        res
                     }
                     _ => todo!(),
-                }
+                };
+                res.var_supports = new_var_info;
+                res
             }
             Statement::Assign {
                 var,
@@ -480,16 +256,18 @@ impl BoundCtx {
                         init.marginalize(*var)
                     };
                     new_bound.bound.polynomial *= SymPolynomial::var_power(*var, *n);
-                    new_bound.var_supports[var.id()] += SupportSet::point(*n);
+                    new_bound.var_supports = self
+                        .support
+                        .transform_statement(stmt, new_bound.var_supports);
                     new_bound
                 } else {
                     todo!()
                 }
             }
-            Statement::Decrement { var, amount } => {
+            Statement::Decrement { var, offset } => {
                 let mut cur = init;
                 let alpha = cur.bound.geo_params[var.id()].clone();
-                for _ in 0..amount.0 {
+                for _ in 0..offset.0 {
                     let polynomial = cur.bound.polynomial;
                     let (p0, shifted) = polynomial.extract_zero_and_shift_left(*var);
                     let other = p0
@@ -497,7 +275,7 @@ impl BoundCtx {
                             + (SymPolynomial::one() - SymPolynomial::var(*var)) * alpha.clone());
                     cur.bound.polynomial = shifted + other;
                 }
-                cur.var_supports[var.id()] = cur.var_supports[var.id()].saturating_sub(amount.0);
+                cur.var_supports = self.support.transform_statement(stmt, cur.var_supports);
                 cur
             }
             Statement::IfThenElse { cond, then, els } => {
@@ -508,18 +286,19 @@ impl BoundCtx {
             }
             Statement::Fail => BoundResult {
                 bound: GeometricBound::zero(self.program_var_count),
-                var_supports: vec![SupportSet::empty(); init.var_supports.len()],
+                var_supports: VarSupport::empty(init.var_supports.num_vars()),
             },
             Statement::Normalize { .. } => todo!(),
             Statement::While { cond, unroll, body } => {
                 let mut pre_loop = init;
                 let mut rest = BoundResult {
                     bound: GeometricBound::zero(self.program_var_count),
-                    var_supports: vec![SupportSet::empty(); pre_loop.var_supports.len()],
+                    var_supports: VarSupport::empty(pre_loop.var_supports.num_vars()),
                 };
                 let unroll_count = unroll.unwrap_or(0);
                 let (iters, invariant_supports, _) =
-                    Self::analyze_while_support(cond, body, pre_loop.var_supports.clone());
+                    self.support
+                        .analyze_while(cond, body, pre_loop.var_supports.clone());
                 let unroll_count = if let Some(iters) = iters {
                     unroll_count.max(iters)
                 } else {
@@ -532,24 +311,30 @@ impl BoundCtx {
                     rest = self.add_bound_results(rest, else_bound);
                 }
                 let min_degree = 1;
-                let shape = invariant_supports
-                    .iter()
-                    .map(|s| match s {
-                        SupportSet::Empty => 0,
-                        SupportSet::Range { end, .. } => {
-                            if let Some(end) = end {
-                                *end as usize + 1
-                            } else {
-                                min_degree
+                let shape = match &invariant_supports {
+                    VarSupport::Empty(num_vars) => vec![0; *num_vars],
+                    VarSupport::Prod(supports) => supports
+                        .iter()
+                        .map(|s| match s {
+                            SupportSet::Empty => 0,
+                            SupportSet::Range { end, .. } => {
+                                if let Some(end) = end {
+                                    *end as usize + 1
+                                } else {
+                                    min_degree
+                                }
                             }
-                        }
-                        _ => todo!(),
-                    })
-                    .collect::<Vec<_>>();
-                let finite_supports = invariant_supports
-                    .iter()
-                    .map(|s| s.is_empty() || s.finite_nonempty_range().is_some())
-                    .collect::<Vec<_>>();
+                            _ => todo!(),
+                        })
+                        .collect::<Vec<_>>(),
+                };
+                let finite_supports = match &invariant_supports {
+                    VarSupport::Empty(num_vars) => vec![true; *num_vars],
+                    VarSupport::Prod(supports) => supports
+                        .iter()
+                        .map(|s| s.is_empty() || s.finite_nonempty_range().is_some())
+                        .collect::<Vec<_>>(),
+                };
                 let (loop_entry, loop_exit) = self.bound_event(pre_loop, cond);
                 rest = self.add_bound_results(rest, loop_exit);
                 let invariant = BoundResult {
@@ -574,7 +359,14 @@ impl BoundCtx {
                 exit.bound = exit.bound / (SymExpr::one() - c.clone());
                 self.add_bound_results(exit, rest)
             }
+        };
+        if let Some(direct_var_info) = direct_var_supports {
+            debug_assert_eq!(
+                result.var_supports, direct_var_info,
+                "inconsistent variable support info for:\n{stmt}"
+            );
         }
+        result
     }
 
     pub fn bound_statements(&mut self, init: BoundResult, stmts: &[Statement]) -> BoundResult {
@@ -593,7 +385,7 @@ impl BoundCtx {
         };
         let init = BoundResult {
             bound: init_bound,
-            var_supports: vec![SupportSet::zero(); self.program_var_count],
+            var_supports: VarSupport::zero(self.program_var_count),
         };
         self.bound_statements(init, &program.stmts)
     }

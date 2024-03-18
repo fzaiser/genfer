@@ -2,13 +2,13 @@ Support is a subset of: {0, ..., 1}
 
 Computing moments...
 Total measure:             Z = 1.0
-Expected value:            E = 0.12328935005514932
-Standard deviation:        σ = 0.3287690469282779
-Variance:                  V = 0.10808908621812818
-Skewness (3rd std moment): S = 2.291643045259254
-Kurtosis (4th std moment): K = 6.251627846885107
+Expected value:            E = 0.1232893500551493
+Standard deviation:        σ = 0.3287690469282778
+Variance:                  V = 0.10808908621812816
+Skewness (3rd std moment): S = 2.291643045259255
+Kurtosis (4th std moment): K = 6.2516278468851105
 
 Computing probabilities up to 2...
-p(0) = 0.8767106499448507
-p(1) = 0.12328935005514932
+p(0) = 0.8767106499448505
+p(1) = 0.1232893500551493
 p(n) <= 0.0 for all n >= 2

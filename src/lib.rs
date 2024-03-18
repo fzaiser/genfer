@@ -10,6 +10,7 @@
 #![allow(clippy::cast_sign_loss)]
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::missing_errors_doc)]
+#![allow(clippy::module_inception)]
 #![allow(clippy::needless_pass_by_value)]
 #![allow(clippy::single_match_else)]
 #![allow(clippy::comparison_chain)]
@@ -23,6 +24,7 @@ pub mod multivariate_taylor;
 pub mod number;
 pub mod parser;
 pub mod ppl;
+pub mod semantics;
 pub mod support;
 pub mod symbolic;
 pub mod univariate_taylor;

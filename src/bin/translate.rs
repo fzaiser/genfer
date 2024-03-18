@@ -4,6 +4,7 @@
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::enum_glob_use)]
 #![allow(clippy::float_cmp)]
+#![allow(clippy::format_collect)]
 
 use std::fmt::Write;
 use std::path::PathBuf;
@@ -138,11 +139,11 @@ impl Translate for WebPpl<'_> {
                 }
                 writeln!(self.f, ";")
             }
-            Decrement { var, amount } => {
+            Decrement { var, offset } => {
                 let var = WebPplVar(*var);
                 writeln!(
                     self.f,
-                    "{var} = ({var} < {amount}) ? 0 : ({var} - {amount});"
+                    "{var} = ({var} < {offset}) ? 0 : ({var} - {offset});"
                 )
             }
             IfThenElse { cond, then, els } => {
@@ -189,7 +190,6 @@ impl Translate for WebPpl<'_> {
                 let indent_str = " ".repeat(indent);
                 writeln!(self.f, "{indent_str}}}")
             }
-
             Fail => writeln!(self.f, "condition(false);"),
             Normalize { given_vars, stmts } => {
                 let indent_str = " ".repeat(indent);
@@ -589,8 +589,8 @@ impl<'a> Translate for Anglican<'a> {
                 write!(self.f, " {offset})")?;
                 Ok(())
             }
-            Decrement { var, amount } => {
-                write!(self.f, "{var} (if (< {var} {amount}) 0 (- {var} {amount}))")
+            Decrement { var, offset } => {
+                write!(self.f, "{var} (if (< {var} {offset}) 0 (- {var} {offset}))")
             }
             IfThenElse { els, .. } => {
                 if let Some(event) = stmt.recognize_observe() {
