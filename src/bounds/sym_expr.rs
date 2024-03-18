@@ -1,6 +1,6 @@
 use num_traits::{One, Zero};
 
-use crate::bounds::linear::*;
+use crate::bounds::linear::{LinearConstraint, LinearExpr};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum SymExpr {
@@ -86,11 +86,7 @@ impl SymExpr {
                 let rhs = rhs.extract_linear()?;
                 if let Some(factor) = lhs.as_constant() {
                     Some(rhs * factor)
-                } else if let Some(factor) = rhs.as_constant() {
-                    Some(lhs * factor)
-                } else {
-                    None
-                }
+                } else { rhs.as_constant().map(|factor| lhs * factor) }
             }
             SymExpr::Pow(base, n) => {
                 if *n == 0 {
@@ -158,8 +154,8 @@ impl SymExpr {
                     } else {
                         n.to_string()
                     }
-                } else if exponent <= 0 && exponent >= -127 {
-                    format!("({mantissa}/{})", (1i128 << (-exponent as i128)))
+                } else if (-127..=0).contains(&exponent) {
+                    format!("({mantissa}/{})", (1i128 << i128::from(-exponent)))
                 } else {
                     todo!()
                 }
@@ -449,7 +445,7 @@ impl SymConstraint {
                         }
                     }
                 }
-                return None;
+                None
             }
         }
     }
@@ -464,7 +460,7 @@ impl std::fmt::Display for SymConstraint {
             Self::Or(constraints) => {
                 write!(f, "(or")?;
                 for constraint in constraints {
-                    write!(f, " {}", constraint)?;
+                    write!(f, " {constraint}")?;
                 }
                 write!(f, ")")
             }

@@ -272,6 +272,7 @@ impl SupportTransformer {
                         if end.is_some() && new_end.is_none() {
                             unreachable!();
                         }
+                        #[allow(clippy::manual_assert)]
                         if (new_end.is_some() && new_end < end) || new_start < start {
                             panic!("More iterations needed");
                         }
@@ -295,6 +296,7 @@ impl SupportTransformer {
                         if end.is_some() && new_end.is_none() {
                             unreachable!();
                         }
+                        #[allow(clippy::manual_assert)]
                         if (new_end.is_some() && new_end < end) || new_start < start {
                             panic!("More iterations needed");
                         }

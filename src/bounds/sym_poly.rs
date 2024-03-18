@@ -3,7 +3,7 @@ use std::ops::{AddAssign, SubAssign};
 use ndarray::{arr0, indices, ArrayD, ArrayViewD, ArrayViewMutD, Axis, Dimension, Slice};
 use num_traits::{One, Zero};
 
-use crate::{bounds::sym_expr::*, multivariate_taylor::TaylorPoly, number::Number, ppl::Var};
+use crate::{bounds::sym_expr::SymExpr, multivariate_taylor::TaylorPoly, number::Number, ppl::Var};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct SymPolynomial {

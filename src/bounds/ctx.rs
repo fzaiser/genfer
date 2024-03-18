@@ -5,7 +5,11 @@ use ndarray::{ArrayD, Axis};
 use num_traits::{One, Zero};
 
 use crate::{
-    bounds::{bound::*, sym_expr::*, sym_poly::*},
+    bounds::{
+        bound::{BoundResult, GeometricBound},
+        sym_expr::{SymConstraint, SymExpr},
+        sym_poly::SymPolynomial,
+    },
     number::{Number, F64},
     ppl::{Distribution, Event, Natural, Program, Statement},
     semantics::{
@@ -34,7 +38,7 @@ pub struct BoundCtx {
 impl BoundCtx {
     pub fn new() -> Self {
         Self {
-            support: SupportTransformer::default(),
+            support: SupportTransformer,
             program_var_count: 0,
             sym_var_count: 0,
             nonlinear_param_vars: Vec::new(),
@@ -341,7 +345,7 @@ impl BoundCtx {
                     bound: self.new_bound(shape, &finite_supports),
                     var_supports: invariant_supports,
                 };
-                println!("Invariant: {}", invariant);
+                println!("Invariant: {invariant}");
                 self.assert_le(&loop_entry.bound, &invariant.bound);
                 let idx = self.fresh_sym_var_idx();
                 let c = SymExpr::var(idx);
@@ -421,11 +425,10 @@ impl BoundCtx {
         writeln!(out, "  return [").unwrap();
         for c in &self.constraints {
             match c {
-                SymConstraint::Eq(_, _) => continue,
+                SymConstraint::Eq(_, _) | SymConstraint::Or(_) => continue,
                 SymConstraint::Lt(lhs, rhs) | SymConstraint::Le(lhs, rhs) => {
                     writeln!(out, "    ({}) - ({}),", rhs.to_python(), lhs.to_python()).unwrap();
                 }
-                SymConstraint::Or(_) => continue,
             }
         }
         writeln!(out, "  ]").unwrap();
@@ -475,10 +478,10 @@ impl BoundCtx {
         }
         writeln!(out)?;
         for constraint in &self.constraints {
-            writeln!(out, "(assert {})", constraint)?;
+            writeln!(out, "(assert {constraint})")?;
         }
         for constraint in &self.soft_constraints {
-            writeln!(out, "(assert-soft {})", constraint)?;
+            writeln!(out, "(assert-soft {constraint})")?;
         }
         writeln!(out)?;
         writeln!(out, "(check-sat)")?;
@@ -733,10 +736,10 @@ impl BoundCtx {
         let ctx = z3::Context::new(&cfg);
         let solver = z3::Solver::new(&ctx);
         for constraint in self.constraints() {
-            solver.assert(&constraint.to_z3(&ctx))
+            solver.assert(&constraint.to_z3(&ctx));
         }
         for constraint in self.soft_constraints() {
-            solver.assert(&constraint.to_z3(&ctx))
+            solver.assert(&constraint.to_z3(&ctx));
         }
         match solver.check() {
             z3::SatResult::Unknown => {

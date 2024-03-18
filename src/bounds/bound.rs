@@ -1,5 +1,5 @@
 use crate::{
-    bounds::{sym_expr::*, sym_poly::*},
+    bounds::{sym_expr::SymExpr, sym_poly::SymPolynomial},
     multivariate_taylor::TaylorPoly,
     number::Number,
     ppl::Var,

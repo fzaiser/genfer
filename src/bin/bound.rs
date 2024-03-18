@@ -85,7 +85,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
         ctx.output_qepcad(&mut out)?;
     }
     let time_constraint_gen = start.elapsed();
-    println!("Constraint generation time: {:?}", time_constraint_gen);
+    println!("Constraint generation time: {time_constraint_gen:?}");
     println!("Solving constraints...");
     let start_smt = Instant::now();
     let solver_result = ctx.solve_z3(
@@ -94,7 +94,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
         !args.no_optimize,
     );
     let solver_time = start_smt.elapsed();
-    println!("Solver time: {:?}", solver_time);
+    println!("Solver time: {solver_time:?}");
     match solver_result {
         Ok(z3_bound) => {
             println!("\nFinal bound:\n");

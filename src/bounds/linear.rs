@@ -1,4 +1,4 @@
-use crate::bounds::sym_expr::*;
+use crate::bounds::sym_expr::SymExpr;
 
 #[derive(Clone, Debug)]
 pub struct LinearExpr {
