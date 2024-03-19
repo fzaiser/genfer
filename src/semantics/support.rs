@@ -245,7 +245,7 @@ impl SupportTransformer {
                 self.one_iteration(loop_entry.clone(), loop_exit.clone(), body, cond);
             loop_entry_invariant = loop_entry_invariant.join(&new_loop_entry);
             if loop_entry == new_loop_entry && loop_exit == new_loop_exit {
-                return (Some(i), loop_entry_invariant, loop_exit);
+                return (Some(i), loop_entry, loop_exit);
             }
             loop_entry = new_loop_entry;
             loop_exit = new_loop_exit;

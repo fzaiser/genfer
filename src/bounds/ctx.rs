@@ -221,73 +221,7 @@ impl Transformer for BoundCtx {
                 let else_res = self.transform_statements(els, else_res);
                 self.add_bound_results(then_res, else_res)
             }
-            Statement::While { cond, unroll, body } => {
-                let mut pre_loop = init;
-                let mut rest = BoundResult {
-                    bound: GeometricBound::zero(self.program_var_count),
-                    var_supports: VarSupport::empty(pre_loop.var_supports.num_vars()),
-                };
-                let unroll_count = unroll.unwrap_or(0);
-                let (iters, invariant_supports, _) =
-                    self.support
-                        .analyze_while(cond, body, pre_loop.var_supports.clone());
-                let unroll_count = if let Some(iters) = iters {
-                    unroll_count.max(iters)
-                } else {
-                    unroll_count
-                };
-                println!("Unrolling {unroll_count} times");
-                for _ in 0..unroll_count {
-                    let (then_bound, else_bound) = self.transform_event(cond, pre_loop.clone());
-                    pre_loop = self.transform_statements(body, then_bound);
-                    rest = self.add_bound_results(rest, else_bound);
-                }
-                let min_degree = 1;
-                let shape = match &invariant_supports {
-                    VarSupport::Empty(num_vars) => vec![0; *num_vars],
-                    VarSupport::Prod(supports) => supports
-                        .iter()
-                        .map(|s| match s {
-                            SupportSet::Empty => 0,
-                            SupportSet::Range { end, .. } => {
-                                if let Some(end) = end {
-                                    *end as usize + 1
-                                } else {
-                                    min_degree
-                                }
-                            }
-                            _ => todo!(),
-                        })
-                        .collect::<Vec<_>>(),
-                };
-                let finite_supports = match &invariant_supports {
-                    VarSupport::Empty(num_vars) => vec![true; *num_vars],
-                    VarSupport::Prod(supports) => supports
-                        .iter()
-                        .map(|s| s.is_empty() || s.finite_nonempty_range().is_some())
-                        .collect::<Vec<_>>(),
-                };
-                let (loop_entry, loop_exit) = self.transform_event(cond, pre_loop);
-                rest = self.add_bound_results(rest, loop_exit);
-                let invariant = BoundResult {
-                    bound: self.new_bound(shape, &finite_supports),
-                    var_supports: invariant_supports,
-                };
-                println!("Invariant: {invariant}");
-                self.assert_le(&loop_entry.bound, &invariant.bound);
-                let idx = self.fresh_sym_var_idx();
-                let c = SymExpr::var(idx);
-                println!("Invariant-c: {c}");
-                self.nonlinear_param_vars.push(idx);
-                self.add_constraint(c.clone().must_ge(SymExpr::zero()));
-                self.add_constraint(c.clone().must_le(SymExpr::one()));
-                self.add_soft_constraint(c.clone().must_lt(SymExpr::one()));
-                let cur_bound = self.transform_statements(&body, invariant.clone());
-                let (post_loop, mut exit) = self.transform_event(cond, cur_bound);
-                self.assert_le(&post_loop.bound, &(invariant.bound.clone() * c.clone()));
-                exit.bound = exit.bound / (SymExpr::one() - c.clone());
-                self.add_bound_results(exit, rest)
-            }
+            Statement::While { cond, unroll, body } => self.bound_while(cond, *unroll, body, init),
             Statement::Fail => BoundResult {
                 bound: GeometricBound::zero(self.program_var_count),
                 var_supports: VarSupport::empty(init.var_supports.num_vars()),
@@ -393,6 +327,83 @@ impl BoundCtx {
             bound,
             var_supports,
         }
+    }
+
+    fn bound_while(
+        &mut self,
+        cond: &Event,
+        unroll: Option<usize>,
+        body: &[Statement],
+        init: BoundResult,
+    ) -> BoundResult {
+        let mut pre_loop = init;
+        let mut rest = BoundResult {
+            bound: GeometricBound::zero(self.program_var_count),
+            var_supports: VarSupport::empty(pre_loop.var_supports.num_vars()),
+        };
+        let unroll_count = unroll.unwrap_or(0);
+        let (iters, invariant_supports, _) =
+            self.support
+                .analyze_while(cond, body, pre_loop.var_supports.clone());
+        let unroll_count = if let Some(iters) = iters {
+            unroll_count.max(iters)
+        } else {
+            unroll_count
+        };
+        println!("Unrolling {unroll_count} times");
+        for _ in 0..unroll_count {
+            let (then_bound, else_bound) = self.transform_event(cond, pre_loop.clone());
+            pre_loop = self.transform_statements(body, then_bound);
+            rest = self.add_bound_results(rest, else_bound);
+        }
+        let min_degree = 1;
+        let shape = match &invariant_supports {
+            VarSupport::Empty(num_vars) => vec![0; *num_vars],
+            VarSupport::Prod(supports) => supports
+                .iter()
+                .map(|s| match s {
+                    SupportSet::Empty => 0,
+                    SupportSet::Range { end, .. } => {
+                        if let Some(end) = end {
+                            *end as usize + 1
+                        } else {
+                            min_degree
+                        }
+                    }
+                    _ => todo!(),
+                })
+                .collect::<Vec<_>>(),
+        };
+        let finite_supports = match &invariant_supports {
+            VarSupport::Empty(num_vars) => vec![true; *num_vars],
+            VarSupport::Prod(supports) => supports
+                .iter()
+                .map(|s| s.is_empty() || s.finite_nonempty_range().is_some())
+                .collect::<Vec<_>>(),
+        };
+        let (_, invariant_supports, _) =
+            self.support
+                .analyze_while(cond, body, pre_loop.var_supports.clone());
+        let (loop_entry, loop_exit) = self.transform_event(cond, pre_loop);
+        rest = self.add_bound_results(rest, loop_exit);
+        let invariant = BoundResult {
+            bound: self.new_bound(shape, &finite_supports),
+            var_supports: invariant_supports,
+        };
+        println!("Invariant: {invariant}");
+        self.assert_le(&loop_entry.bound, &invariant.bound);
+        let idx = self.fresh_sym_var_idx();
+        let c = SymExpr::var(idx);
+        println!("Invariant-c: {c}");
+        self.nonlinear_param_vars.push(idx);
+        self.add_constraint(c.clone().must_ge(SymExpr::zero()));
+        self.add_constraint(c.clone().must_le(SymExpr::one()));
+        self.add_soft_constraint(c.clone().must_lt(SymExpr::one()));
+        let cur_bound = self.transform_statements(&body, invariant.clone());
+        let (post_loop, mut exit) = self.transform_event(cond, cur_bound);
+        self.assert_le(&post_loop.bound, &(invariant.bound.clone() * c.clone()));
+        exit.bound = exit.bound / (SymExpr::one() - c.clone());
+        self.add_bound_results(exit, rest)
     }
 
     pub fn output_python(&self, bound: &GeometricBound) -> String {
