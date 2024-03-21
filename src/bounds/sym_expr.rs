@@ -86,7 +86,9 @@ impl SymExpr {
                 let rhs = rhs.extract_linear()?;
                 if let Some(factor) = lhs.as_constant() {
                     Some(rhs * factor)
-                } else { rhs.as_constant().map(|factor| lhs * factor) }
+                } else {
+                    rhs.as_constant().map(|factor| lhs * factor)
+                }
             }
             SymExpr::Pow(base, n) => {
                 if *n == 0 {
@@ -289,6 +291,12 @@ impl std::ops::Div for SymExpr {
 
     fn div(self, rhs: Self) -> Self::Output {
         self * rhs.pow(-1)
+    }
+}
+
+impl std::ops::DivAssign for SymExpr {
+    fn div_assign(&mut self, rhs: Self) {
+        *self = self.clone() / rhs;
     }
 }
 

@@ -1,17 +1,16 @@
 use std::time::Duration;
 
 use good_lp::{variable, ProblemVariables, Solution, SolverModel};
-use ndarray::{ArrayD, Axis};
+use ndarray::{ArrayD, ArrayViewD, Axis, Slice};
 use num_traits::{One, Zero};
 
 use crate::{
     bounds::{
         bound::{BoundResult, GeometricBound},
         sym_expr::{SymConstraint, SymExpr},
-        sym_poly::SymPolynomial,
     },
     number::{Number, F64},
-    ppl::{Distribution, Event, Natural, Program, Statement},
+    ppl::{Distribution, Event, Natural, Program, Statement, Var},
     semantics::{
         support::{SupportTransformer, VarSupport},
         Transformer,
@@ -47,7 +46,7 @@ impl Transformer for BoundCtx {
     fn init(&mut self, program: &Program) -> Self::Domain {
         self.program_var_count = program.used_vars().num_vars();
         let init_bound = GeometricBound {
-            polynomial: SymPolynomial::one(),
+            masses: ArrayD::ones(vec![1; self.program_var_count]),
             geo_params: vec![SymExpr::zero(); self.program_var_count],
         };
         BoundResult {
@@ -59,35 +58,40 @@ impl Transformer for BoundCtx {
     fn transform_event(
         &mut self,
         event: &Event,
-        init: Self::Domain,
+        mut init: Self::Domain,
     ) -> (Self::Domain, Self::Domain) {
         match event {
             Event::InSet(v, set) => {
-                let alpha = init.bound.geo_params[v.id()].clone();
-                let one_minus_alpha_v =
-                    SymPolynomial::one() - SymPolynomial::var(*v) * alpha.clone();
-                let mut then_bound = GeometricBound {
-                    polynomial: SymPolynomial::zero(),
-                    geo_params: init.bound.geo_params.clone(),
-                };
+                let max = set.iter().fold(0, |acc, x| acc.max(x.0 as usize));
+                init.bound.extend_axis(*v, max + 2);
+                let axis = Axis(v.id());
+                let len = init.bound.masses.len_of(axis);
+                let mut then_bound = init.bound.clone();
+                let mut else_bound = init.bound;
                 then_bound.geo_params[v.id()] = SymExpr::zero();
-                let mut then_res = BoundResult {
-                    bound: then_bound,
-                    var_supports: init.var_supports.clone(),
-                };
-                let mut else_res = init;
-                (then_res.var_supports, else_res.var_supports) =
-                    self.support.transform_event(event, else_res.var_supports);
-                for Natural(n) in set {
-                    let mut coeff = SymPolynomial::zero();
-                    for i in 0..=*n {
-                        coeff += else_res.bound.polynomial.coeff_of_var_power(*v, i as usize)
-                            * alpha.clone().pow((n - i) as i32);
+                for i in 0..len {
+                    if set.contains(&Natural(i as u32)) {
+                        else_bound
+                            .masses
+                            .index_axis_mut(axis, i)
+                            .fill(SymExpr::zero());
+                    } else {
+                        then_bound
+                            .masses
+                            .index_axis_mut(axis, i)
+                            .fill(SymExpr::zero());
                     }
-                    let monomial = coeff.clone() * SymPolynomial::var_power(*v, *n);
-                    then_res.bound.polynomial += monomial.clone();
-                    else_res.bound.polynomial -= monomial.clone() * one_minus_alpha_v.clone();
                 }
+                let (then_support, else_support) =
+                    self.support.transform_event(event, init.var_supports);
+                let then_res = BoundResult {
+                    bound: then_bound,
+                    var_supports: then_support,
+                };
+                let else_res = BoundResult {
+                    bound: else_bound,
+                    var_supports: else_support,
+                };
                 (then_res, else_res)
             }
             Event::DataFromDist(data, dist) => {
@@ -102,8 +106,8 @@ impl Transformer for BoundCtx {
                     };
                     let mut then_res = init.clone();
                     let mut else_res = init;
-                    then_res.bound.polynomial *= SymExpr::from(then);
-                    else_res.bound.polynomial *= SymExpr::from(els);
+                    then_res.bound *= SymExpr::from(then);
+                    else_res.bound *= SymExpr::from(els);
                     (then_res, else_res)
                 } else {
                     todo!()
@@ -159,21 +163,45 @@ impl Transformer for BoundCtx {
                 match distribution {
                     Distribution::Bernoulli(p) => {
                         let p = F64::from_ratio(p.numer, p.denom).to_f64();
-                        res.bound.polynomial *=
-                            SymPolynomial::var(*var) * SymExpr::from(p) + (1.0 - p).into();
+                        let mut new_shape = res.bound.masses.shape().to_owned();
+                        new_shape[var.id()] = 2;
+                        res.bound.masses =
+                            res.bound.masses.broadcast(new_shape).unwrap().to_owned();
+                        res.bound
+                            .masses
+                            .index_axis_mut(Axis(var.id()), 0)
+                            .map_inplace(|e| *e *= (1.0 - p).into());
+                        res.bound
+                            .masses
+                            .index_axis_mut(Axis(var.id()), 1)
+                            .map_inplace(|e| *e *= p.into());
                     }
                     Distribution::Geometric(p) if !add_previous_value => {
                         let p = F64::from_ratio(p.numer, p.denom).to_f64();
-                        res.bound.polynomial *= SymExpr::from(p);
+                        res.bound *= SymExpr::from(p);
                         res.bound.geo_params[var.id()] = SymExpr::from(1.0 - p);
                     }
                     Distribution::Uniform { start, end } => {
-                        let mut factor = SymPolynomial::zero();
-                        let len = f64::from(end.0 - start.0);
-                        for i in start.0..end.0 {
-                            factor += SymPolynomial::var_power(*var, i) / len.into();
+                        let mut new_shape = res.bound.masses.shape().to_owned();
+                        let len = end.0 as usize;
+                        new_shape[var.id()] = len;
+                        res.bound.masses =
+                            res.bound.masses.broadcast(new_shape).unwrap().to_owned();
+                        for i in 0..len {
+                            if i < start.0 as usize {
+                                res.bound
+                                    .masses
+                                    .index_axis_mut(Axis(var.id()), i)
+                                    .fill(SymExpr::zero());
+                            } else {
+                                res.bound
+                                    .masses
+                                    .index_axis_mut(Axis(var.id()), i)
+                                    .map_inplace(|e| {
+                                        *e /= SymExpr::from(f64::from(end.0 - start.0))
+                                    })
+                            }
                         }
-                        res.bound.polynomial *= factor;
                     }
                     _ => todo!(),
                 };
@@ -192,7 +220,16 @@ impl Transformer for BoundCtx {
                     } else {
                         init.marginalize(*var)
                     };
-                    new_bound.bound.polynomial *= SymPolynomial::var_power(*var, *n);
+                    let mut zero_shape = new_bound.bound.masses.shape().to_owned();
+                    zero_shape[var.id()] = *n as usize;
+                    new_bound.bound.masses = ndarray::concatenate(
+                        Axis(var.id()),
+                        &[
+                            ArrayD::zeros(zero_shape).view(),
+                            new_bound.bound.masses.view(),
+                        ],
+                    )
+                    .unwrap();
                     new_bound.var_supports = self
                         .support
                         .transform_statement(stmt, new_bound.var_supports);
@@ -203,15 +240,19 @@ impl Transformer for BoundCtx {
             }
             Statement::Decrement { var, offset } => {
                 let mut cur = init;
-                let alpha = cur.bound.geo_params[var.id()].clone();
-                for _ in 0..offset.0 {
-                    let polynomial = cur.bound.polynomial;
-                    let (p0, shifted) = polynomial.extract_zero_and_shift_left(*var);
-                    let other = p0
-                        * (SymPolynomial::one()
-                            + (SymPolynomial::one() - SymPolynomial::var(*var)) * alpha.clone());
-                    cur.bound.polynomial = shifted + other;
-                }
+                cur.bound.extend_axis(*var, (offset.0 + 2) as usize);
+                let zero_elem = cur
+                    .bound
+                    .masses
+                    .slice_axis(Axis(var.id()), Slice::from(0..=offset.0 as usize))
+                    .sum_axis(Axis(var.id()));
+                cur.bound
+                    .masses
+                    .slice_axis_inplace(Axis(var.id()), Slice::from(offset.0 as usize..));
+                cur.bound
+                    .masses
+                    .index_axis_mut(Axis(var.id()), 0)
+                    .assign(&zero_elem);
                 cur.var_supports = self.support.transform_statement(stmt, cur.var_supports);
                 cur
             }
@@ -292,13 +333,21 @@ impl BoundCtx {
         var
     }
 
-    pub fn add_bounds(&mut self, lhs: GeometricBound, rhs: GeometricBound) -> GeometricBound {
+    pub fn add_bounds(
+        &mut self,
+        mut lhs: GeometricBound,
+        mut rhs: GeometricBound,
+    ) -> GeometricBound {
         let count = self.program_var_count;
         let mut geo_params = Vec::with_capacity(count);
         for i in 0..count {
             let a = lhs.geo_params[i].clone();
             let b = rhs.geo_params[i].clone();
             if a == b {
+                geo_params.push(a);
+            } else if a.is_zero() {
+                geo_params.push(b);
+            } else if b.is_zero() {
                 geo_params.push(a);
             } else {
                 let new_geo_param_var = self.new_geo_param_var();
@@ -313,9 +362,17 @@ impl BoundCtx {
                 ]));
             }
         }
-        let polynomial = lhs.polynomial + rhs.polynomial; // TODO: check whether this is correct
+        for i in 0..count {
+            let lhs_len = lhs.masses.len_of(Axis(i));
+            let rhs_len = rhs.masses.len_of(Axis(i));
+            if lhs_len < rhs_len {
+                lhs.extend_axis(Var(i), rhs_len);
+            } else if rhs_len < lhs_len {
+                rhs.extend_axis(Var(i), lhs_len);
+            }
+        }
         GeometricBound {
-            polynomial,
+            masses: lhs.masses + rhs.masses,
             geo_params,
         }
     }
@@ -447,16 +504,8 @@ impl BoundCtx {
         writeln!(out, "constraints = NonlinearConstraint(constraint_fun, 0, np.inf, jac='2-point', hess=BFGS())").unwrap();
         writeln!(out).unwrap();
         writeln!(out, "def objective(x):").unwrap();
-        let numer = bound
-            .polynomial
-            .coeffs
-            .iter()
-            .fold(SymExpr::zero(), |acc, c| acc + c.clone());
-        write!(out, "  return ({}) / (", numer.to_python()).unwrap();
-        for e in &bound.geo_params {
-            write!(out, "(1 - {}) * ", e.to_python()).unwrap();
-        }
-        writeln!(out, "1)").unwrap();
+        let total = bound.total_mass();
+        write!(out, "  return ({})", total.to_python()).unwrap();
         writeln!(out, "x0 = np.full((nvars,), 0.9)").unwrap();
         out
     }
@@ -550,12 +599,12 @@ impl BoundCtx {
         Ok(())
     }
 
-    fn new_polynomial(&mut self, shape: Vec<usize>) -> SymPolynomial {
+    fn new_masses(&mut self, shape: Vec<usize>) -> ArrayD<SymExpr> {
         let mut coeffs = ArrayD::zeros(shape);
         for c in &mut coeffs {
             *c = self.fresh_sym_var();
         }
-        SymPolynomial::new(coeffs)
+        coeffs
     }
 
     fn new_bound(&mut self, shape: Vec<usize>, finite_supports: &[bool]) -> GeometricBound {
@@ -566,23 +615,25 @@ impl BoundCtx {
             }
         }
         GeometricBound {
-            polynomial: self.new_polynomial(shape),
+            masses: self.new_masses(shape),
             geo_params,
         }
     }
 
     fn assert_le_helper(
         &mut self,
-        lhs_coeffs: &ArrayD<SymExpr>,
+        lhs_coeffs: &ArrayViewD<SymExpr>,
+        lhs_factor: SymExpr,
         lhs_geo_params: &[SymExpr],
-        rhs_coeffs: &ArrayD<SymExpr>,
+        rhs_coeffs: &ArrayViewD<SymExpr>,
+        rhs_factor: SymExpr,
         rhs_geo_params: &[SymExpr],
     ) {
         if lhs_geo_params.is_empty() {
             assert!(lhs_coeffs.len() == 1);
             assert!(rhs_coeffs.len() == 1);
-            let lhs_coeff = lhs_coeffs.first().unwrap().clone();
-            let rhs_coeff = rhs_coeffs.first().unwrap().clone();
+            let lhs_coeff = lhs_coeffs.first().unwrap().clone() * lhs_factor;
+            let rhs_coeff = rhs_coeffs.first().unwrap().clone() * rhs_factor;
             self.add_constraint(lhs_coeff.must_le(rhs_coeff));
             return;
         }
@@ -597,39 +648,29 @@ impl BoundCtx {
             rhs_coeffs.len_of(Axis(0))
         };
         let len = len_lhs.max(len_rhs);
-        let lhs_shape = lhs_coeffs.shape();
-        let rhs_shape = rhs_coeffs.shape();
-        let mut lhs_inequality = if lhs_coeffs.ndim() == 0 {
-            ArrayD::zeros(&[][..])
-        } else {
-            ArrayD::zeros(&lhs_shape[1..])
-        };
-        let mut rhs_inequality = if rhs_coeffs.ndim() == 0 {
-            ArrayD::zeros(&[][..])
-        } else {
-            ArrayD::zeros(&rhs_shape[1..])
-        };
         for i in 0..len {
-            lhs_inequality.mapv_inplace(|c| c * lhs_geo_params[0].clone());
-            rhs_inequality.mapv_inplace(|c| c * rhs_geo_params[0].clone());
-            if lhs_coeffs.ndim() == 0 {
-                if i == 0 {
-                    *lhs_inequality.first_mut().unwrap() += lhs_coeffs.first().unwrap().clone();
-                }
-            } else if i < len_lhs {
-                lhs_inequality += &lhs_coeffs.index_axis(Axis(0), i);
-            }
-            if rhs_coeffs.ndim() == 0 {
-                if i == 0 {
-                    *rhs_inequality.first_mut().unwrap() += rhs_coeffs.first().unwrap().clone();
-                }
-            } else if i < len_rhs {
-                rhs_inequality += &rhs_coeffs.index_axis(Axis(0), i);
-            }
+            let (lhs, lhs_factor) = if i < len_lhs {
+                (lhs_coeffs.index_axis(Axis(0), i), lhs_factor.clone())
+            } else {
+                (
+                    lhs_coeffs.index_axis(Axis(0), len_lhs - 1),
+                    lhs_factor.clone() * lhs_geo_params[0].clone().pow((i - len_lhs + 1) as i32),
+                )
+            };
+            let (rhs, rhs_factor) = if i < len_rhs {
+                (rhs_coeffs.index_axis(Axis(0), i), rhs_factor.clone())
+            } else {
+                (
+                    rhs_coeffs.index_axis(Axis(0), len_rhs - 1),
+                    rhs_factor.clone() * rhs_geo_params[0].clone().pow((i - len_rhs + 1) as i32),
+                )
+            };
             self.assert_le_helper(
-                &lhs_inequality,
+                &lhs,
+                lhs_factor,
                 &lhs_geo_params[1..],
-                &rhs_inequality,
+                &rhs,
+                rhs_factor,
                 &rhs_geo_params[1..],
             );
         }
@@ -641,9 +682,11 @@ impl BoundCtx {
             self.add_constraint(lhs.geo_params[i].clone().must_le(rhs.geo_params[i].clone()));
         }
         self.assert_le_helper(
-            &lhs.polynomial.coeffs,
+            &lhs.masses.view(),
+            SymExpr::one(),
             &lhs.geo_params,
-            &rhs.polynomial.coeffs,
+            &rhs.masses.view(),
+            SymExpr::one(),
             &rhs.geo_params,
         );
     }
@@ -686,13 +729,11 @@ impl BoundCtx {
                 _ => unreachable!(),
             }
         }
-        let objective = bound
-            .polynomial
-            .coeffs
-            .iter()
-            .fold(good_lp::Expression::from(0.), |acc, c| {
-                acc + c.extract_linear().unwrap().to_lp_expr(&var_list)
-            });
+        let total = bound.total_mass();
+        let objective = total
+            .extract_linear()
+            .unwrap_or_else(|| panic!("Objective is not linear in the program variables: {total}"))
+            .to_lp_expr(&var_list);
         let mut problem = lp.minimise(objective).using(good_lp::default_solver);
         for constraint in &linear_constraints {
             problem.add_constraint(constraint.to_lp_constraint(&var_list));
@@ -708,7 +749,7 @@ impl BoundCtx {
             .map(|v| solution.value(*v))
             .collect::<Vec<_>>();
         let mut resolved_bound = bound;
-        for coeff in &mut resolved_bound.polynomial.coeffs {
+        for coeff in &mut resolved_bound.masses {
             let val = coeff.eval(&solution);
             *coeff = SymExpr::Constant(val);
         }
@@ -783,7 +824,7 @@ impl BoundCtx {
                 println!("{var} -> {val}", var = SymExpr::var(var));
             }
             let mut resolved_bound = bound.clone();
-            for coeff in &mut resolved_bound.polynomial.coeffs {
+            for coeff in &mut resolved_bound.masses {
                 let val = model.eval(&coeff.to_z3(&ctx), false).unwrap();
                 let val = z3_real_to_f64(&val)
                     .unwrap_or_else(|| panic!("{val} cannot be converted to f64"));
