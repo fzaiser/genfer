@@ -30,8 +30,14 @@ struct CliArgs {
     /// Disable timing of the execution
     #[arg(long)]
     no_timing: bool,
+    #[arg(short = 'd', long, default_value = "1")]
+    /// The minimum degree of the loop invariant polynomial
+    min_degree: usize,
+    #[arg(short = 'u', long, default_value = "0")]
+    /// The default number of loop unrollings
+    unroll: usize,
     /// Timeout for the SMT solver in ms
-    #[arg(long, default_value = "30000")]
+    #[arg(long, default_value = "10000")]
     timeout: u64,
     /// Whether to optimize the bound once one is found
     #[arg(long)]
@@ -57,7 +63,9 @@ pub fn main() -> std::io::Result<()> {
 
 fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
     let start = Instant::now();
-    let mut ctx = BoundCtx::new();
+    let mut ctx = BoundCtx::new()
+        .with_min_degree(args.min_degree)
+        .with_default_unroll(args.unroll);
     let result = ctx.semantics(program);
     match &result.var_supports {
         VarSupport::Empty(_) => println!("Support: empty"),

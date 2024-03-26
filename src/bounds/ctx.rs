@@ -25,6 +25,8 @@ pub enum SolverError {
 }
 
 pub struct BoundCtx {
+    default_unroll: usize,
+    min_degree: usize,
     support: SupportTransformer,
     program_var_count: usize,
     sym_var_count: usize,
@@ -282,12 +284,25 @@ impl Transformer for BoundCtx {
 impl BoundCtx {
     pub fn new() -> Self {
         Self {
+            default_unroll: 8,
+            min_degree: 1,
             support: SupportTransformer,
             program_var_count: 0,
             sym_var_count: 0,
             nonlinear_param_vars: Vec::new(),
             constraints: Vec::new(),
             soft_constraints: Vec::new(),
+        }
+    }
+
+    pub fn with_min_degree(self, min_degree: usize) -> Self {
+        Self { min_degree, ..self }
+    }
+
+    pub fn with_default_unroll(self, default_unroll: usize) -> Self {
+        Self {
+            default_unroll,
+            ..self
         }
     }
 
@@ -398,7 +413,7 @@ impl BoundCtx {
             bound: GeometricBound::zero(self.program_var_count),
             var_supports: VarSupport::empty(pre_loop.var_supports.num_vars()),
         };
-        let unroll_count = unroll.unwrap_or(0);
+        let unroll_count = unroll.unwrap_or(self.default_unroll);
         let (iters, invariant_supports, _) =
             self.support
                 .analyze_while(cond, body, pre_loop.var_supports.clone());
@@ -413,7 +428,6 @@ impl BoundCtx {
             pre_loop = self.transform_statements(body, then_bound);
             rest = self.add_bound_results(rest, else_bound);
         }
-        let min_degree = 1;
         let shape = match &invariant_supports {
             VarSupport::Empty(num_vars) => vec![0; *num_vars],
             VarSupport::Prod(supports) => supports
@@ -424,7 +438,7 @@ impl BoundCtx {
                         if let Some(end) = end {
                             *end as usize + 1
                         } else {
-                            min_degree
+                            self.min_degree
                         }
                     }
                     _ => todo!(),
@@ -794,6 +808,7 @@ impl BoundCtx {
         for constraint in self.soft_constraints() {
             solver.assert(&constraint.to_z3(&ctx));
         }
+        solver.push();
         match solver.check() {
             z3::SatResult::Unknown => {
                 if let Some(reason) = solver.get_reason_unknown() {
@@ -809,68 +824,82 @@ impl BoundCtx {
             z3::SatResult::Sat => {}
         }
         let objective = bound.total_mass();
+        let mut best_obj_val = f64::INFINITY;
+        let mut best_bound = bound.clone();
+        let mut best_nonlinear_var_assignment = None::<Vec<f64>>;
         let mut obj_lo = 0.0;
-        let mut obj_hi;
-        let model = loop {
-            let model = solver
-                .get_model()
-                .unwrap_or_else(|| panic!("SMT solver's model is not available"));
-            for var in 0..self.sym_var_count() {
-                let val = model
-                    .eval(&z3::ast::Real::new_const(&ctx, var as u32), false)
-                    .unwrap();
-                let val = z3_real_to_f64(&val)
-                    .unwrap_or_else(|| panic!("{val} cannot be converted to f64"));
-                println!("{var} -> {val}", var = SymExpr::var(var));
+        let mut obj_hi = f64::INFINITY;
+        loop {
+            if let Some(model) = solver.get_model() {
+                for var in 0..self.sym_var_count() {
+                    let val = model
+                        .eval(&z3::ast::Real::new_const(&ctx, var as u32), false)
+                        .unwrap();
+                    let val = z3_real_to_f64(&val)
+                        .unwrap_or_else(|| panic!("{val} cannot be converted to f64"));
+                    println!("{var} -> {val}", var = SymExpr::var(var));
+                }
+                let mut resolved_bound = bound.clone();
+                for coeff in &mut resolved_bound.masses {
+                    let val = model.eval(&coeff.to_z3(&ctx), false).unwrap();
+                    let val = z3_real_to_f64(&val)
+                        .unwrap_or_else(|| panic!("{val} cannot be converted to f64"));
+                    *coeff = SymExpr::Constant(val);
+                }
+                for geo_param in &mut resolved_bound.geo_params {
+                    let val = model.eval(&geo_param.to_z3(&ctx), false).unwrap();
+                    let val = z3_real_to_f64(&val)
+                        .unwrap_or_else(|| panic!("{val} cannot be converted to f64"));
+                    *geo_param = SymExpr::Constant(val);
+                }
+                println!("SMT solution:\n {resolved_bound}");
+                let obj_val =
+                    z3_real_to_f64(&model.eval(&objective.to_z3(&ctx), false).unwrap()).unwrap();
+                println!("Total mass (objective): {obj_val}");
+                if obj_val < best_obj_val {
+                    best_obj_val = obj_val;
+                    best_bound = resolved_bound;
+                    best_nonlinear_var_assignment = Some(
+                        self.nonlinear_param_vars
+                            .iter()
+                            .map(|var| {
+                                let val =
+                                    model.eval(&SymExpr::var(*var).to_z3(&ctx), false).unwrap();
+                                z3_real_to_f64(&val)
+                                    .unwrap_or_else(|| panic!("{val} cannot be converted to f64"))
+                            })
+                            .collect::<Vec<_>>(),
+                    );
+                }
+                obj_hi = best_obj_val;
             }
-            let mut resolved_bound = bound.clone();
-            for coeff in &mut resolved_bound.masses {
-                let val = model.eval(&coeff.to_z3(&ctx), false).unwrap();
-                let val = z3_real_to_f64(&val)
-                    .unwrap_or_else(|| panic!("{val} cannot be converted to f64"));
-                *coeff = SymExpr::Constant(val);
-            }
-            for geo_param in &mut resolved_bound.geo_params {
-                let val = model.eval(&geo_param.to_z3(&ctx), false).unwrap();
-                let val = z3_real_to_f64(&val)
-                    .unwrap_or_else(|| panic!("{val} cannot be converted to f64"));
-                *geo_param = SymExpr::Constant(val);
-            }
-            println!("SMT solution:\n {resolved_bound}");
-            let obj_val =
-                z3_real_to_f64(&model.eval(&objective.to_z3(&ctx), false).unwrap()).unwrap();
-            println!("Total mass (objective): {obj_val}");
-            obj_hi = obj_val;
             println!("Objective bound: [{obj_lo}, {obj_hi}]");
             if !optimize || obj_hi - obj_lo < 0.1 * obj_hi {
-                break model;
+                break;
             }
+            solver.pop(1);
             solver.push();
             let mid = (obj_lo + obj_hi) / 2.0;
             solver.assert(&objective.to_z3(&ctx).le(&SymExpr::from(mid).to_z3(&ctx)));
-            loop {
-                match solver.check() {
-                    z3::SatResult::Sat => {
-                        break;
-                    }
-                    z3::SatResult::Unknown | z3::SatResult::Unsat => {
-                        solver.pop(1);
-                        obj_lo = mid;
-                    }
+            match solver.check() {
+                z3::SatResult::Sat => {
+                    println!("Solution found for these objective bounds.");
+                }
+                z3::SatResult::Unsat => {
+                    println!("No solution for these objective bounds.");
+                    obj_lo = mid;
+                }
+                z3::SatResult::Unknown => {
+                    println!("Solver responded 'unknown' while optimizing the objective. Aborting optimization.");
+                    break;
                 }
             }
-        };
+        }
         println!("Optimizing polynomial coefficients...");
-        let nonlinear_var_assignment = self
-            .nonlinear_param_vars
-            .iter()
-            .map(|var| {
-                let val = model.eval(&SymExpr::var(*var).to_z3(&ctx), false).unwrap();
-                z3_real_to_f64(&val).unwrap_or_else(|| panic!("{val} cannot be converted to f64"))
-            })
-            .collect::<Vec<_>>();
-        let optimized_solution =
-            self.solve_lp_for_nonlinear_var_assignment(bound, &nonlinear_var_assignment)?;
+        let optimized_solution = self.solve_lp_for_nonlinear_var_assignment(
+            &best_bound,
+            &best_nonlinear_var_assignment.unwrap(),
+        )?;
         Ok(optimized_solution)
     }
 }
