@@ -8,7 +8,9 @@
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use genfer::bounds::ctx::{BoundCtx, SolverError};
+use genfer::bounds::ctx::BoundCtx;
+use genfer::bounds::optimizer::{LinearProgrammingOptimizer, Optimizer, Z3Optimizer};
+use genfer::bounds::solver::{ConstraintProblem, Solver, SolverError, Z3Solver};
 use genfer::number::F64;
 use genfer::parser;
 use genfer::ppl::{Program, Var};
@@ -101,17 +103,34 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
     println!("Constraint generation time: {time_constraint_gen:?}");
     println!("Solving constraints...");
     let start_smt = Instant::now();
-    let solver_result = ctx.solve_z3(
-        &result.bound,
-        Duration::from_millis(args.timeout),
-        !args.no_optimize,
-    );
+    let timeout = Duration::from_millis(args.timeout);
+    let problem = ConstraintProblem {
+        var_count: ctx.sym_var_count(),
+        geom_vars: ctx.geom_vars().to_owned(),
+        factor_vars: ctx.factor_vars().to_owned(),
+        coefficient_vars: ctx.coefficient_vars().to_owned(),
+        constraints: ctx.constraints().to_owned(),
+    };
+    let objective = result.bound.total_mass();
+    let solver_result = Z3Solver
+        .solve(&problem, timeout)
+        .map(|solution| {
+            if !args.no_optimize {
+                Z3Optimizer.optimize(&problem, &objective, solution, timeout)
+            } else {
+                solution
+            }
+        })
+        .map(|solution| {
+            LinearProgrammingOptimizer.optimize(&problem, &objective, solution, timeout)
+        });
     let solver_time = start_smt.elapsed();
     println!("Solver time: {solver_time:?}");
     match solver_result {
-        Ok(z3_bound) => {
+        Ok(assignment) => {
+            let bound = result.bound.resolve(&assignment);
             println!("\nFinal bound:\n");
-            println!("{z3_bound}");
+            println!("{bound}");
 
             println!("\nProbability masses:");
             let mut inputs = vec![F64::one(); result.var_supports.num_vars()];
@@ -122,7 +141,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
                 } else {
                     100
                 };
-            let expansion = z3_bound.evaluate_var(&inputs, program.result, degree_p1);
+            let expansion = bound.evaluate_var(&inputs, program.result, degree_p1);
             let mut index = vec![0; result.var_supports.num_vars()];
             for i in 0..degree_p1 {
                 index[program.result.id()] = i;
@@ -132,7 +151,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
 
             println!("\nMoments:");
             let inputs = vec![F64::one(); result.var_supports.num_vars()];
-            let expansion = z3_bound.evaluate_var(&inputs, program.result, 5);
+            let expansion = bound.evaluate_var(&inputs, program.result, 5);
             let mut index = vec![0; result.var_supports.num_vars()];
             for i in 0..5 {
                 index[program.result.id()] = i;

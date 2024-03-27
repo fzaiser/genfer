@@ -119,6 +119,16 @@ impl GeometricBound {
         Self { masses, geo_params }
     }
 
+    pub fn resolve(&self, assignments: &[f64]) -> GeometricBound {
+        let masses = self.masses.map(|c| SymExpr::Constant(c.eval(assignments)));
+        let geo_params = self
+            .geo_params
+            .iter()
+            .map(|p| SymExpr::Constant(p.eval(assignments)))
+            .collect();
+        Self { masses, geo_params }
+    }
+
     pub fn substitute(&self, replacements: &[SymExpr<f64>]) -> GeometricBound {
         Self {
             masses: self.masses.map(|c| c.substitute(replacements)),

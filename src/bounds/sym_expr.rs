@@ -467,7 +467,7 @@ impl<T> SymConstraint<T> {
                 PolyConstraint::Le(lhs.numer * rhs.denom, rhs.numer * lhs.denom)
             }
             SymConstraint::Or(constraints) => {
-                PolyConstraint::or(constraints.iter().map(|c| c.to_poly()).collect())
+                PolyConstraint::or(constraints.iter().map(SymConstraint::to_poly).collect())
             }
         }
     }
@@ -591,8 +591,7 @@ impl<T> SymConstraint<T> {
                 e1.extract_linear()?,
                 e2.extract_linear()?,
             )),
-            SymConstraint::Lt(..) => None,
-            SymConstraint::Le(e1, e2) => Some(LinearConstraint::le(
+            SymConstraint::Lt(e1, e2) | SymConstraint::Le(e1, e2) => Some(LinearConstraint::le(
                 e1.extract_linear()?,
                 e2.extract_linear()?,
             )),

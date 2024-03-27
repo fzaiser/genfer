@@ -1,6 +1,8 @@
 pub mod bound;
 pub mod ctx;
 pub mod linear;
+pub mod optimizer;
+pub mod solver;
 pub mod sym_expr;
 pub mod sym_poly;
 pub mod sym_rational;
