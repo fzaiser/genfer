@@ -81,6 +81,10 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
     for constraint in ctx.constraints() {
         println!("  {constraint}");
     }
+    println!("Polynomial constraints:");
+    for constraint in ctx.constraints() {
+        println!("  {}", constraint.to_poly());
+    }
     // println!("Python:");
     // println!("{}", ctx.output_python_z3());
     if let Some(path) = &args.smt {

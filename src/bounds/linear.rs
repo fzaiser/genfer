@@ -1,56 +1,79 @@
+use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub};
+
+use num_traits::{One, Zero};
+
 use crate::bounds::sym_expr::SymExpr;
 
 #[derive(Clone, Debug)]
-pub struct LinearExpr {
-    pub coeffs: Vec<f64>,
-    pub constant: f64,
+pub struct LinearExpr<T> {
+    pub coeffs: Vec<T>,
+    pub constant: T,
 }
 
-impl LinearExpr {
-    pub fn new(coeffs: Vec<f64>, constant: f64) -> Self {
+impl<T> LinearExpr<T> {
+    pub fn new(coeffs: Vec<T>, constant: T) -> Self {
         Self { coeffs, constant }
     }
 
-    pub fn zero() -> Self {
-        Self::new(vec![], 0.0)
+    pub fn zero() -> Self
+    where
+        T: Zero,
+    {
+        Self::new(vec![], T::zero())
     }
 
-    pub fn one() -> Self {
-        Self::new(vec![1.0], 0.0)
+    pub fn one() -> Self
+    where
+        T: Zero + One,
+    {
+        Self::new(vec![T::one()], T::zero())
     }
 
-    pub fn constant(constant: f64) -> Self {
+    pub fn constant(constant: T) -> Self {
         Self::new(vec![], constant)
     }
 
-    pub fn var(var: usize) -> Self {
-        let mut coeffs = vec![0.0; var + 1];
-        coeffs[var] = 1.0;
-        Self::new(coeffs, 0.0)
+    pub fn var(var: usize) -> Self
+    where
+        T: Clone + Zero + One,
+    {
+        let mut coeffs = vec![T::zero(); var + 1];
+        coeffs[var] = T::one();
+        Self::new(coeffs, T::zero())
     }
 
-    pub fn as_constant(&self) -> Option<f64> {
-        if self.coeffs.iter().all(|c| c == &0.0) {
-            Some(self.constant)
+    pub fn as_constant(&self) -> Option<&T>
+    where
+        T: Zero,
+    {
+        if self.coeffs.iter().all(Zero::is_zero) {
+            Some(&self.constant)
         } else {
             None
         }
     }
 
-    pub fn to_lp_expr(&self, vars: &[good_lp::Variable]) -> good_lp::Expression {
-        let mut result = good_lp::Expression::from(self.constant);
+    pub fn to_lp_expr(
+        &self,
+        vars: &[good_lp::Variable],
+        conv: &impl Fn(&T) -> f64,
+    ) -> good_lp::Expression {
+        let mut result = good_lp::Expression::from(conv(&self.constant));
         for (coeff, var) in self.coeffs.iter().zip(vars) {
-            result.add_mul(*coeff, var);
+            result.add_mul(conv(coeff), var);
         }
         result
     }
 }
 
-impl std::fmt::Display for LinearExpr {
+impl<T: std::fmt::Display> std::fmt::Display for LinearExpr<T>
+where
+    T: Zero + One + PartialEq + Neg<Output = T>,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut first = true;
         for (i, coeff) in self.coeffs.iter().enumerate() {
-            if *coeff == 0.0 {
+            if coeff.is_zero() {
                 continue;
             }
             if first {
@@ -58,15 +81,15 @@ impl std::fmt::Display for LinearExpr {
             } else {
                 write!(f, " + ")?;
             }
-            if *coeff == 1.0 {
-                write!(f, "{}", SymExpr::var(i))?;
-            } else if *coeff == -1.0 {
-                write!(f, "-{}", SymExpr::var(i))?;
+            if coeff.is_one() {
+                write!(f, "{}", SymExpr::<T>::var(i))?;
+            } else if *coeff == -T::one() {
+                write!(f, "-{}", SymExpr::<T>::var(i))?;
             } else {
-                write!(f, "{}{}", coeff, SymExpr::var(i))?;
+                write!(f, "{}{}", coeff, SymExpr::<T>::var(i))?;
             }
         }
-        if self.constant != 0.0 {
+        if !self.constant.is_zero() {
             if first {
                 first = false;
             } else {
@@ -81,34 +104,48 @@ impl std::fmt::Display for LinearExpr {
     }
 }
 
-impl std::ops::Neg for LinearExpr {
+impl<T> Neg for LinearExpr<T>
+where
+    T: Clone + Neg<Output = T>,
+{
     type Output = Self;
 
     #[inline]
-    fn neg(self) -> Self::Output {
-        self * (-1.0)
+    fn neg(mut self) -> Self::Output {
+        self.constant = -self.constant;
+        for coeff in &mut self.coeffs {
+            *coeff = -coeff.clone();
+        }
+        self
     }
 }
 
-impl std::ops::Add for LinearExpr {
+impl<T> Add for LinearExpr<T>
+where
+    T: AddAssign,
+{
     type Output = Self;
 
     #[inline]
     fn add(self, other: Self) -> Self::Output {
-        let constant = self.constant + other.constant;
+        let mut constant = self.constant;
+        constant += other.constant;
         let (mut coeffs, other) = if self.coeffs.len() > other.coeffs.len() {
             (self.coeffs, other.coeffs)
         } else {
             (other.coeffs, self.coeffs)
         };
-        for i in 0..other.len() {
-            coeffs[i] += other[i];
+        for (c1, c2) in coeffs.iter_mut().zip(other) {
+            *c1 += c2;
         }
         Self::new(coeffs, constant)
     }
 }
 
-impl std::ops::Sub for LinearExpr {
+impl<T> Sub for LinearExpr<T>
+where
+    T: Clone + AddAssign + Neg<Output = T>,
+{
     type Output = Self;
 
     #[inline]
@@ -117,65 +154,99 @@ impl std::ops::Sub for LinearExpr {
     }
 }
 
-impl std::ops::Mul<f64> for LinearExpr {
+impl<T> Mul<T> for LinearExpr<T>
+where
+    T: Mul<Output = T> + Clone,
+{
     type Output = Self;
 
     #[inline]
-    fn mul(self, other: f64) -> Self::Output {
+    fn mul(self, other: T) -> Self::Output {
         Self::new(
-            self.coeffs.into_iter().map(|c| c * other).collect(),
-            self.constant * other,
+            self.coeffs.into_iter().map(|c| c * other.clone()).collect(),
+            self.constant * other.clone(),
+        )
+    }
+}
+
+impl<T> Div<T> for LinearExpr<T>
+where
+    T: Div<Output = T> + Clone,
+{
+    type Output = Self;
+
+    #[inline]
+    fn div(self, other: T) -> Self::Output {
+        Self::new(
+            self.coeffs.into_iter().map(|c| c / other.clone()).collect(),
+            self.constant / other.clone(),
         )
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct LinearConstraint {
-    expr: LinearExpr,
-    /// If true, `expr` must be equal to zero, otherwise it must be non-positive
+pub struct LinearConstraint<T> {
+    expr: LinearExpr<T>,
+    /// If true, `expr` must be equal to zero, otherwise it must be nonnegative
     eq_zero: bool,
 }
 
-impl LinearConstraint {
-    pub fn eq(e1: LinearExpr, e2: LinearExpr) -> Self {
+impl<T> LinearConstraint<T> {
+    pub fn eq(e1: LinearExpr<T>, e2: LinearExpr<T>) -> Self
+    where
+        LinearExpr<T>: Sub<Output = LinearExpr<T>>,
+    {
         Self {
-            expr: e1 - e2,
+            expr: e2 - e1,
             eq_zero: true,
         }
     }
 
-    pub fn le(e1: LinearExpr, e2: LinearExpr) -> Self {
+    pub fn le(e1: LinearExpr<T>, e2: LinearExpr<T>) -> Self
+    where
+        LinearExpr<T>: Sub<Output = LinearExpr<T>>,
+    {
         Self {
-            expr: e1 - e2,
+            expr: e2 - e1,
             eq_zero: false,
         }
     }
 
-    pub fn to_lp_constraint(&self, var_list: &[good_lp::Variable]) -> good_lp::Constraint {
-        let result = self.expr.to_lp_expr(var_list);
+    pub fn to_lp_constraint(
+        &self,
+        var_list: &[good_lp::Variable],
+        conv: &impl Fn(&T) -> f64,
+    ) -> good_lp::Constraint {
+        let result = self.expr.to_lp_expr(var_list, conv);
         if self.eq_zero {
             result.eq(0.0)
         } else {
-            result.leq(0.0)
+            result.geq(0.0)
         }
     }
 
-    pub fn eval_constant(&self) -> Option<bool> {
+    pub fn eval_constant(&self) -> Option<bool>
+    where
+        T: Zero + PartialOrd,
+    {
         let constant = self.expr.as_constant()?;
         if self.eq_zero {
-            Some(constant == 0.0)
+            Some(constant.is_zero())
         } else {
-            Some(constant <= 0.0)
+            Some(constant >= &T::zero())
         }
     }
 }
 
-impl std::fmt::Display for LinearConstraint {
+impl<T> std::fmt::Display for LinearConstraint<T>
+where
+    LinearExpr<T>: std::fmt::Display,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.eq_zero {
             write!(f, "{} = 0", self.expr)
         } else {
-            write!(f, "{} <= 0", self.expr)
+            write!(f, "{} >= 0", self.expr)
         }
     }
 }

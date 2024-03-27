@@ -8,6 +8,7 @@ use crate::{
     bounds::{
         bound::{BoundResult, GeometricBound},
         sym_expr::{SymConstraint, SymExpr},
+        util::{f64_to_qepcad, f64_to_z3, z3_real_to_f64},
     },
     number::{Number, F64},
     ppl::{Distribution, Event, Natural, Program, Statement, Var},
@@ -32,8 +33,8 @@ pub struct BoundCtx {
     sym_var_count: usize,
     // Variables used nonlinearly, in [0,1)
     nonlinear_param_vars: Vec<usize>,
-    constraints: Vec<SymConstraint>,
-    soft_constraints: Vec<SymConstraint>,
+    constraints: Vec<SymConstraint<f64>>,
+    soft_constraints: Vec<SymConstraint<f64>>,
 }
 
 impl Default for BoundCtx {
@@ -200,8 +201,8 @@ impl Transformer for BoundCtx {
                                     .masses
                                     .index_axis_mut(Axis(var.id()), i)
                                     .map_inplace(|e| {
-                                        *e /= SymExpr::from(f64::from(end.0 - start.0))
-                                    })
+                                        *e /= SymExpr::from(f64::from(end.0 - start.0));
+                                    });
                             }
                         }
                     }
@@ -310,11 +311,11 @@ impl BoundCtx {
         self.sym_var_count
     }
 
-    pub fn constraints(&self) -> &[SymConstraint] {
+    pub fn constraints(&self) -> &[SymConstraint<f64>] {
         &self.constraints
     }
 
-    pub fn soft_constraints(&self) -> &[SymConstraint] {
+    pub fn soft_constraints(&self) -> &[SymConstraint<f64>] {
         &self.soft_constraints
     }
 
@@ -324,21 +325,21 @@ impl BoundCtx {
         var
     }
 
-    pub fn fresh_sym_var(&mut self) -> SymExpr {
+    pub fn fresh_sym_var(&mut self) -> SymExpr<f64> {
         SymExpr::var(self.fresh_sym_var_idx())
     }
 
-    pub fn add_constraint(&mut self, constraint: SymConstraint) {
+    pub fn add_constraint(&mut self, constraint: SymConstraint<f64>) {
         // println!("Adding constraint {constraint}");
         self.constraints.push(constraint);
     }
 
-    pub fn add_soft_constraint(&mut self, constraint: SymConstraint) {
+    pub fn add_soft_constraint(&mut self, constraint: SymConstraint<f64>) {
         // println!("Adding soft constraint {constraint}");
         self.soft_constraints.push(constraint);
     }
 
-    pub fn new_geo_param_var(&mut self) -> SymExpr {
+    pub fn new_geo_param_var(&mut self) -> SymExpr<f64> {
         let idx = self.fresh_sym_var_idx();
         let var = SymExpr::var(idx);
         self.nonlinear_param_vars.push(idx);
@@ -441,7 +442,7 @@ impl BoundCtx {
                             self.min_degree
                         }
                     }
-                    _ => todo!(),
+                    SupportSet::Interval { .. } => todo!(),
                 })
                 .collect::<Vec<_>>(),
         };
@@ -470,10 +471,10 @@ impl BoundCtx {
         self.add_constraint(c.clone().must_ge(SymExpr::zero()));
         self.add_constraint(c.clone().must_le(SymExpr::one()));
         self.add_soft_constraint(c.clone().must_lt(SymExpr::one()));
-        let cur_bound = self.transform_statements(&body, invariant.clone());
+        let cur_bound = self.transform_statements(body, invariant.clone());
         let (post_loop, mut exit) = self.transform_event(cond, cur_bound);
         self.assert_le(&post_loop.bound, &(invariant.bound.clone() * c.clone()));
-        exit.bound = exit.bound / (SymExpr::one() - c.clone());
+        exit.bound /= SymExpr::one() - c.clone();
         self.add_bound_results(exit, rest)
     }
 
@@ -549,7 +550,7 @@ impl BoundCtx {
         writeln!(out, "(set-option :pp.decimal true)")?;
         writeln!(out)?;
         for i in 0..self.sym_var_count() {
-            writeln!(out, "(declare-const {} Real)", SymExpr::var(i))?;
+            writeln!(out, "(declare-const {} Real)", SymExpr::<f64>::var(i))?;
         }
         writeln!(out)?;
         for constraint in &self.constraints {
@@ -596,11 +597,11 @@ impl BoundCtx {
             } else {
                 writeln!(out, r" /\")?;
             }
-            write!(out, "  {}", c.to_qepcad())?;
+            write!(out, "  {}", c.to_qepcad(&|f| f64_to_qepcad(*f)))?;
         }
         for c in self.soft_constraints() {
             writeln!(out, r" /\")?;
-            write!(out, "  {}", c.to_qepcad())?;
+            write!(out, "  {}", c.to_qepcad(&|f| f64_to_qepcad(*f)))?;
         }
         writeln!(out, "\n].")?;
 
@@ -613,7 +614,7 @@ impl BoundCtx {
         Ok(())
     }
 
-    fn new_masses(&mut self, shape: Vec<usize>) -> ArrayD<SymExpr> {
+    fn new_masses(&mut self, shape: Vec<usize>) -> ArrayD<SymExpr<f64>> {
         let mut coeffs = ArrayD::zeros(shape);
         for c in &mut coeffs {
             *c = self.fresh_sym_var();
@@ -636,12 +637,12 @@ impl BoundCtx {
 
     fn assert_le_helper(
         &mut self,
-        lhs_coeffs: &ArrayViewD<SymExpr>,
-        lhs_factor: SymExpr,
-        lhs_geo_params: &[SymExpr],
-        rhs_coeffs: &ArrayViewD<SymExpr>,
-        rhs_factor: SymExpr,
-        rhs_geo_params: &[SymExpr],
+        lhs_coeffs: &ArrayViewD<SymExpr<f64>>,
+        lhs_factor: SymExpr<f64>,
+        lhs_geo_params: &[SymExpr<f64>],
+        rhs_coeffs: &ArrayViewD<SymExpr<f64>>,
+        rhs_factor: SymExpr<f64>,
+        rhs_geo_params: &[SymExpr<f64>],
     ) {
         if lhs_geo_params.is_empty() {
             assert!(lhs_coeffs.len() == 1);
@@ -747,10 +748,10 @@ impl BoundCtx {
         let objective = total
             .extract_linear()
             .unwrap_or_else(|| panic!("Objective is not linear in the program variables: {total}"))
-            .to_lp_expr(&var_list);
+            .to_lp_expr(&var_list, &|v| *v);
         let mut problem = lp.minimise(objective).using(good_lp::default_solver);
         for constraint in &linear_constraints {
-            problem.add_constraint(constraint.to_lp_constraint(&var_list));
+            problem.add_constraint(constraint.to_lp_constraint(&var_list, &|v| *v));
         }
         let solution = problem.solve().map_err(|err| match err {
             good_lp::ResolutionError::Unbounded => panic!("Optimal solution is unbounded."),
@@ -780,33 +781,16 @@ impl BoundCtx {
         timeout: Duration,
         optimize: bool,
     ) -> Result<GeometricBound, SolverError> {
-        fn z3_real_to_f64(real: &z3::ast::Real) -> Option<f64> {
-            if let Some((n, d)) = real.as_real() {
-                return Some(n as f64 / d as f64);
-            }
-            let string = real.to_string();
-            if let Ok(f) = string.parse::<f64>() {
-                Some(f)
-            } else {
-                let words = string.split_whitespace().collect::<Vec<_>>();
-                if words.len() == 3 && words[0] == "(/" && words[2].ends_with(')') {
-                    let n = words[1].parse::<f64>().ok()?;
-                    let d = words[2][..words[2].len() - 1].parse::<f64>().ok()?;
-                    return Some(n / d);
-                }
-                None
-            }
-        }
         let mut cfg = z3::Config::new();
         cfg.set_model_generation(true);
         cfg.set_timeout_msec(timeout.as_millis() as u64);
         let ctx = z3::Context::new(&cfg);
         let solver = z3::Solver::new(&ctx);
         for constraint in self.constraints() {
-            solver.assert(&constraint.to_z3(&ctx));
+            solver.assert(&constraint.to_z3(&ctx, &f64_to_z3));
         }
         for constraint in self.soft_constraints() {
-            solver.assert(&constraint.to_z3(&ctx));
+            solver.assert(&constraint.to_z3(&ctx, &f64_to_z3));
         }
         solver.push();
         match solver.check() {
@@ -837,24 +821,30 @@ impl BoundCtx {
                         .unwrap();
                     let val = z3_real_to_f64(&val)
                         .unwrap_or_else(|| panic!("{val} cannot be converted to f64"));
-                    println!("{var} -> {val}", var = SymExpr::var(var));
+                    println!("{var} -> {val}", var = SymExpr::<f64>::var(var));
                 }
                 let mut resolved_bound = bound.clone();
                 for coeff in &mut resolved_bound.masses {
-                    let val = model.eval(&coeff.to_z3(&ctx), false).unwrap();
+                    let val = model.eval(&coeff.to_z3(&ctx, &f64_to_z3), false).unwrap();
                     let val = z3_real_to_f64(&val)
                         .unwrap_or_else(|| panic!("{val} cannot be converted to f64"));
                     *coeff = SymExpr::Constant(val);
                 }
                 for geo_param in &mut resolved_bound.geo_params {
-                    let val = model.eval(&geo_param.to_z3(&ctx), false).unwrap();
+                    let val = model
+                        .eval(&geo_param.to_z3(&ctx, &f64_to_z3), false)
+                        .unwrap();
                     let val = z3_real_to_f64(&val)
                         .unwrap_or_else(|| panic!("{val} cannot be converted to f64"));
                     *geo_param = SymExpr::Constant(val);
                 }
                 println!("SMT solution:\n {resolved_bound}");
-                let obj_val =
-                    z3_real_to_f64(&model.eval(&objective.to_z3(&ctx), false).unwrap()).unwrap();
+                let obj_val = z3_real_to_f64(
+                    &model
+                        .eval(&objective.to_z3(&ctx, &f64_to_z3), false)
+                        .unwrap(),
+                )
+                .unwrap();
                 println!("Total mass (objective): {obj_val}");
                 if obj_val < best_obj_val {
                     best_obj_val = obj_val;
@@ -863,8 +853,9 @@ impl BoundCtx {
                         self.nonlinear_param_vars
                             .iter()
                             .map(|var| {
-                                let val =
-                                    model.eval(&SymExpr::var(*var).to_z3(&ctx), false).unwrap();
+                                let val = model
+                                    .eval(&SymExpr::var(*var).to_z3(&ctx, &f64_to_z3), false)
+                                    .unwrap();
                                 z3_real_to_f64(&val)
                                     .unwrap_or_else(|| panic!("{val} cannot be converted to f64"))
                             })
@@ -880,7 +871,11 @@ impl BoundCtx {
             solver.pop(1);
             solver.push();
             let mid = (obj_lo + obj_hi) / 2.0;
-            solver.assert(&objective.to_z3(&ctx).le(&SymExpr::from(mid).to_z3(&ctx)));
+            solver.assert(
+                &objective
+                    .to_z3(&ctx, &f64_to_z3)
+                    .le(&SymExpr::from(mid).to_z3(&ctx, &f64_to_z3)),
+            );
             match solver.check() {
                 z3::SatResult::Sat => {
                     println!("Solution found for these objective bounds.");
@@ -891,6 +886,10 @@ impl BoundCtx {
                 }
                 z3::SatResult::Unknown => {
                     println!("Solver responded 'unknown' while optimizing the objective. Aborting optimization.");
+                    println!(
+                        "Reason for unknown: {}",
+                        solver.get_reason_unknown().unwrap_or("none".to_owned())
+                    );
                     break;
                 }
             }

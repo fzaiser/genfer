@@ -1,26 +1,41 @@
+use std::{
+    fmt::Display,
+    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+};
+
 use num_traits::{One, Zero};
 
 use crate::bounds::linear::{LinearConstraint, LinearExpr};
 
+use super::{sym_poly::PolyConstraint, sym_rational::RationalFunction, util::pow};
+
 #[derive(Debug, Clone, PartialEq)]
-pub enum SymExpr {
-    Constant(f64),
+pub enum SymExpr<T> {
+    Constant(T),
     Variable(usize),
-    Add(Box<SymExpr>, Box<SymExpr>),
-    Mul(Box<SymExpr>, Box<SymExpr>),
-    Pow(Box<SymExpr>, i32),
+    Add(Box<SymExpr<T>>, Box<SymExpr<T>>),
+    Mul(Box<SymExpr<T>>, Box<SymExpr<T>>),
+    Pow(Box<SymExpr<T>>, i32),
 }
 
-impl SymExpr {
+impl<T> SymExpr<T> {
     pub fn var(i: usize) -> Self {
         Self::Variable(i)
     }
 
-    pub fn inverse(self) -> Self {
+    pub fn inverse(self) -> Self
+    where
+        T: PartialEq,
+        Self: Zero + One,
+    {
         self.pow(-1)
     }
 
-    pub fn pow(self, n: i32) -> Self {
+    pub fn pow(self, n: i32) -> Self
+    where
+        T: PartialEq,
+        Self: Zero + One,
+    {
         if n == 0 {
             Self::one()
         } else if n == 1 || (n >= 0 && self.is_zero()) || self.is_one() {
@@ -31,72 +46,82 @@ impl SymExpr {
     }
 
     /// Must equal `rhs`.
-    pub fn must_eq(self, rhs: Self) -> SymConstraint {
+    pub fn must_eq(self, rhs: Self) -> SymConstraint<T> {
         SymConstraint::Eq(self, rhs)
     }
 
     /// Must be less than `rhs`.
-    pub fn must_lt(self, rhs: Self) -> SymConstraint {
+    pub fn must_lt(self, rhs: Self) -> SymConstraint<T> {
         SymConstraint::Lt(self, rhs)
     }
 
     /// Must be less than or equal to `rhs`.
-    pub fn must_le(self, rhs: Self) -> SymConstraint {
+    pub fn must_le(self, rhs: Self) -> SymConstraint<T> {
         SymConstraint::Le(self, rhs)
     }
 
     /// Must be greater than `rhs`.
-    pub fn must_gt(self, rhs: Self) -> SymConstraint {
+    pub fn must_gt(self, rhs: Self) -> SymConstraint<T> {
         SymConstraint::Lt(rhs, self)
     }
 
     /// Must be greater than or equal to `rhs`.
-    pub fn must_ge(self, rhs: Self) -> SymConstraint {
+    pub fn must_ge(self, rhs: Self) -> SymConstraint<T> {
         SymConstraint::Le(rhs, self)
     }
 
-    pub fn substitute(&self, replacements: &[SymExpr]) -> Self {
+    pub fn substitute(&self, replacements: &[Self]) -> Self
+    where
+        T: PartialEq,
+        Self: Clone + Zero + One + Add<Output = Self> + Mul<Output = Self>,
+    {
         match self {
-            SymExpr::Constant(_) => self.clone(),
-            SymExpr::Variable(i) => replacements[*i].clone(),
-            SymExpr::Add(lhs, rhs) => lhs.substitute(replacements) + rhs.substitute(replacements),
-            SymExpr::Mul(lhs, rhs) => lhs.substitute(replacements) * rhs.substitute(replacements),
-            SymExpr::Pow(base, n) => base.substitute(replacements).pow(*n),
+            Self::Constant(_) => self.clone(),
+            Self::Variable(i) => replacements[*i].clone(),
+            Self::Add(lhs, rhs) => lhs.substitute(replacements) + rhs.substitute(replacements),
+            Self::Mul(lhs, rhs) => lhs.substitute(replacements) * rhs.substitute(replacements),
+            Self::Pow(base, n) => base.substitute(replacements).pow(*n),
         }
     }
 
-    pub fn extract_constant(&self) -> Option<f64> {
+    pub fn extract_constant(&self) -> Option<T>
+    where
+        T: Clone,
+    {
         match self {
-            SymExpr::Constant(c) => Some(*c),
+            Self::Constant(c) => Some(c.clone()),
             _ => None,
         }
     }
 
-    pub fn extract_linear(&self) -> Option<LinearExpr> {
+    pub fn extract_linear(&self) -> Option<LinearExpr<T>>
+    where
+        T: Clone + Zero + One + AddAssign + Add<Output = T> + MulAssign + Div<Output = T>,
+    {
         match self {
-            SymExpr::Constant(c) => Some(LinearExpr::constant(*c)),
-            SymExpr::Variable(i) => Some(LinearExpr::var(*i)),
-            SymExpr::Add(lhs, rhs) => {
+            Self::Constant(c) => Some(LinearExpr::constant(c.clone())),
+            Self::Variable(i) => Some(LinearExpr::var(*i)),
+            Self::Add(lhs, rhs) => {
                 let lhs = lhs.extract_linear()?;
                 let rhs = rhs.extract_linear()?;
                 Some(lhs + rhs)
             }
-            SymExpr::Mul(lhs, rhs) => {
+            Self::Mul(lhs, rhs) => {
                 let lhs = lhs.extract_linear()?;
                 let rhs = rhs.extract_linear()?;
                 if let Some(factor) = lhs.as_constant() {
-                    Some(rhs * factor)
+                    Some(rhs * factor.clone())
                 } else {
-                    rhs.as_constant().map(|factor| lhs * factor)
+                    rhs.as_constant().map(|factor| lhs * factor.clone())
                 }
             }
-            SymExpr::Pow(base, n) => {
+            Self::Pow(base, n) => {
                 if *n == 0 {
-                    return Some(LinearExpr::constant(1.0));
+                    return Some(LinearExpr::one());
                 }
                 let base = base.extract_linear()?;
                 if let Some(base) = base.as_constant() {
-                    return Some(LinearExpr::constant(base.powi(*n)));
+                    return Some(LinearExpr::constant(pow(base.clone(), *n)));
                 }
                 if *n == 1 {
                     Some(base)
@@ -107,88 +132,142 @@ impl SymExpr {
         }
     }
 
-    pub fn to_z3<'a>(&self, ctx: &'a z3::Context) -> z3::ast::Real<'a> {
+    pub fn to_rational_function(&self) -> RationalFunction<T>
+    where
+        T: Clone
+            + PartialEq
+            + Zero
+            + One
+            + AddAssign
+            + Add<Output = T>
+            + MulAssign
+            + Mul<Output = T>
+            + Div<Output = T>,
+    {
         match self {
-            SymExpr::Constant(f) => {
-                let (mantissa, exponent) = f64_to_mantissa_exponent(*f);
-                let m = z3::ast::Int::from_i64(ctx, mantissa).to_real();
-                let two = z3::ast::Int::from_i64(ctx, 2).to_real();
-                let e = z3::ast::Int::from_i64(ctx, exponent).to_real();
-                m * two.power(&e)
-            }
-            SymExpr::Variable(v) => z3::ast::Real::new_const(ctx, *v as u32),
-            SymExpr::Add(e1, e2) => e1.to_z3(ctx) + e2.to_z3(ctx),
-            SymExpr::Mul(e1, e2) => e1.to_z3(ctx) * e2.to_z3(ctx),
-            SymExpr::Pow(e, n) => e
-                .to_z3(ctx)
+            Self::Constant(c) => RationalFunction::constant(c.clone()),
+            Self::Variable(i) => RationalFunction::var(*i),
+            Self::Add(lhs, rhs) => lhs.to_rational_function() + rhs.to_rational_function(),
+            Self::Mul(lhs, rhs) => lhs.to_rational_function() * rhs.to_rational_function(),
+            Self::Pow(base, n) => base.to_rational_function().pow(*n),
+        }
+    }
+
+    pub fn to_z3<'a>(
+        &self,
+        ctx: &'a z3::Context,
+        conv: &impl Fn(&'a z3::Context, &T) -> z3::ast::Real<'a>,
+    ) -> z3::ast::Real<'a> {
+        match self {
+            Self::Constant(f) => conv(ctx, f),
+            Self::Variable(v) => z3::ast::Real::new_const(ctx, *v as u32),
+            Self::Add(e1, e2) => e1.to_z3(ctx, conv) + e2.to_z3(ctx, conv),
+            Self::Mul(e1, e2) => e1.to_z3(ctx, conv) * e2.to_z3(ctx, conv),
+            Self::Pow(e, n) => e
+                .to_z3(ctx, conv)
                 .power(&z3::ast::Int::from_i64(ctx, (*n).into()).to_real()),
         }
     }
 
-    pub fn to_python(&self) -> String {
+    pub fn to_python(&self) -> String
+    where
+        T: Display,
+    {
         match self {
-            SymExpr::Constant(c) => c.to_string(),
-            SymExpr::Variable(v) => format!("x[{v}]"),
-            SymExpr::Add(lhs, rhs) => format!("({} + {})", lhs.to_python(), rhs.to_python()),
-            SymExpr::Mul(lhs, rhs) => format!("({} * {})", lhs.to_python(), rhs.to_python()),
-            SymExpr::Pow(lhs, rhs) => format!("({} ** {})", lhs.to_python(), rhs),
+            Self::Constant(c) => c.to_string(),
+            Self::Variable(v) => format!("x[{v}]"),
+            Self::Add(lhs, rhs) => format!("({} + {})", lhs.to_python(), rhs.to_python()),
+            Self::Mul(lhs, rhs) => format!("({} * {})", lhs.to_python(), rhs.to_python()),
+            Self::Pow(lhs, rhs) => format!("({} ** {})", lhs.to_python(), rhs),
         }
     }
 
-    pub fn to_python_z3(&self) -> String {
+    pub fn to_z3_string(&self) -> String
+    where
+        T: Display + Clone + Neg<Output = T> + Zero + One + PartialOrd,
+    {
         match self {
-            SymExpr::Constant(c) => c.to_string(),
-            SymExpr::Variable(v) => format!("x{v}"),
-            SymExpr::Add(lhs, rhs) => format!("({} + {})", lhs.to_python_z3(), rhs.to_python_z3()),
-            SymExpr::Mul(lhs, rhs) => format!("({} * {})", lhs.to_python_z3(), rhs.to_python_z3()),
-            SymExpr::Pow(lhs, rhs) => format!("({} ^ {})", lhs.to_python_z3(), rhs),
-        }
-    }
-
-    pub fn to_qepcad(&self) -> String {
-        match self {
-            SymExpr::Constant(c) => {
-                let (mantissa, exponent) = f64_to_mantissa_exponent(*c);
-                let n = *c as i128;
-                if n as f64 == *c {
-                    if n < 0 {
-                        format!("({n})")
-                    } else {
-                        n.to_string()
-                    }
-                } else if (-127..=0).contains(&exponent) {
-                    format!("({mantissa}/{})", (1i128 << i128::from(-exponent)))
+            Self::Constant(value) => {
+                if value < &T::zero() {
+                    format!("(- {})", -value.clone())
                 } else {
-                    todo!()
+                    format!("{value}")
                 }
             }
-            SymExpr::Variable(v) => format!("{}", crate::ppl::Var(*v)),
-            SymExpr::Add(lhs, rhs) => format!("({} + {})", lhs.to_qepcad(), rhs.to_qepcad()),
-            SymExpr::Mul(lhs, rhs) => format!("({} {})", lhs.to_qepcad(), rhs.to_qepcad()),
-            SymExpr::Pow(lhs, rhs) => format!("({} ^ {})", lhs.to_qepcad(), rhs),
+            Self::Variable(i) => format!("x{i}"),
+            Self::Add(lhs, rhs) => format!("(+ {lhs} {rhs})"),
+            Self::Mul(lhs, rhs) => {
+                if Self::Constant(-T::zero()) == **rhs {
+                    format!("(- {lhs})")
+                } else {
+                    format!("(* {lhs} {rhs})")
+                }
+            }
+            Self::Pow(expr, n) => {
+                if *n == -1 {
+                    format!("(/ 1 {expr})")
+                } else if *n < 0 {
+                    format!("(/ 1 (^ {expr} {}))", -n)
+                } else {
+                    format!("(^ {expr} {n})")
+                }
+            }
         }
     }
 
-    pub fn eval(&self, values: &[f64]) -> f64 {
+    pub fn to_python_z3(&self) -> String
+    where
+        T: Display,
+    {
         match self {
-            SymExpr::Constant(c) => *c,
-            SymExpr::Variable(v) => values[*v],
-            SymExpr::Add(lhs, rhs) => lhs.eval(values) + rhs.eval(values),
-            SymExpr::Mul(lhs, rhs) => lhs.eval(values) * rhs.eval(values),
-            SymExpr::Pow(base, n) => base.eval(values).powi(*n),
+            Self::Constant(c) => c.to_string(),
+            Self::Variable(v) => format!("x{v}"),
+            Self::Add(lhs, rhs) => format!("({} + {})", lhs.to_python_z3(), rhs.to_python_z3()),
+            Self::Mul(lhs, rhs) => format!("({} * {})", lhs.to_python_z3(), rhs.to_python_z3()),
+            Self::Pow(lhs, rhs) => format!("({} ^ {})", lhs.to_python_z3(), rhs),
+        }
+    }
+
+    pub fn to_qepcad(&self, conv: &impl Fn(&T) -> String) -> String {
+        match self {
+            Self::Constant(c) => conv(c),
+            Self::Variable(v) => format!("{}", crate::ppl::Var(*v)),
+            Self::Add(lhs, rhs) => format!("({} + {})", lhs.to_qepcad(conv), rhs.to_qepcad(conv)),
+            Self::Mul(lhs, rhs) => format!("({} {})", lhs.to_qepcad(conv), rhs.to_qepcad(conv)),
+            Self::Pow(lhs, rhs) => format!("({} ^ {})", lhs.to_qepcad(conv), rhs),
+        }
+    }
+
+    pub fn eval(&self, values: &[T]) -> T
+    where
+        T: Clone
+            + AddAssign
+            + Add<Output = T>
+            + MulAssign
+            + Mul<Output = T>
+            + Div<Output = T>
+            + One
+            + Zero,
+    {
+        match self {
+            Self::Constant(c) => c.clone(),
+            Self::Variable(v) => values[*v].clone(),
+            Self::Add(lhs, rhs) => lhs.eval(values) + rhs.eval(values),
+            Self::Mul(lhs, rhs) => lhs.eval(values) * rhs.eval(values),
+            Self::Pow(base, n) => pow(base.eval(values), *n),
         }
     }
 }
 
-impl From<f64> for SymExpr {
+impl<T: From<f64>> From<f64> for SymExpr<T> {
     fn from(value: f64) -> Self {
-        Self::Constant(value)
+        Self::Constant(value.into())
     }
 }
 
-impl Zero for SymExpr {
+impl<T: Zero> Zero for SymExpr<T> {
     fn zero() -> Self {
-        Self::Constant(0.0)
+        Self::Constant(T::zero())
     }
 
     fn is_zero(&self) -> bool {
@@ -199,9 +278,12 @@ impl Zero for SymExpr {
     }
 }
 
-impl One for SymExpr {
+impl<T: Zero + One> One for SymExpr<T>
+where
+    T: One + PartialEq,
+{
     fn one() -> Self {
-        Self::Constant(1.0)
+        Self::Constant(T::one())
     }
 
     fn is_one(&self) -> bool {
@@ -212,21 +294,28 @@ impl One for SymExpr {
     }
 }
 
-impl std::ops::Neg for SymExpr {
+impl<T: Neg> Neg for SymExpr<T>
+where
+    T: Clone + Zero + One + Neg<Output = T>,
+    Self: Mul<Output = Self>,
+{
     type Output = Self;
 
     fn neg(self) -> Self::Output {
         if self.is_zero() {
             self
         } else if let Self::Constant(c) = self {
-            (-c).into()
+            Self::Constant(-c.clone())
         } else {
-            self * (-1.0).into()
+            self * Self::Constant(-T::one())
         }
     }
 }
 
-impl std::ops::Add for SymExpr {
+impl<T> Add for SymExpr<T>
+where
+    T: Zero + Add<Output = T>,
+{
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -240,13 +329,19 @@ impl std::ops::Add for SymExpr {
     }
 }
 
-impl std::ops::AddAssign for SymExpr {
+impl<T> AddAssign for SymExpr<T>
+where
+    Self: Clone + Add<Output = Self> + Zero,
+{
     fn add_assign(&mut self, rhs: Self) {
         *self = self.clone() + rhs;
     }
 }
 
-impl std::ops::Sub for SymExpr {
+impl<T> Sub for SymExpr<T>
+where
+    Self: PartialEq + Zero + Add<Output = Self> + Neg<Output = Self>,
+{
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
@@ -258,13 +353,19 @@ impl std::ops::Sub for SymExpr {
     }
 }
 
-impl std::ops::SubAssign for SymExpr {
+impl<T> SubAssign for SymExpr<T>
+where
+    Self: Clone + Sub<Output = Self>,
+{
     fn sub_assign(&mut self, rhs: Self) {
         *self = self.clone() - rhs;
     }
 }
 
-impl std::ops::Mul for SymExpr {
+impl<T> Mul for SymExpr<T>
+where
+    Self: Zero + One + PartialEq,
+{
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
@@ -280,13 +381,20 @@ impl std::ops::Mul for SymExpr {
     }
 }
 
-impl std::ops::MulAssign for SymExpr {
+impl<T> MulAssign for SymExpr<T>
+where
+    Self: Clone + Mul<Output = Self>,
+{
     fn mul_assign(&mut self, rhs: Self) {
         *self = self.clone() * rhs;
     }
 }
 
-impl std::ops::Div for SymExpr {
+impl<T> Div for SymExpr<T>
+where
+    T: PartialEq,
+    Self: Mul<Output = Self> + PartialEq + Zero + One + Clone,
+{
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self::Output {
@@ -294,78 +402,107 @@ impl std::ops::Div for SymExpr {
     }
 }
 
-impl std::ops::DivAssign for SymExpr {
+impl<T> DivAssign for SymExpr<T>
+where
+    Self: Div<Output = Self> + Clone,
+{
     fn div_assign(&mut self, rhs: Self) {
         *self = self.clone() / rhs;
     }
 }
 
-impl std::fmt::Display for SymExpr {
+impl<T> std::fmt::Display for SymExpr<T>
+where
+    T: Display,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Constant(value) => {
-                if value < &0.0 {
-                    write!(f, "(- {})", -value)
-                } else {
-                    write!(f, "{value}")
-                }
-            }
-            Self::Variable(i) => write!(f, "x{i}"),
-            Self::Add(lhs, rhs) => write!(f, "(+ {lhs} {rhs})"),
-            Self::Mul(lhs, rhs) => {
-                if Self::Constant(-1.0) == **rhs {
-                    write!(f, "(- {lhs})")
-                } else {
-                    write!(f, "(* {lhs} {rhs})")
-                }
-            }
-            Self::Pow(expr, n) => {
-                if *n == -1 {
-                    write!(f, "(/ 1 {expr})")
-                } else if *n < 0 {
-                    write!(f, "(/ 1 (^ {expr} {}))", -n)
-                } else {
-                    write!(f, "(^ {expr} {n})")
-                }
-            }
+            Self::Constant(c) => write!(f, "{c}"),
+            Self::Variable(v) => write!(f, "x{v}"),
+            Self::Add(lhs, rhs) => write!(f, "({lhs} + {rhs})"),
+            Self::Mul(lhs, rhs) => write!(f, "({lhs} * {rhs})"),
+            Self::Pow(base, n) => write!(f, "({base} ^ {n})"),
         }
     }
 }
 
 #[derive(Clone, Debug)]
-pub enum SymConstraint {
-    Eq(SymExpr, SymExpr),
-    Lt(SymExpr, SymExpr),
-    Le(SymExpr, SymExpr),
-    Or(Vec<SymConstraint>),
+pub enum SymConstraint<T> {
+    Eq(SymExpr<T>, SymExpr<T>),
+    Lt(SymExpr<T>, SymExpr<T>),
+    Le(SymExpr<T>, SymExpr<T>),
+    Or(Vec<SymConstraint<T>>),
 }
-impl SymConstraint {
-    pub fn or(constraints: Vec<SymConstraint>) -> Self {
+impl<T> SymConstraint<T> {
+    pub fn or(constraints: Vec<SymConstraint<T>>) -> Self {
         Self::Or(constraints)
     }
 
-    pub fn to_z3<'a>(&self, ctx: &'a z3::Context) -> z3::ast::Bool<'a> {
+    pub fn to_poly(&self) -> PolyConstraint<T>
+    where
+        T: Clone
+            + PartialEq
+            + Zero
+            + One
+            + AddAssign
+            + Add<Output = T>
+            + MulAssign
+            + Mul<Output = T>
+            + Div<Output = T>,
+    {
         match self {
-            SymConstraint::Eq(e1, e2) => z3::ast::Ast::_eq(&e1.to_z3(ctx), &e2.to_z3(ctx)),
-            SymConstraint::Lt(e1, e2) => e1.to_z3(ctx).lt(&e2.to_z3(ctx)),
-            SymConstraint::Le(e1, e2) => e1.to_z3(ctx).le(&e2.to_z3(ctx)),
+            SymConstraint::Eq(lhs, rhs) => {
+                let lhs = lhs.to_rational_function();
+                let rhs = rhs.to_rational_function();
+                PolyConstraint::Eq(lhs.numer * rhs.denom, rhs.numer * lhs.denom)
+            }
+            SymConstraint::Lt(lhs, rhs) => {
+                let lhs = lhs.to_rational_function();
+                let rhs = rhs.to_rational_function();
+                PolyConstraint::Lt(lhs.numer * rhs.denom, rhs.numer * lhs.denom)
+            }
+            SymConstraint::Le(lhs, rhs) => {
+                let lhs = lhs.to_rational_function();
+                let rhs = rhs.to_rational_function();
+                PolyConstraint::Le(lhs.numer * rhs.denom, rhs.numer * lhs.denom)
+            }
             SymConstraint::Or(constraints) => {
-                let disjuncts = constraints.iter().map(|c| c.to_z3(ctx)).collect::<Vec<_>>();
+                PolyConstraint::or(constraints.iter().map(|c| c.to_poly()).collect())
+            }
+        }
+    }
+
+    pub fn to_z3<'a>(
+        &self,
+        ctx: &'a z3::Context,
+        conv: &impl Fn(&'a z3::Context, &T) -> z3::ast::Real<'a>,
+    ) -> z3::ast::Bool<'a> {
+        match self {
+            SymConstraint::Eq(e1, e2) => {
+                z3::ast::Ast::_eq(&e1.to_z3(ctx, conv), &e2.to_z3(ctx, conv))
+            }
+            SymConstraint::Lt(e1, e2) => e1.to_z3(ctx, conv).lt(&e2.to_z3(ctx, conv)),
+            SymConstraint::Le(e1, e2) => e1.to_z3(ctx, conv).le(&e2.to_z3(ctx, conv)),
+            SymConstraint::Or(constraints) => {
+                let disjuncts = constraints
+                    .iter()
+                    .map(|c| c.to_z3(ctx, conv))
+                    .collect::<Vec<_>>();
                 z3::ast::Bool::or(ctx, &disjuncts.iter().collect::<Vec<_>>())
             }
         }
     }
 
-    pub fn to_qepcad(&self) -> String {
+    pub fn to_qepcad(&self, conv: &impl Fn(&T) -> String) -> String {
         match self {
             SymConstraint::Eq(lhs, rhs) => {
-                format!("{} = {}", lhs.to_qepcad(), rhs.to_qepcad())
+                format!("{} = {}", lhs.to_qepcad(conv), rhs.to_qepcad(conv))
             }
             SymConstraint::Lt(lhs, rhs) => {
-                format!("{} < {}", lhs.to_qepcad(), rhs.to_qepcad())
+                format!("{} < {}", lhs.to_qepcad(conv), rhs.to_qepcad(conv))
             }
             SymConstraint::Le(lhs, rhs) => {
-                format!("{} <= {}", lhs.to_qepcad(), rhs.to_qepcad())
+                format!("{} <= {}", lhs.to_qepcad(conv), rhs.to_qepcad(conv))
             }
             SymConstraint::Or(cs) => {
                 let mut res = "[".to_owned();
@@ -376,14 +513,17 @@ impl SymConstraint {
                     } else {
                         res += r" \/ ";
                     }
-                    res += &c.to_qepcad();
+                    res += &c.to_qepcad(conv);
                 }
                 res + "]"
             }
         }
     }
 
-    pub fn to_python_z3(&self) -> String {
+    pub fn to_python_z3(&self) -> String
+    where
+        T: Display,
+    {
         match self {
             SymConstraint::Eq(lhs, rhs) => {
                 format!("{} == {}", lhs.to_python_z3(), rhs.to_python_z3())
@@ -410,7 +550,11 @@ impl SymConstraint {
         }
     }
 
-    pub fn substitute(&self, replacements: &[SymExpr]) -> SymConstraint {
+    pub fn substitute(&self, replacements: &[SymExpr<T>]) -> SymConstraint<T>
+    where
+        T: PartialEq,
+        SymExpr<T>: Clone + Zero + One + Add<Output = SymExpr<T>> + Mul<Output = SymExpr<T>>,
+    {
         match self {
             SymConstraint::Eq(e1, e2) => {
                 SymConstraint::Eq(e1.substitute(replacements), e2.substitute(replacements))
@@ -430,7 +574,18 @@ impl SymConstraint {
         }
     }
 
-    pub fn extract_linear(&self) -> Option<LinearConstraint> {
+    pub fn extract_linear(&self) -> Option<LinearConstraint<T>>
+    where
+        T: Clone
+            + PartialOrd
+            + Zero
+            + One
+            + Neg<Output = T>
+            + AddAssign
+            + Add<Output = T>
+            + MulAssign
+            + Div<Output = T>,
+    {
         match self {
             SymConstraint::Eq(e1, e2) => Some(LinearConstraint::eq(
                 e1.extract_linear()?,
@@ -447,8 +602,8 @@ impl SymConstraint {
                     if let Some(linear_constraint) = constraint.extract_linear() {
                         if linear_constraint.eval_constant() == Some(true) {
                             return Some(LinearConstraint::eq(
-                                LinearExpr::constant(0.0),
-                                LinearExpr::constant(0.0),
+                                LinearExpr::constant(T::zero()),
+                                LinearExpr::constant(T::zero()),
                             ));
                         }
                     }
@@ -459,42 +614,25 @@ impl SymConstraint {
     }
 }
 
-impl std::fmt::Display for SymConstraint {
+impl<T> std::fmt::Display for SymConstraint<T>
+where
+    T: Display,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Eq(e1, e2) => write!(f, "(= {e1} {e2})"),
-            Self::Lt(e1, e2) => write!(f, "(< {e1} {e2})"),
-            Self::Le(e1, e2) => write!(f, "(<= {e1} {e2})"),
+            Self::Eq(e1, e2) => write!(f, "{e1} = {e2}"),
+            Self::Lt(e1, e2) => write!(f, "{e1} < {e2}"),
+            Self::Le(e1, e2) => write!(f, "{e1} <= {e2}"),
             Self::Or(constraints) => {
-                write!(f, "(or")?;
-                for constraint in constraints {
-                    write!(f, " {constraint}")?;
+                write!(f, "(")?;
+                for (i, c) in constraints.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, " OR ")?;
+                    }
+                    write!(f, "{c}")?;
                 }
                 write!(f, ")")
             }
         }
     }
-}
-
-fn f64_to_mantissa_exponent(f: f64) -> (i64, i64) {
-    if !f.is_finite() {
-        unreachable!("Non-finite f64 in constraint: {f}");
-    }
-    let i = f as i64;
-    if i as f64 == f {
-        return (i, 0);
-    }
-    let bits: u64 = f.to_bits();
-    let sign: i64 = if bits >> 63 == 0 { 1 } else { -1 };
-    let mut exponent = ((bits >> 52) & 0x7ff) as i64;
-    let mantissa = if exponent == 0 {
-        (bits & 0x000f_ffff_ffff_ffff) << 1
-    } else {
-        (bits & 0x000f_ffff_ffff_ffff) | 0x0010_0000_0000_0000
-    } as i64;
-    let trailing_zeros: i64 = mantissa.trailing_zeros().min(63).into();
-    // Exponent bias + mantissa shift
-    exponent -= 1023 + 52 - trailing_zeros;
-    let mantissa = sign * (mantissa >> trailing_zeros);
-    (mantissa, exponent)
 }

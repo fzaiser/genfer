@@ -56,8 +56,8 @@ impl std::fmt::Display for BoundResult {
 /// + d * x_0 / (1 - p * x_0) + e * x_0 * x_1 / (1 - p * x_0) + f * x_0 * x_1^2 / (1 - p * x_0) / (1 - q * x_1)`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct GeometricBound {
-    pub masses: ArrayD<SymExpr>,
-    pub geo_params: Vec<SymExpr>,
+    pub masses: ArrayD<SymExpr<f64>>,
+    pub geo_params: Vec<SymExpr<f64>>,
 }
 
 impl GeometricBound {
@@ -68,7 +68,7 @@ impl GeometricBound {
         }
     }
 
-    pub fn mass(&self, mut idx: Vec<usize>) -> SymExpr {
+    pub fn mass(&self, mut idx: Vec<usize>) -> SymExpr<f64> {
         assert_eq!(idx.len(), self.masses.ndim());
         let mut factor = SymExpr::one();
         for v in 0..idx.len() {
@@ -119,7 +119,7 @@ impl GeometricBound {
         Self { masses, geo_params }
     }
 
-    pub fn substitute(&self, replacements: &[SymExpr]) -> GeometricBound {
+    pub fn substitute(&self, replacements: &[SymExpr<f64>]) -> GeometricBound {
         Self {
             masses: self.masses.map(|c| c.substitute(replacements)),
             geo_params: self
@@ -155,8 +155,8 @@ impl GeometricBound {
     }
 
     pub fn eval_impl<T: From<f64> + Number>(
-        coeffs: &ArrayViewD<SymExpr>,
-        geo_params: &[SymExpr],
+        coeffs: &ArrayViewD<SymExpr<f64>>,
+        geo_params: &[SymExpr<f64>],
         inputs: &[TaylorPoly<T>],
     ) -> TaylorPoly<T> {
         if coeffs.ndim() == 0 {
@@ -180,10 +180,10 @@ impl GeometricBound {
     }
 
     fn eval_expr_impl(
-        coeffs: &ArrayViewD<SymExpr>,
-        geo_params: &[SymExpr],
+        coeffs: &ArrayViewD<SymExpr<f64>>,
+        geo_params: &[SymExpr<f64>],
         inputs: &[f64],
-    ) -> SymExpr {
+    ) -> SymExpr<f64> {
         let nvars = coeffs.ndim();
         if nvars == 0 {
             return coeffs.first().unwrap().clone();
@@ -203,7 +203,7 @@ impl GeometricBound {
         res
     }
 
-    pub fn total_mass(&self) -> SymExpr {
+    pub fn total_mass(&self) -> SymExpr<f64> {
         Self::eval_expr_impl(
             &self.masses.view(),
             &self.geo_params,
@@ -216,17 +216,17 @@ impl std::fmt::Display for GeometricBound {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Masses:\n{}", self.masses)?;
         write!(f, "Geometric params: ")?;
-        for param in self.geo_params.iter() {
+        for param in &self.geo_params {
             write!(f, "{param}, ")?;
         }
         writeln!(f)
     }
 }
 
-impl std::ops::Mul<SymExpr> for GeometricBound {
+impl std::ops::Mul<SymExpr<f64>> for GeometricBound {
     type Output = Self;
 
-    fn mul(mut self, rhs: SymExpr) -> Self::Output {
+    fn mul(mut self, rhs: SymExpr<f64>) -> Self::Output {
         for elem in &mut self.masses {
             *elem *= rhs.clone();
         }
@@ -234,18 +234,18 @@ impl std::ops::Mul<SymExpr> for GeometricBound {
     }
 }
 
-impl std::ops::MulAssign<SymExpr> for GeometricBound {
-    fn mul_assign(&mut self, rhs: SymExpr) {
+impl std::ops::MulAssign<SymExpr<f64>> for GeometricBound {
+    fn mul_assign(&mut self, rhs: SymExpr<f64>) {
         for elem in &mut self.masses {
             *elem *= rhs.clone();
         }
     }
 }
 
-impl std::ops::Div<SymExpr> for GeometricBound {
+impl std::ops::Div<SymExpr<f64>> for GeometricBound {
     type Output = Self;
 
-    fn div(mut self, rhs: SymExpr) -> Self::Output {
+    fn div(mut self, rhs: SymExpr<f64>) -> Self::Output {
         for elem in &mut self.masses {
             *elem /= rhs.clone();
         }
@@ -253,8 +253,8 @@ impl std::ops::Div<SymExpr> for GeometricBound {
     }
 }
 
-impl std::ops::DivAssign<SymExpr> for GeometricBound {
-    fn div_assign(&mut self, rhs: SymExpr) {
+impl std::ops::DivAssign<SymExpr<f64>> for GeometricBound {
+    fn div_assign(&mut self, rhs: SymExpr<f64>) {
         for elem in &mut self.masses {
             *elem /= rhs.clone();
         }
