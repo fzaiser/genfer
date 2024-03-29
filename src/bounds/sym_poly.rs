@@ -213,6 +213,33 @@ impl<T> SparsePoly<T> {
         }
         result
     }
+
+    pub fn derive(&self, var: usize) -> Self
+    where
+        T: From<u32> + Clone + Zero + One + PartialEq + AddAssign + MulAssign,
+    {
+        let mut result = Self::zero();
+        for (monomial, coeff) in &self.monomials {
+            if let Some(exp) = monomial.get(&var) {
+                let mut new_monomial = monomial.clone();
+                if *exp > 1 {
+                    new_monomial.insert(var, exp - 1);
+                } else {
+                    new_monomial.remove(&var);
+                }
+                let new_coeff = coeff.clone() * T::from(*exp as u32);
+                result.monomials.insert(new_monomial, new_coeff);
+            }
+        }
+        result
+    }
+
+    pub fn gradient(&self, vars: &[usize]) -> Vec<Self>
+    where
+        T: From<u32> + Clone + Zero + One + PartialEq + AddAssign + MulAssign,
+    {
+        vars.iter().map(|&var| self.derive(var)).collect()
+    }
 }
 
 impl<T: From<f64>> From<f64> for SparsePoly<T> {
@@ -409,6 +436,32 @@ pub enum PolyConstraint<T> {
 impl<T> PolyConstraint<T> {
     pub fn or(constraints: Vec<PolyConstraint<T>>) -> Self {
         Self::Or(constraints)
+    }
+
+    pub fn holds(&self, values: &[T]) -> bool
+    where
+        T: Clone + Zero + One + PartialEq + AddAssign + MulAssign + PartialOrd,
+    {
+        match self {
+            PolyConstraint::Eq(lhs, rhs) => lhs.eval(values) == rhs.eval(values),
+            PolyConstraint::Lt(lhs, rhs) => lhs.eval(values) < rhs.eval(values),
+            PolyConstraint::Le(lhs, rhs) => lhs.eval(values) <= rhs.eval(values),
+            PolyConstraint::Or(constraints) => constraints.iter().any(|c| c.holds(values)),
+        }
+    }
+
+    pub fn has_slack(&self, values: &[T], epsilon: T) -> bool
+    where
+        T: Clone + Zero + One + PartialEq + AddAssign + MulAssign + PartialOrd,
+    {
+        match self {
+            PolyConstraint::Eq(..) => false,
+            PolyConstraint::Lt(lhs, rhs) => lhs.eval(values) + epsilon < rhs.eval(values),
+            PolyConstraint::Le(lhs, rhs) => lhs.eval(values) + epsilon <= rhs.eval(values),
+            PolyConstraint::Or(constraints) => constraints
+                .iter()
+                .all(|c| c.has_slack(values, epsilon.clone())),
+        }
     }
 
     pub fn to_z3<'a>(

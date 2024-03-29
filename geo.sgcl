@@ -1,0 +1,5 @@
+Y := 0;
+while 0 ~ Bernoulli(0.5) {
+    Y += 1;
+}
+return Y

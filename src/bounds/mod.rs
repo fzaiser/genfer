@@ -1,5 +1,6 @@
 pub mod bound;
 pub mod ctx;
+pub mod gradient_descent;
 pub mod linear;
 pub mod optimizer;
 pub mod solver;

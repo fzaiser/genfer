@@ -9,16 +9,24 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use genfer::bounds::ctx::BoundCtx;
+use genfer::bounds::gradient_descent::GradientDescent;
 use genfer::bounds::optimizer::{LinearProgrammingOptimizer, Optimizer, Z3Optimizer};
-use genfer::bounds::solver::{ConstraintProblem, Solver, SolverError, Z3Solver};
+use genfer::bounds::solver::{ConstraintProblem, Solver as _, SolverError, Z3Solver};
 use genfer::number::F64;
 use genfer::parser;
 use genfer::ppl::{Program, Var};
 use genfer::semantics::support::VarSupport;
 use genfer::semantics::Transformer;
 
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use num_traits::{One, Zero};
+
+#[derive(Clone, ValueEnum)]
+enum Solver {
+    Z3,
+    #[value(name = "gd")]
+    GradientDescent,
+}
 
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Parser)]
@@ -38,12 +46,15 @@ struct CliArgs {
     #[arg(short = 'u', long, default_value = "0")]
     /// The default number of loop unrollings
     unroll: usize,
-    /// Timeout for the SMT solver in ms
+    /// Timeout for the solver in ms
     #[arg(long, default_value = "10000")]
     timeout: u64,
-    /// Whether to optimize the bound once one is found
+    /// The solver to use
+    #[arg(long, default_value = "z3")]
+    solver: Solver,
+    /// Whether to optimize the linear parts of the bound at the end
     #[arg(long)]
-    no_optimize: bool,
+    no_post_optimize: bool,
     /// Optionally output an SMT-LIB file at this path
     #[arg(long)]
     smt: Option<PathBuf>,
@@ -102,7 +113,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
     let time_constraint_gen = start.elapsed();
     println!("Constraint generation time: {time_constraint_gen:?}");
     println!("Solving constraints...");
-    let start_smt = Instant::now();
+    let start_solver = Instant::now();
     let timeout = Duration::from_millis(args.timeout);
     let problem = ConstraintProblem {
         var_count: ctx.sym_var_count(),
@@ -112,19 +123,22 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
         constraints: ctx.constraints().to_owned(),
     };
     let objective = result.bound.total_mass();
-    let solver_result = Z3Solver
-        .solve(&problem, timeout)
+    let init_solution = match args.solver {
+        Solver::Z3 => Z3Solver.solve(&problem, timeout),
+        Solver::GradientDescent => GradientDescent::default().solve(&problem, timeout),
+    };
+    let solver_result = init_solution
         .map(|solution| {
-            if !args.no_optimize {
-                Z3Optimizer.optimize(&problem, &objective, solution, timeout)
-            } else {
+            if args.no_post_optimize {
                 solution
+            } else {
+                Z3Optimizer.optimize(&problem, &objective, solution, timeout)
             }
         })
         .map(|solution| {
             LinearProgrammingOptimizer.optimize(&problem, &objective, solution, timeout)
         });
-    let solver_time = start_smt.elapsed();
+    let solver_time = start_solver.elapsed();
     println!("Solver time: {solver_time:?}");
     match solver_result {
         Ok(assignment) => {
@@ -161,10 +175,10 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
         }
         Err(e) => match e {
             SolverError::Timeout => {
-                println!("SMT solver timeout");
+                println!("Solver timeout");
             }
             SolverError::Infeasible => {
-                println!("SMT proved that there is no bound of the required form");
+                println!("Solver proved that there is no bound of the required form");
             }
         },
     }
