@@ -1,6 +1,7 @@
 use std::{
     fmt::Display,
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
+    rc::Rc,
 };
 
 use num_traits::{One, Zero};
@@ -13,9 +14,9 @@ use super::{sym_poly::PolyConstraint, sym_rational::RationalFunction, util::pow}
 pub enum SymExpr<T> {
     Constant(T),
     Variable(usize),
-    Add(Box<SymExpr<T>>, Box<SymExpr<T>>),
-    Mul(Box<SymExpr<T>>, Box<SymExpr<T>>),
-    Pow(Box<SymExpr<T>>, i32),
+    Add(Rc<SymExpr<T>>, Rc<SymExpr<T>>),
+    Mul(Rc<SymExpr<T>>, Rc<SymExpr<T>>),
+    Pow(Rc<SymExpr<T>>, i32),
 }
 
 impl<T> SymExpr<T> {
@@ -41,7 +42,7 @@ impl<T> SymExpr<T> {
         } else if n == 1 || (n >= 0 && self.is_zero()) || self.is_one() {
             self
         } else {
-            Self::Pow(Box::new(self), n)
+            Self::Pow(Rc::new(self), n)
         }
     }
 
@@ -151,6 +152,85 @@ impl<T> SymExpr<T> {
             Self::Mul(lhs, rhs) => lhs.to_rational_function() * rhs.to_rational_function(),
             Self::Pow(base, n) => base.to_rational_function().pow(*n),
         }
+    }
+
+    fn eval_dual(&self, values: &[T], var: usize) -> (T, T)
+    where
+        T: Clone
+            + From<i32>
+            + AddAssign
+            + Add<Output = T>
+            + MulAssign
+            + Mul<Output = T>
+            + Div<Output = T>
+            + One
+            + Zero,
+    {
+        match self {
+            Self::Constant(c) => (c.clone(), T::zero()),
+            Self::Variable(v) => {
+                if *v == var {
+                    (values[*v].clone(), T::one())
+                } else {
+                    (values[*v].clone(), T::zero())
+                }
+            }
+            Self::Add(lhs, rhs) => {
+                let (lhs_val, lhs_grad) = lhs.eval_dual(values, var);
+                let (rhs_val, rhs_grad) = rhs.eval_dual(values, var);
+                (lhs_val + rhs_val, lhs_grad + rhs_grad)
+            }
+            Self::Mul(lhs, rhs) => {
+                let (lhs_val, lhs_grad) = lhs.eval_dual(values, var);
+                let (rhs_val, rhs_grad) = rhs.eval_dual(values, var);
+                (
+                    lhs_val.clone() * rhs_val.clone(),
+                    lhs_grad * rhs_val + rhs_grad * lhs_val,
+                )
+            }
+            Self::Pow(base, n) => {
+                if n == &0 {
+                    (T::one(), T::zero())
+                } else {
+                    let (base_val, base_grad) = base.eval_dual(values, var);
+                    let outer_deriv = pow(base_val.clone(), *n - 1);
+                    let grad = base_grad * outer_deriv.clone() * T::from(*n);
+                    (outer_deriv * base_val, grad)
+                }
+            }
+        }
+    }
+
+    pub fn derivative_at(&self, values: &[T], var: usize) -> T
+    where
+        T: Clone
+            + From<i32>
+            + AddAssign
+            + Add<Output = T>
+            + MulAssign
+            + Mul<Output = T>
+            + Div<Output = T>
+            + One
+            + Zero,
+    {
+        self.eval_dual(values, var).1
+    }
+
+    pub fn gradient_at(&self, values: &[T]) -> Vec<T>
+    where
+        T: Clone
+            + From<i32>
+            + AddAssign
+            + Add<Output = T>
+            + MulAssign
+            + Mul<Output = T>
+            + Div<Output = T>
+            + One
+            + Zero,
+    {
+        (0..values.len())
+            .map(|i| self.derivative_at(values, i))
+            .collect()
     }
 
     pub fn to_z3<'a>(
@@ -324,7 +404,7 @@ where
         } else if rhs.is_zero() {
             self
         } else {
-            Self::Add(Box::new(self), Box::new(rhs))
+            Self::Add(Rc::new(self), Rc::new(rhs))
         }
     }
 }
@@ -376,7 +456,7 @@ where
         } else if rhs.is_one() {
             self
         } else {
-            Self::Mul(Box::new(self), Box::new(rhs))
+            Self::Mul(Rc::new(self), Rc::new(rhs))
         }
     }
 }

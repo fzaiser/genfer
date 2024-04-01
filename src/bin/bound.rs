@@ -9,8 +9,8 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use genfer::bounds::ctx::BoundCtx;
-use genfer::bounds::gradient_descent::GradientDescent;
-use genfer::bounds::optimizer::{LinearProgrammingOptimizer, Optimizer, Z3Optimizer};
+use genfer::bounds::gradient_descent::{Adam, GradientDescent};
+use genfer::bounds::optimizer::{LinearProgrammingOptimizer, Optimizer as _, Z3Optimizer};
 use genfer::bounds::solver::{ConstraintProblem, Solver as _, SolverError, Z3Solver};
 use genfer::number::F64;
 use genfer::parser;
@@ -26,6 +26,14 @@ enum Solver {
     Z3,
     #[value(name = "gd")]
     GradientDescent,
+}
+
+#[derive(Clone, ValueEnum)]
+enum Optimizer {
+    Z3,
+    #[value(name = "gd")]
+    GradientDescent,
+    Adam,
 }
 
 #[allow(clippy::struct_excessive_bools)]
@@ -52,9 +60,12 @@ struct CliArgs {
     /// The solver to use
     #[arg(long, default_value = "z3")]
     solver: Solver,
+    /// The optimizer to use
+    #[arg(long)]
+    optimizer: Option<Optimizer>,
     /// Whether to optimize the linear parts of the bound at the end
     #[arg(long)]
-    no_post_optimize: bool,
+    no_linear_optimize: bool,
     /// Optionally output an SMT-LIB file at this path
     #[arg(long)]
     smt: Option<PathBuf>,
@@ -127,22 +138,41 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
         Solver::Z3 => Z3Solver.solve(&problem, timeout),
         Solver::GradientDescent => GradientDescent::default().solve(&problem, timeout),
     };
-    let solver_result = init_solution
-        .map(|solution| {
-            if args.no_post_optimize {
-                solution
-            } else {
-                Z3Optimizer.optimize(&problem, &objective, solution, timeout)
-            }
-        })
-        .map(|solution| {
-            LinearProgrammingOptimizer.optimize(&problem, &objective, solution, timeout)
-        });
     let solver_time = start_solver.elapsed();
     println!("Solver time: {solver_time:?}");
-    match solver_result {
-        Ok(assignment) => {
-            let bound = result.bound.resolve(&assignment);
+    match init_solution {
+        Ok(solution) => {
+            println!("Optimizing solution...");
+            let optimized_solution = if let Some(optimizer) = &args.optimizer {
+                let start_optimizer = Instant::now();
+                let optimized_solution = match optimizer {
+                    Optimizer::Z3 => {
+                        Z3Optimizer.optimize(&problem, &objective, solution.clone(), timeout)
+                    }
+                    Optimizer::GradientDescent => {
+                        GradientDescent::default().optimize(&problem, &objective, solution, timeout)
+                    }
+                    Optimizer::Adam => {
+                        Adam::default().optimize(&problem, &objective, solution, timeout)
+                    }
+                };
+                let optimizer_time = start_optimizer.elapsed();
+                println!("Optimizer time: {optimizer_time:?}");
+                optimized_solution
+            } else {
+                solution
+            };
+            let optimized_solution = if args.no_linear_optimize {
+                optimized_solution
+            } else {
+                LinearProgrammingOptimizer.optimize(
+                    &problem,
+                    &objective,
+                    optimized_solution,
+                    timeout,
+                )
+            };
+            let bound = result.bound.resolve(&optimized_solution);
             println!("\nFinal bound:\n");
             println!("{bound}");
 

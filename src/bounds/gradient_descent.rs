@@ -5,7 +5,11 @@ use ndarray::Array1;
 
 use crate::bounds::sym_poly::PolyConstraint;
 
-use super::solver::{ConstraintProblem, Solver, SolverError};
+use super::{
+    optimizer::Optimizer,
+    solver::{ConstraintProblem, Solver, SolverError},
+    sym_expr::SymExpr,
+};
 
 pub enum DirSelectionStrategy {
     Greedy,
@@ -35,7 +39,7 @@ impl Solver for GradientDescent {
         _timeout: Duration,
     ) -> Result<Vec<f64>, SolverError> {
         let slack_epsilon = self.step_size * self.step_size;
-        let epsilon = self.step_size;
+        let lr = self.step_size;
         let all_vars = (0..problem.var_count).collect::<Vec<_>>();
         let constraints_grads = problem
             .constraints
@@ -75,11 +79,11 @@ impl Solver for GradientDescent {
                     for gradient in &gradients {
                         direction += gradient;
                     }
-                    project_into_cone(direction, &gradients)
+                    project_into_cone(direction, &gradients, 1e-3)
                         .unwrap_or_else(|| largest_gradient(problem, &gradients))
                 }
             };
-            point += &(epsilon * direction);
+            point += &(lr * direction);
             trajectory.push(point.clone());
         }
         println!("Points:");
@@ -106,8 +110,11 @@ fn largest_gradient(problem: &ConstraintProblem, gradients: &[Array1<f64>]) -> A
     best_gradient
 }
 
-fn project_into_cone(vector: Array1<f64>, good_dirs: &[Array1<f64>]) -> Option<Array1<f64>> {
-    let epsilon = 1e-3;
+fn project_into_cone(
+    vector: Array1<f64>,
+    good_dirs: &[Array1<f64>],
+    epsilon: f64,
+) -> Option<Array1<f64>> {
     if good_dirs.iter().all(|dir| dir.dot(&vector) >= 0.0) {
         return Some(vector);
     }
@@ -145,4 +152,227 @@ fn project_into_cone(vector: Array1<f64>, good_dirs: &[Array1<f64>]) -> Option<A
         result += &(var * dir);
     }
     Some(result)
+}
+
+impl Optimizer for GradientDescent {
+    fn optimize(
+        &mut self,
+        problem: &ConstraintProblem,
+        objective: &SymExpr<f64>,
+        init: Vec<f64>,
+        _timeout: Duration,
+    ) -> Vec<f64> {
+        let slack_epsilon = 1e-4;
+        let epsilon = self.step_size;
+        let all_vars = (0..problem.var_count).collect::<Vec<_>>();
+        let constraints_grads = problem
+            .constraints
+            .iter()
+            .filter_map(|c| {
+                let c = c.to_poly();
+                let grad = match &c {
+                    PolyConstraint::Le(lhs, rhs) | PolyConstraint::Lt(lhs, rhs) => {
+                        Array1::from_vec((rhs.clone() - lhs.clone()).gradient(&all_vars))
+                    }
+                    _ => return None,
+                };
+                Some((c, grad))
+            })
+            .collect::<Vec<_>>();
+        let mut point: Array1<f64> = Array1::from_vec(init);
+        let mut best_point: Array1<f64> = point.clone();
+        let mut best_objective = objective.eval(point.as_slice().unwrap());
+        let mut trajectory = vec![point.clone()];
+        for _ in 0..500 {
+            let mut gradients = Vec::new();
+            for (constraint, gradient) in &constraints_grads {
+                if constraint.has_slack(point.as_slice().unwrap(), slack_epsilon) {
+                    continue;
+                }
+                let gradient = gradient.map(|g| g.eval(point.as_slice().unwrap()));
+                if gradient.iter().all(|x| x == &0.0) {
+                    continue;
+                }
+                gradients.push(gradient);
+            }
+            let mut objective_grad =
+                -Array1::from_vec(objective.gradient_at(point.as_slice().unwrap()));
+            let obj_grad_len = objective_grad.dot(&objective_grad).sqrt();
+            if obj_grad_len > 1e6 {
+                objective_grad /= obj_grad_len;
+                objective_grad *= 1e6;
+            }
+            gradients.push(objective_grad.clone());
+            let mut direction = match self.dir_selection_strategy {
+                DirSelectionStrategy::Greedy => largest_gradient(problem, &gradients),
+                DirSelectionStrategy::ProjectPolyhedralCone => {
+                    project_into_cone(objective_grad, &gradients, 1e-3)
+                        .unwrap_or_else(|| largest_gradient(problem, &gradients))
+                }
+            };
+            let dir_len = direction.dot(&direction).sqrt();
+            if dir_len * epsilon > 0.1 {
+                direction *= 0.1 / (dir_len * epsilon);
+            }
+            point += &(epsilon * direction);
+            let objective = objective.eval(point.as_slice().unwrap());
+            if objective < best_objective
+                && constraints_grads
+                    .iter()
+                    .all(|(c, _)| c.holds(point.as_slice().unwrap()))
+            {
+                best_objective = objective;
+                best_point = point.clone();
+            }
+            println!("Objective: {objective} at {point}");
+            trajectory.push(point.clone());
+        }
+        println!("Points:");
+        for p in &trajectory {
+            println!("{p},");
+        }
+        println!("Best objective: {best_objective} at {best_point}");
+        best_point.to_vec()
+    }
+}
+
+pub struct Adam {
+    lr: f64,
+    beta1: f64,
+    beta2: f64,
+    epsilon: f64,
+    dir_selection_strategy: DirSelectionStrategy,
+}
+
+impl Default for Adam {
+    fn default() -> Self {
+        Self {
+            lr: 0.01,
+            beta1: 0.9,
+            beta2: 0.999,
+            epsilon: 1e-8,
+            dir_selection_strategy: DirSelectionStrategy::ProjectPolyhedralCone,
+        }
+    }
+}
+
+impl Optimizer for Adam {
+    fn optimize(
+        &mut self,
+        problem: &ConstraintProblem,
+        objective: &SymExpr<f64>,
+        init: Vec<f64>,
+        _timeout: Duration,
+    ) -> Vec<f64> {
+        let slack_epsilon = 1e-4;
+        let epsilon = 1e-3;
+        let all_vars = (0..problem.var_count).collect::<Vec<_>>();
+        let constraints_grads = problem
+            .constraints
+            .iter()
+            .filter_map(|c| {
+                let c = c.to_poly();
+                let grad = match &c {
+                    PolyConstraint::Le(lhs, rhs) | PolyConstraint::Lt(lhs, rhs) => {
+                        Array1::from_vec((rhs.clone() - lhs.clone()).gradient(&all_vars))
+                    }
+                    _ => return None,
+                };
+                Some((c, grad))
+            })
+            .collect::<Vec<_>>();
+        let mut point: Array1<f64> = Array1::from_vec(init);
+        let mut best_point: Array1<f64> = point.clone();
+        let mut best_objective = objective.eval(point.as_slice().unwrap());
+        let mut trajectory = vec![point.clone()];
+        let mut m = Array1::zeros(problem.var_count);
+        let mut v = Array1::zeros(problem.var_count);
+        let mut t = 1;
+        for _ in 0..500 {
+            let mut gradients = Vec::new();
+            for (constraint, gradient) in &constraints_grads {
+                if constraint.has_slack(point.as_slice().unwrap(), slack_epsilon) {
+                    continue;
+                }
+                let gradient = gradient.map(|g| g.eval(point.as_slice().unwrap()));
+                if gradient.iter().all(|x| x == &0.0) {
+                    continue;
+                }
+                gradients.push(gradient);
+            }
+            let mut objective_grad =
+                -Array1::from_vec(objective.gradient_at(point.as_slice().unwrap()));
+            let obj_grad_len = objective_grad.dot(&objective_grad).sqrt();
+            if obj_grad_len > 1e6 {
+                objective_grad /= obj_grad_len;
+                objective_grad *= 1e6;
+            }
+            gradients.push(objective_grad.clone());
+            let mut direction = match self.dir_selection_strategy {
+                DirSelectionStrategy::Greedy => largest_gradient(problem, &gradients),
+                DirSelectionStrategy::ProjectPolyhedralCone => {
+                    project_into_cone(objective_grad, &gradients, 1e-3)
+                        .unwrap_or_else(|| largest_gradient(problem, &gradients))
+                }
+            };
+            let dir_len = direction.dot(&direction).sqrt();
+            if dir_len * epsilon > 0.1 {
+                direction *= 0.1 / (dir_len * epsilon);
+            }
+            m = self.beta1 * &m + (1.0 - self.beta1) * &direction;
+            v = self.beta2 * &v + (1.0 - self.beta2) * &(&direction * &direction);
+            let m_hat = &m / (1.0 - self.beta1.powi(t));
+            let v_hat = &v / (1.0 - self.beta2.powi(t));
+            let update_dir = self.lr * &m_hat / (&v_hat.map(|x| x.sqrt()) + self.epsilon);
+            let step_size = find_satisfying_in_dir(
+                &point,
+                &update_dir,
+                &constraints_grads
+                    .iter()
+                    .map(|(c, _)| c.clone())
+                    .collect::<Vec<_>>(),
+            );
+            point += &(step_size * update_dir);
+            let objective = objective.eval(point.as_slice().unwrap());
+            if objective < best_objective
+                && constraints_grads
+                    .iter()
+                    .all(|(c, _)| c.holds(point.as_slice().unwrap()))
+            {
+                best_objective = objective;
+                best_point = point.clone();
+            }
+            println!("Objective: {objective} at {point}");
+            trajectory.push(point.clone());
+            t += 1;
+        }
+        println!("Points:");
+        for p in &trajectory {
+            println!("{p},");
+        }
+        println!("Best objective: {best_objective} at {best_point}");
+        best_point.to_vec()
+    }
+}
+
+fn find_satisfying_in_dir(
+    point: &Array1<f64>,
+    dir: &Array1<f64>,
+    constraints: &[PolyConstraint<f64>],
+) -> f64 {
+    let mut lo = 0.0;
+    let mut hi = 1.0;
+    while hi - lo > 1e-6 {
+        let mid = (lo + hi) / 2.0;
+        let new_point = point + &(mid * dir);
+        if constraints
+            .iter()
+            .all(|c| c.holds(new_point.as_slice().unwrap()))
+        {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    hi
 }

@@ -158,6 +158,11 @@ impl Optimizer for LinearProgrammingOptimizer {
             .iter()
             .map(|v| solution.value(*v))
             .collect::<Vec<_>>();
+        println!(
+            "Best objective: {} at {:?}",
+            objective.eval(&solution),
+            solution
+        );
         solution
     }
 }

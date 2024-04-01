@@ -159,6 +159,39 @@ where
     {
         self.numer.eval(values) / self.denom.eval(values)
     }
+
+    pub fn derive(&self, var: usize) -> Self
+    where
+        T: From<u32>
+            + Clone
+            + Zero
+            + One
+            + PartialEq
+            + Neg<Output = T>
+            + AddAssign
+            + SubAssign
+            + MulAssign,
+    {
+        let numer = self.numer.derive(var) * self.denom.clone()
+            - self.numer.clone() * self.denom.derive(var);
+        let denom = self.denom.clone() * self.denom.clone();
+        Self { numer, denom }
+    }
+
+    pub fn gradient(&self, vars: &[usize]) -> Vec<Self>
+    where
+        T: From<u32>
+            + Clone
+            + Zero
+            + One
+            + PartialEq
+            + Neg<Output = T>
+            + AddAssign
+            + SubAssign
+            + MulAssign,
+    {
+        vars.iter().map(|&var| self.derive(var)).collect()
+    }
 }
 
 impl<T: From<f64>> From<f64> for RationalFunction<T>

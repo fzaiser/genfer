@@ -52,8 +52,10 @@ impl std::fmt::Display for BoundResult {
 /// ```
 /// and `geo_params` is the vector `[p, q]`.
 /// Then the generating function is
-/// `a + b * x_1 + c * x_1^2 / (1 - q * x_1)
-/// + d * x_0 / (1 - p * x_0) + e * x_0 * x_1 / (1 - p * x_0) + f * x_0 * x_1^2 / (1 - p * x_0) / (1 - q * x_1)`.
+/// ```text
+/// a + b * x_1 + c * x_1^2 / (1 - q * x_1)
+/// + d * x_0 / (1 - p * x_0) + e * x_0 * x_1 / (1 - p * x_0) + f * x_0 * x_1^2 / (1 - p * x_0) / (1 - q * x_1)
+/// ```
 #[derive(Debug, Clone, PartialEq)]
 pub struct GeometricBound {
     pub masses: ArrayD<SymExpr<f64>>,
