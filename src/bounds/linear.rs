@@ -186,9 +186,9 @@ where
 
 #[derive(Clone, Debug)]
 pub struct LinearConstraint<T> {
-    expr: LinearExpr<T>,
+    pub expr: LinearExpr<T>,
     /// If true, `expr` must be equal to zero, otherwise it must be nonnegative
-    eq_zero: bool,
+    pub eq_zero: bool,
 }
 
 impl<T> LinearConstraint<T> {

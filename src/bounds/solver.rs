@@ -18,6 +18,12 @@ pub struct ConstraintProblem {
     pub constraints: Vec<SymConstraint<f64>>,
 }
 
+impl ConstraintProblem {
+    pub fn holds_exact(&self, assignment: &[f64]) -> bool {
+        self.constraints.iter().all(|c| c.holds_exact(assignment))
+    }
+}
+
 pub trait Solver {
     fn solve(
         &mut self,

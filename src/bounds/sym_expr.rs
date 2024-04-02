@@ -5,6 +5,7 @@ use std::{
 };
 
 use num_traits::{One, Zero};
+use rug::{ops::Pow, Rational};
 
 use crate::bounds::linear::{LinearConstraint, LinearExpr};
 
@@ -339,6 +340,18 @@ impl<T> SymExpr<T> {
     }
 }
 
+impl SymExpr<f64> {
+    pub fn eval_exact(&self, values: &[f64]) -> Rational {
+        match self {
+            Self::Constant(c) => Rational::from_f64(*c).unwrap(),
+            Self::Variable(v) => Rational::from_f64(values[*v]).unwrap(),
+            Self::Add(lhs, rhs) => lhs.eval_exact(values) + rhs.eval_exact(values),
+            Self::Mul(lhs, rhs) => lhs.eval_exact(values) * rhs.eval_exact(values),
+            Self::Pow(base, n) => base.eval_exact(values).pow(*n),
+        }
+    }
+}
+
 impl<T: From<f64>> From<f64> for SymExpr<T> {
     fn from(value: f64) -> Self {
         Self::Constant(value.into())
@@ -654,6 +667,28 @@ impl<T> SymConstraint<T> {
         }
     }
 
+    pub fn gradient_at(&self, values: &[T]) -> Vec<T>
+    where
+        T: Clone
+            + From<i32>
+            + AddAssign
+            + Add<Output = T>
+            + MulAssign
+            + Mul<Output = T>
+            + Div<Output = T>
+            + One
+            + Zero,
+        SymExpr<T>: Sub<Output = SymExpr<T>>,
+    {
+        match self {
+            SymConstraint::Lt(lhs, rhs) | SymConstraint::Le(lhs, rhs) => {
+                let term = rhs.clone() - lhs.clone();
+                term.gradient_at(values)
+            }
+            _ => vec![T::zero(); values.len()],
+        }
+    }
+
     pub fn extract_linear(&self) -> Option<LinearConstraint<T>>
     where
         T: Clone
@@ -689,6 +724,35 @@ impl<T> SymConstraint<T> {
                 }
                 None
             }
+        }
+    }
+}
+
+impl SymConstraint<f64> {
+    pub fn holds_exact(&self, values: &[f64]) -> bool {
+        match self {
+            SymConstraint::Lt(lhs, rhs) => lhs.eval_exact(values) < rhs.eval_exact(values),
+            SymConstraint::Le(lhs, rhs) => lhs.eval_exact(values) <= rhs.eval_exact(values),
+            _ => true,
+        }
+    }
+    pub fn has_min_dist(&self, point: &[f64], min_dist: f64) -> bool {
+        match self {
+            SymConstraint::Lt(lhs, rhs) | SymConstraint::Le(lhs, rhs) => {
+                let term = lhs.clone() - rhs.clone();
+                let val = term.eval(point);
+                let grad = term.gradient_at(point);
+                let grad_len_sq = grad
+                    .iter()
+                    .map(|g| g.clone() * g.clone())
+                    .fold(0.0, |acc, f| acc + f);
+                if grad_len_sq.is_zero() {
+                    return true; // distance isn't well defined.
+                }
+                let dist = -val.clone() / grad_len_sq.sqrt();
+                dist < min_dist
+            }
+            _ => true,
         }
     }
 }

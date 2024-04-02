@@ -8,7 +8,7 @@ use crate::bounds::sym_poly::PolyConstraint;
 use super::{
     optimizer::Optimizer,
     solver::{ConstraintProblem, Solver, SolverError},
-    sym_expr::SymExpr,
+    sym_expr::{SymConstraint, SymExpr},
 };
 
 pub enum DirSelectionStrategy {
@@ -38,40 +38,53 @@ impl Solver for GradientDescent {
         problem: &ConstraintProblem,
         _timeout: Duration,
     ) -> Result<Vec<f64>, SolverError> {
-        let slack_epsilon = self.step_size * self.step_size;
         let lr = self.step_size;
-        let all_vars = (0..problem.var_count).collect::<Vec<_>>();
-        let constraints_grads = problem
-            .constraints
-            .iter()
-            .filter_map(|c| {
-                let c = c.to_poly();
-                let grad = match &c {
-                    PolyConstraint::Le(lhs, rhs) | PolyConstraint::Lt(lhs, rhs) => {
-                        Array1::from_vec((rhs.clone() - lhs.clone()).gradient(&all_vars))
-                    }
-                    _ => return None,
-                };
-                Some((c, grad))
-            })
-            .collect::<Vec<_>>();
         let mut point: Array1<f64> = Array1::ones(problem.var_count);
+        for constraint in &problem.constraints {
+            if let Some(linear) = constraint.extract_linear() {
+                let linear = linear.expr;
+                let mut lower_bound = 1.0;
+                let mut maybe_var = None;
+                let mut num_vars = 0;
+                for (var, coeff) in linear.coeffs.iter().enumerate() {
+                    if coeff != &0.0 {
+                        num_vars += 1;
+                        if coeff > &0.0 {
+                            lower_bound = -linear.constant / coeff;
+                            maybe_var = Some(var);
+                        }
+                    }
+                }
+                if num_vars == 1 {
+                    if let Some(var) = maybe_var {
+                        if problem.coefficient_vars.contains(&var) {
+                            point[var] = (lower_bound + 0.5) * 2.0; // TODO: is this robust enough?
+                        }
+                    }
+                }
+            }
+        }
         let mut trajectory = vec![point.clone()];
         for _ in 0..self.max_iters {
-            let mut gradients = Vec::new();
-            for (constraint, gradient) in &constraints_grads {
-                if constraint.has_slack(point.as_slice().unwrap(), slack_epsilon) {
-                    continue;
-                }
-                let gradient = gradient.map(|g| g.eval(point.as_slice().unwrap()));
-                if gradient.iter().all(|x| x == &0.0) {
-                    continue;
-                }
-                gradients.push(gradient);
-            }
-            if gradients.is_empty() {
+            let violated_constraints = problem
+                .constraints
+                .iter()
+                .filter(|c| !c.holds_exact(point.as_slice().unwrap()))
+                .collect::<Vec<_>>();
+            if violated_constraints.is_empty() {
                 break;
             }
+            let tight_constraints = problem
+                .constraints
+                .iter()
+                .filter(|c| {
+                    c.has_min_dist(point.as_slice().unwrap(), self.step_size * self.step_size)
+                })
+                .collect::<Vec<_>>();
+            let gradients = tight_constraints
+                .iter()
+                .map(|c| Array1::from_vec(c.gradient_at(point.as_slice().unwrap())))
+                .collect::<Vec<_>>();
             let direction = match self.dir_selection_strategy {
                 DirSelectionStrategy::Greedy => largest_gradient(problem, &gradients),
                 DirSelectionStrategy::ProjectPolyhedralCone => {
@@ -83,21 +96,50 @@ impl Solver for GradientDescent {
                         .unwrap_or_else(|| largest_gradient(problem, &gradients))
                 }
             };
-            point += &(lr * direction);
+            if let Some(update) = line_search(&point, &direction, &problem.constraints) {
+                point += &update;
+            } else {
+                point += &(lr * direction);
+            }
             trajectory.push(point.clone());
         }
         println!("Points:");
         for p in &trajectory {
             println!("{p},");
         }
-        if constraints_grads
-            .iter()
-            .any(|(c, _)| !c.holds(point.as_slice().unwrap()))
-        {
+        if !problem.holds_exact(point.as_slice().unwrap()) {
             return Err(SolverError::Timeout);
         }
         Ok(point.to_vec())
     }
+}
+
+fn line_search(
+    point: &Array1<f64>,
+    direction: &Array1<f64>,
+    constraints: &[SymConstraint<f64>],
+) -> Option<Array1<f64>> {
+    let mut update = direction.clone();
+    while !constraints
+        .iter()
+        .all(|c| c.holds_exact((point + &update).as_slice().unwrap()))
+    {
+        if update.iter().all(|x| x.abs() < 1e-9) {
+            return None;
+        }
+        update *= 0.5;
+    }
+    loop {
+        update *= 1.5;
+        if !constraints
+            .iter()
+            .all(|c| c.holds_exact((point + &update).as_slice().unwrap()))
+        {
+            update /= 1.5;
+            break;
+        }
+    }
+    Some(update)
 }
 
 fn largest_gradient(problem: &ConstraintProblem, gradients: &[Array1<f64>]) -> Array1<f64> {
