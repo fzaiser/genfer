@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use genfer::bounds::ctx::BoundCtx;
-use genfer::bounds::gradient_descent::{Adam, GradientDescent};
+use genfer::bounds::gradient_descent::{Adam, AdamBarrier, GradientDescent};
 use genfer::bounds::optimizer::{LinearProgrammingOptimizer, Optimizer as _, Z3Optimizer};
 use genfer::bounds::solver::{ConstraintProblem, Solver as _, SolverError, Z3Solver};
 use genfer::number::F64;
@@ -34,6 +34,7 @@ enum Optimizer {
     #[value(name = "gd")]
     GradientDescent,
     Adam,
+    AdamBarrier,
 }
 
 #[allow(clippy::struct_excessive_bools)]
@@ -154,6 +155,9 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
                     }
                     Optimizer::Adam => {
                         Adam::default().optimize(&problem, &objective, solution, timeout)
+                    }
+                    Optimizer::AdamBarrier => {
+                        AdamBarrier::default().optimize(&problem, &objective, solution, timeout)
                     }
                 };
                 let optimizer_time = start_optimizer.elapsed();

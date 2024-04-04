@@ -1,5 +1,6 @@
 use std::ops::{Div, MulAssign};
 
+use ndarray::{Array1, ArrayView1};
 use num_traits::One;
 
 pub fn f64_to_mantissa_exponent(f: f64) -> (i64, i64) {
@@ -125,4 +126,16 @@ where
         exp /= 2;
     }
     result
+}
+
+pub fn norm(vec: &ArrayView1<f64>) -> f64 {
+    vec.iter().map(|x| x * x).sum::<f64>().sqrt()
+}
+
+pub fn normalize(vec: &ArrayView1<f64>) -> Array1<f64> {
+    let norm = norm(vec);
+    if norm == 0.0 {
+        return vec.to_owned();
+    }
+    vec.map(|x| x / norm)
 }

@@ -4,12 +4,17 @@ use std::{
     rc::Rc,
 };
 
+use ndarray::ArrayView1;
 use num_traits::{One, Zero};
 use rug::{ops::Pow, Rational};
 
 use crate::bounds::linear::{LinearConstraint, LinearExpr};
 
-use super::{sym_poly::PolyConstraint, sym_rational::RationalFunction, util::pow};
+use super::{
+    sym_poly::PolyConstraint,
+    sym_rational::RationalFunction,
+    util::{norm, pow},
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum SymExpr<T> {
@@ -753,6 +758,20 @@ impl SymConstraint<f64> {
                 dist < min_dist
             }
             _ => false,
+        }
+    }
+    pub fn estimate_signed_dist(&self, point: &[f64]) -> f64 {
+        match self {
+            SymConstraint::Lt(lhs, rhs) | SymConstraint::Le(lhs, rhs) => {
+                let term = lhs.clone() - rhs.clone();
+                let val = term.eval(point);
+                let grad = term.gradient_at(point);
+                if val == 0.0 {
+                    return 0.0;
+                }
+                val / norm(&ArrayView1::from(&grad))
+            }
+            _ => -1.0,
         }
     }
 }
