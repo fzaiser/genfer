@@ -736,7 +736,7 @@ impl SymConstraint<f64> {
             _ => true,
         }
     }
-    pub fn has_min_dist(&self, point: &[f64], min_dist: f64) -> bool {
+    pub fn is_close(&self, point: &[f64], min_dist: f64) -> bool {
         match self {
             SymConstraint::Lt(lhs, rhs) | SymConstraint::Le(lhs, rhs) => {
                 let term = lhs.clone() - rhs.clone();
@@ -747,12 +747,12 @@ impl SymConstraint<f64> {
                     .map(|g| g.clone() * g.clone())
                     .fold(0.0, |acc, f| acc + f);
                 if grad_len_sq.is_zero() {
-                    return true; // distance isn't well defined.
+                    return false;
                 }
                 let dist = -val.clone() / grad_len_sq.sqrt();
                 dist < min_dist
             }
-            _ => true,
+            _ => false,
         }
     }
 }

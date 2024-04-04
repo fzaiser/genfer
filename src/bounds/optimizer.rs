@@ -105,64 +105,92 @@ impl Optimizer for LinearProgrammingOptimizer {
         init: Vec<f64>,
         _timeout: Duration,
     ) -> Vec<f64> {
-        let mut replacements = (0..problem.var_count).map(SymExpr::var).collect::<Vec<_>>();
-        for v in problem.geom_vars.iter().chain(problem.factor_vars.iter()) {
-            replacements[*v] = SymExpr::Constant(init[*v]);
-        }
-        let objective = objective.substitute(&replacements);
-        let constraints = problem
-            .constraints
-            .iter()
-            .map(|c| c.substitute(&replacements))
-            .collect::<Vec<_>>();
-        let linear_constraints = constraints
-            .iter()
-            .map(|constraint| {
-                constraint.extract_linear().unwrap_or_else(|| {
+        optimize_linear_parts(problem, objective, init.clone()).unwrap_or_else(|| {
+            println!("LP solver failed to optimize linear parts. Returning initial solution.");
+            init
+        })
+    }
+}
+
+pub fn optimize_linear_parts(
+    problem: &ConstraintProblem,
+    objective: &SymExpr<f64>,
+    init: Vec<f64>,
+) -> Option<Vec<f64>> {
+    let mut replacements = (0..problem.var_count).map(SymExpr::var).collect::<Vec<_>>();
+    for v in problem.geom_vars.iter().chain(problem.factor_vars.iter()) {
+        replacements[*v] = SymExpr::Constant(init[*v]);
+    }
+    let objective = objective.substitute(&replacements);
+    let constraints = problem
+        .constraints
+        .iter()
+        .map(|c| c.substitute(&replacements))
+        .collect::<Vec<_>>();
+    let linear_constraints = constraints
+        .iter()
+        .map(|constraint| {
+            constraint
+                .extract_linear()
+                .unwrap_or_else(|| {
                     panic!("Constraint is not linear in the program variables: {constraint}")
                 })
-            })
-            .collect::<Vec<_>>();
-        let mut lp = ProblemVariables::new();
-        let mut var_list = Vec::new();
-        for replacement in replacements {
-            match replacement {
-                SymExpr::Variable(_) => {
-                    var_list.push(lp.add_variable());
-                }
-                SymExpr::Constant(c) => {
-                    var_list.push(lp.add(variable().min(c).max(c)));
-                }
-                _ => unreachable!(),
+                .normalize()
+                .tighten(1e-6)
+        })
+        .collect::<Vec<_>>();
+    let mut lp = ProblemVariables::new();
+    let mut var_list = Vec::new();
+    for replacement in replacements {
+        match replacement {
+            SymExpr::Variable(_) => {
+                var_list.push(lp.add_variable());
             }
-        }
-        let linear_objective = objective
-            .extract_linear()
-            .unwrap_or_else(|| {
-                panic!("Objective is not linear in the program variables: {objective}")
-            })
-            .to_lp_expr(&var_list, &|v| *v);
-        let mut problem = lp.minimise(linear_objective).using(good_lp::default_solver);
-        for constraint in &linear_constraints {
-            problem.add_constraint(constraint.to_lp_constraint(&var_list, &|v| *v));
-        }
-        let solution = problem.solve().unwrap_or_else(|err| match err {
-            good_lp::ResolutionError::Unbounded => panic!("Optimal solution is unbounded."),
-            good_lp::ResolutionError::Infeasible => {
-                panic!("LP solver found the problem infeasible.")
+            SymExpr::Constant(c) => {
+                var_list.push(lp.add(variable().min(c).max(c)));
             }
-            good_lp::ResolutionError::Other(msg) => todo!("Other error: {msg}"),
-            good_lp::ResolutionError::Str(msg) => todo!("Error: {msg}"),
-        });
-        let solution = var_list
-            .iter()
-            .map(|v| solution.value(*v))
-            .collect::<Vec<_>>();
-        println!(
-            "Best objective: {} at {:?}",
-            objective.eval(&solution),
-            solution
-        );
-        solution
+            _ => unreachable!(),
+        }
     }
+    let linear_objective = objective
+        .extract_linear()
+        .unwrap_or_else(|| panic!("Objective is not linear in the program variables: {objective}"))
+        .to_lp_expr(&var_list, &|v| *v);
+    let mut lp = lp.minimise(linear_objective).using(good_lp::default_solver);
+    for constraint in &linear_constraints {
+        lp.add_constraint(constraint.to_lp_constraint(&var_list, &|v| *v));
+    }
+    let solution = match lp.solve() {
+        Ok(solution) => solution,
+        Err(good_lp::ResolutionError::Unbounded) => {
+            println!("Optimal solution is unbounded.");
+            return None;
+        }
+        Err(good_lp::ResolutionError::Infeasible) => {
+            println!("LP solver found the problem infeasible.");
+            return None;
+        }
+        Err(good_lp::ResolutionError::Other(msg)) => {
+            todo!("Other error: {msg}");
+        }
+        Err(good_lp::ResolutionError::Str(msg)) => {
+            todo!("Error: {msg}");
+        }
+    };
+    let solution = var_list
+        .iter()
+        .map(|v| solution.value(*v))
+        .collect::<Vec<_>>();
+    let solution = if problem.holds_exact(&solution) {
+        solution
+    } else {
+        println!("Solution by LP solver does not satisfy the constraints.");
+        return None;
+    };
+    println!(
+        "Best objective: {} at {:?}",
+        objective.eval(&solution),
+        solution
+    );
+    Some(solution)
 }

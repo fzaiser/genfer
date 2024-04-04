@@ -40,6 +40,7 @@ impl Solver for GradientDescent {
     ) -> Result<Vec<f64>, SolverError> {
         let lr = self.step_size;
         let mut point: Array1<f64> = Array1::ones(problem.var_count);
+        // initialize the polynomial coefficient values to their lower bounds (plus some slack)
         for constraint in &problem.constraints {
             if let Some(linear) = constraint.extract_linear() {
                 let linear = linear.expr;
@@ -65,6 +66,8 @@ impl Solver for GradientDescent {
             }
         }
         let mut trajectory = vec![point.clone()];
+        // Repeatedly update the point with the gradient of all the (almost) violated inequalities.
+        // In most cases, one iteration should suffice.
         for _ in 0..self.max_iters {
             let violated_constraints = problem
                 .constraints
@@ -77,9 +80,7 @@ impl Solver for GradientDescent {
             let tight_constraints = problem
                 .constraints
                 .iter()
-                .filter(|c| {
-                    c.has_min_dist(point.as_slice().unwrap(), self.step_size * self.step_size)
-                })
+                .filter(|c| c.is_close(point.as_slice().unwrap(), self.step_size * self.step_size))
                 .collect::<Vec<_>>();
             let gradients = tight_constraints
                 .iter()
@@ -140,6 +141,45 @@ fn line_search(
         }
     }
     Some(update)
+}
+
+fn line_search_with_objective(
+    point: &Array1<f64>,
+    direction: &Array1<f64>,
+    constraints: &[SymConstraint<f64>],
+    objective: &SymExpr<f64>,
+) -> Option<Array1<f64>> {
+    let mut update = direction.clone();
+    let mut best_obj = objective.eval(point.as_slice().unwrap());
+    let mut best_update = None;
+    loop {
+        if update.iter().all(|x| x.abs() < 1e-9) {
+            break;
+        }
+        let feasible = constraints
+            .iter()
+            .all(|c| c.holds_exact((point + &update).as_slice().unwrap()));
+        let cur_obj = objective.eval((point + &update).as_slice().unwrap());
+        if feasible && cur_obj < best_obj {
+            best_obj = cur_obj;
+            best_update = Some(update.clone());
+        }
+        update *= 0.5;
+    }
+    best_update.map(|mut best_update| {
+        loop {
+            let feasible = constraints
+                .iter()
+                .all(|c| c.holds_exact((point + &best_update).as_slice().unwrap()));
+            let cur_obj = objective.eval((point + &best_update).as_slice().unwrap());
+            if !feasible || cur_obj > best_obj {
+                best_update /= 1.5;
+                break;
+            }
+            best_update *= 1.5;
+        }
+        best_update
+    })
 }
 
 fn largest_gradient(problem: &ConstraintProblem, gradients: &[Array1<f64>]) -> Array1<f64> {
@@ -204,65 +244,41 @@ impl Optimizer for GradientDescent {
         init: Vec<f64>,
         _timeout: Duration,
     ) -> Vec<f64> {
-        let slack_epsilon = 1e-4;
-        let epsilon = self.step_size;
-        let all_vars = (0..problem.var_count).collect::<Vec<_>>();
-        let constraints_grads = problem
-            .constraints
-            .iter()
-            .filter_map(|c| {
-                let c = c.to_poly();
-                let grad = match &c {
-                    PolyConstraint::Le(lhs, rhs) | PolyConstraint::Lt(lhs, rhs) => {
-                        Array1::from_vec((rhs.clone() - lhs.clone()).gradient(&all_vars))
-                    }
-                    _ => return None,
-                };
-                Some((c, grad))
-            })
-            .collect::<Vec<_>>();
+        let slack_epsilon = 1e-6;
+        let lr = self.step_size;
         let mut point: Array1<f64> = Array1::from_vec(init);
         let mut best_point: Array1<f64> = point.clone();
         let mut best_objective = objective.eval(point.as_slice().unwrap());
         let mut trajectory = vec![point.clone()];
         for _ in 0..500 {
-            let mut gradients = Vec::new();
-            for (constraint, gradient) in &constraints_grads {
-                if constraint.has_slack(point.as_slice().unwrap(), slack_epsilon) {
-                    continue;
-                }
-                let gradient = gradient.map(|g| g.eval(point.as_slice().unwrap()));
-                if gradient.iter().all(|x| x == &0.0) {
-                    continue;
-                }
-                gradients.push(gradient);
-            }
-            let mut objective_grad =
+            let tight_constraints = problem
+                .constraints
+                .iter()
+                .filter(|c| c.is_close(point.as_slice().unwrap(), slack_epsilon))
+                .collect::<Vec<_>>();
+            let gradients = tight_constraints
+                .iter()
+                .map(|c| Array1::from_vec(c.gradient_at(point.as_slice().unwrap())))
+                .collect::<Vec<_>>();
+            let objective_grad =
                 -Array1::from_vec(objective.gradient_at(point.as_slice().unwrap()));
-            let obj_grad_len = objective_grad.dot(&objective_grad).sqrt();
-            if obj_grad_len > 1e6 {
-                objective_grad /= obj_grad_len;
-                objective_grad *= 1e6;
-            }
-            gradients.push(objective_grad.clone());
-            let mut direction = match self.dir_selection_strategy {
+
+            let direction = match self.dir_selection_strategy {
                 DirSelectionStrategy::Greedy => largest_gradient(problem, &gradients),
                 DirSelectionStrategy::ProjectPolyhedralCone => {
-                    project_into_cone(objective_grad, &gradients, 1e-3)
+                    project_into_cone(objective_grad, &gradients, 1e-4)
                         .unwrap_or_else(|| largest_gradient(problem, &gradients))
                 }
             };
-            let dir_len = direction.dot(&direction).sqrt();
-            if dir_len * epsilon > 0.1 {
-                direction *= 0.1 / (dir_len * epsilon);
-            }
-            point += &(epsilon * direction);
-            let objective = objective.eval(point.as_slice().unwrap());
-            if objective < best_objective
-                && constraints_grads
-                    .iter()
-                    .all(|(c, _)| c.holds(point.as_slice().unwrap()))
+            if let Some(update) =
+                line_search_with_objective(&point, &direction, &problem.constraints, &objective)
             {
+                point += &update;
+            } else {
+                point += &(lr * direction);
+            }
+            let objective = objective.eval(point.as_slice().unwrap());
+            if objective < best_objective && problem.holds_exact(point.as_slice().unwrap()) {
                 best_objective = objective;
                 best_point = point.clone();
             }

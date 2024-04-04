@@ -66,6 +66,22 @@ impl<T> LinearExpr<T> {
     }
 }
 
+impl LinearExpr<f64> {
+    pub fn grad_norm(&self) -> f64 {
+        self.coeffs.iter().map(|c| c * c).sum::<f64>().sqrt()
+    }
+
+    pub fn normalize(&self) -> Self {
+        let grad_len = self.grad_norm();
+        if grad_len == 0.0 {
+            return self.clone();
+        }
+        let coeffs = self.coeffs.iter().map(|c| c / grad_len).collect();
+        let constant = self.constant / grad_len;
+        Self::new(coeffs, constant)
+    }
+}
+
 impl<T: std::fmt::Display> std::fmt::Display for LinearExpr<T>
 where
     T: Zero + One + PartialEq + Neg<Output = T>,
@@ -234,6 +250,27 @@ impl<T> LinearConstraint<T> {
             Some(constant.is_zero())
         } else {
             Some(constant >= &T::zero())
+        }
+    }
+}
+
+impl LinearConstraint<f64> {
+    pub fn normalize(&self) -> Self {
+        Self {
+            expr: self.expr.normalize(),
+            eq_zero: self.eq_zero,
+        }
+    }
+
+    pub fn tighten(&self, eps: f64) -> Self {
+        let constant = if self.expr.grad_norm() == 0.0 {
+            self.expr.constant
+        } else {
+            self.expr.constant - eps
+        };
+        Self {
+            expr: LinearExpr::new(self.expr.coeffs.clone(), constant),
+            eq_zero: self.eq_zero,
         }
     }
 }
