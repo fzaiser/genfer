@@ -26,6 +26,7 @@ enum Solver {
     Z3,
     #[value(name = "gd")]
     GradientDescent,
+    AdamBarrier,
 }
 
 #[derive(Clone, ValueEnum)]
@@ -138,6 +139,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
     let init_solution = match args.solver {
         Solver::Z3 => Z3Solver.solve(&problem, timeout),
         Solver::GradientDescent => GradientDescent::default().solve(&problem, timeout),
+        Solver::AdamBarrier => AdamBarrier::default().solve(&problem, timeout),
     };
     let solver_time = start_solver.elapsed();
     println!("Solver time: {solver_time:?}");

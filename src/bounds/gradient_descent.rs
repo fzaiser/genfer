@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use good_lp::{Expression, ProblemVariables, Solution, SolverModel, VariableDefinition};
 use ndarray::Array1;
+use num_traits::One;
 
 use crate::bounds::util::normalize;
 
@@ -400,6 +401,22 @@ impl Default for AdamBarrier {
     }
 }
 
+impl Solver for AdamBarrier {
+    fn solve(
+        &mut self,
+        problem: &ConstraintProblem,
+        _timeout: Duration,
+    ) -> Result<Vec<f64>, SolverError> {
+        let init = vec![1.0 - 1e-3; problem.var_count];
+        let res = self.optimize(problem, &SymExpr::one(), init, _timeout);
+        if problem.holds_exact(&res) {
+            Ok(res)
+        } else {
+            Err(SolverError::Timeout)
+        }
+    }
+}
+
 impl Optimizer for AdamBarrier {
     fn optimize(
         &mut self,
@@ -417,15 +434,10 @@ impl Optimizer for AdamBarrier {
         let mut t = 1;
         for _ in 0..5000 {
             let obj = objective.eval(point.as_slice().unwrap());
-            let tight_constraints = problem
-                .constraints
-                .iter()
-                .filter(|c| c.is_close(point.as_slice().unwrap(), 1e-2))
-                .collect::<Vec<_>>();
             let mut objective_grad =
                 -Array1::from_vec(objective.gradient_at(point.as_slice().unwrap())) / obj;
             // let mut barrier_penalty = 0.0;
-            for c in &tight_constraints {
+            for c in &problem.constraints {
                 let constraint_grad = Array1::from_vec(c.gradient_at(point.as_slice().unwrap()));
                 let dist = c.estimate_signed_dist(point.as_slice().unwrap());
                 let concentration = t as f64;
@@ -443,7 +455,7 @@ impl Optimizer for AdamBarrier {
             let update_dir = self.lr * &m_hat / (&v_hat.map(|x| x.sqrt()) + self.epsilon);
             point += &update_dir;
             let objective = objective.eval(point.as_slice().unwrap());
-            if objective < best_objective && problem.holds_exact(point.as_slice().unwrap()) {
+            if objective <= best_objective && problem.holds_exact(point.as_slice().unwrap()) {
                 best_objective = objective;
                 best_point = point.clone();
             }
@@ -451,7 +463,7 @@ impl Optimizer for AdamBarrier {
             t += 1;
         }
         println!("Points:");
-        for p in &trajectory {
+        for p in trajectory.iter().step_by(t as usize / 100) {
             println!("{p},");
         }
         println!("Best objective: {best_objective} at {best_point}");
