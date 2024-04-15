@@ -65,6 +65,8 @@ struct CliArgs {
     /// The optimizer to use
     #[arg(long)]
     optimizer: Option<Optimizer>,
+    #[arg(long)]
+    evt: bool,
     /// Whether to optimize the linear parts of the bound at the end
     #[arg(long)]
     no_linear_optimize: bool,
@@ -91,7 +93,8 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
     let start = Instant::now();
     let mut ctx = BoundCtx::new()
         .with_min_degree(args.min_degree)
-        .with_default_unroll(args.unroll);
+        .with_default_unroll(args.unroll)
+        .with_evt(args.evt);
     let result = ctx.semantics(program);
     match &result.var_supports {
         VarSupport::Empty(_) => println!("Support: empty"),
