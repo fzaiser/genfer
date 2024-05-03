@@ -1,9 +1,13 @@
 # GENFER: exact Bayesian inference for discrete models via generating functions
 
-Genfer (**GEN**erating functions to in**FER** posteriors) is a tool to compute the exact posterior distribution of discrete probabilistic models, expressed as probabilistic programs.
+Genfer (**GEN**erating functions to in**FER** posteriors) is a tool to compute the exact posterior distribution of discrete probabilistic models, even with infinite support and continuous priors.
 It is the implementation of the framework from our paper
 
-> Zaiser, Murawski, Ong: Exact Bayesian Inference on Discrete Models via Probability Generating Functions: A Probabilistic Programming Approach. Under review. https://arxiv.org/abs/2305.17058
+> Zaiser, Murawski, Ong: *Exact Bayesian Inference on Discrete Models via Probability Generating Functions: A Probabilistic Programming Approach.* [NeurIPS 2023 (oral)](https://neurips.cc/virtual/2023/poster/72239) [(arxiv)](https://arxiv.org/abs/2305.17058)
+
+The model is specified as a probabilistic program and translated to a generating function representing the posterior distribution.
+Using automatic differentiation, posterior probabilities and moments can be extracted from this generating function.
+Further information can be found in the above paper.
 
 ## Setup
 
