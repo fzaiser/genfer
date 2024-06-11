@@ -70,6 +70,9 @@ struct CliArgs {
     /// Whether to optimize the linear parts of the bound at the end
     #[arg(long)]
     no_linear_optimize: bool,
+    /// Don't transform while loops into do-while loops
+    #[arg(long)]
+    keep_while: bool,
     /// Optionally output an SMT-LIB file at this path
     #[arg(long)]
     smt: Option<PathBuf>,
@@ -94,7 +97,8 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
     let mut ctx = BoundCtx::new()
         .with_min_degree(args.min_degree)
         .with_default_unroll(args.unroll)
-        .with_evt(args.evt);
+        .with_evt(args.evt)
+        .with_do_while_transform(!args.keep_while);
     let result = ctx.semantics(program);
     match &result.var_supports {
         VarSupport::Empty(_) => println!("Support: empty"),

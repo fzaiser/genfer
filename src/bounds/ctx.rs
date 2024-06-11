@@ -20,6 +20,7 @@ pub struct BoundCtx {
     default_unroll: usize,
     min_degree: usize,
     evt: bool,
+    do_while_transform: bool,
     support: SupportTransformer,
     program_var_count: usize,
     sym_var_count: usize,
@@ -282,6 +283,7 @@ impl BoundCtx {
             default_unroll: 8,
             min_degree: 1,
             evt: false,
+            do_while_transform: false,
             support: SupportTransformer,
             program_var_count: 0,
             sym_var_count: 0,
@@ -306,6 +308,13 @@ impl BoundCtx {
 
     pub fn with_evt(self, evt: bool) -> Self {
         Self { evt, ..self }
+    }
+
+    pub fn with_do_while_transform(self, do_while_transform: bool) -> Self {
+        Self {
+            do_while_transform,
+            ..self
+        }
     }
 
     pub fn sym_var_count(&self) -> usize {
@@ -490,20 +499,32 @@ impl BoundCtx {
             self.assert_le(&rhs.bound, &invariant.bound);
             self.add_bound_results(loop_exit, rest)
         } else {
-            let (loop_entry, loop_exit) = self.transform_event(cond, pre_loop);
-            rest = self.add_bound_results(rest, loop_exit);
+            let invariant_supports = if self.do_while_transform {
+                invariant_supports_enter
+            } else {
+                invariant_supports
+            };
             let invariant = BoundResult {
                 bound: self.new_bound(shape, &finite_supports),
-                var_supports: invariant_supports_enter,
+                var_supports: invariant_supports,
             };
             println!("Invariant: {invariant}");
-            self.assert_le(&loop_entry.bound, &invariant.bound);
+            let (post_loop, mut exit) = if self.do_while_transform {
+                let (loop_entry, loop_exit) = self.transform_event(cond, pre_loop);
+                rest = self.add_bound_results(rest, loop_exit);
+                self.assert_le(&loop_entry.bound, &invariant.bound);
+                let post_loop = self.transform_statements(body, invariant.clone());
+                self.transform_event(cond, post_loop)
+            } else {
+                self.assert_le(&pre_loop.bound, &invariant.bound);
+                let (loop_entry, loop_exit) = self.transform_event(cond, invariant.clone());
+                let post_loop = self.transform_statements(body, loop_entry);
+                (post_loop, loop_exit)
+            };
             let c = self.new_factor_var();
             println!("Invariant-c: {c}");
             self.add_constraint(c.clone().must_ge(SymExpr::zero()));
             self.add_constraint(c.clone().must_lt(SymExpr::one()));
-            let cur_bound = self.transform_statements(body, invariant.clone());
-            let (post_loop, mut exit) = self.transform_event(cond, cur_bound);
             self.assert_le(&post_loop.bound, &(invariant.bound.clone() * c.clone()));
             exit.bound /= SymExpr::one() - c.clone();
             self.add_bound_results(exit, rest)
