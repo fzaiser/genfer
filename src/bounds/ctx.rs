@@ -1,4 +1,4 @@
-use ndarray::{ArrayD, ArrayViewD, Axis, Slice};
+use ndarray::{ArrayD, ArrayViewD, Axis, Dimension, Slice};
 use num_traits::{One, Zero};
 
 use crate::{
@@ -445,10 +445,10 @@ impl BoundCtx {
             var_supports: VarSupport::empty(pre_loop.var_supports.num_vars()),
         };
         let unroll_count = unroll.unwrap_or(self.default_unroll);
-        let (iters, invariant_supports, _) =
+        let unroll_result =
             self.support
-                .analyze_while(cond, body, pre_loop.var_supports.clone());
-        let unroll_count = if let Some(iters) = iters {
+                .find_unroll_fixpoint(cond, body, pre_loop.var_supports.clone());
+        let unroll_count = if let Some((iters, _, _)) = unroll_result {
             unroll_count.max(iters)
         } else {
             unroll_count
@@ -459,53 +459,42 @@ impl BoundCtx {
             pre_loop = self.transform_statements(body, then_bound);
             rest = self.add_bound_results(rest, else_bound);
         }
+        let invariant_supports =
+            self.support
+                .find_while_invariant(cond, body, pre_loop.var_supports.clone());
+        let invariant_supports = if self.do_while_transform {
+            let (invariant_entry, _) = self.support.transform_event(cond, invariant_supports);
+            invariant_entry
+        } else {
+            invariant_supports
+        };
         let shape = match &invariant_supports {
-            VarSupport::Empty(num_vars) => vec![0; *num_vars],
+            VarSupport::Empty(num_vars) => vec![(0, Some(0)); *num_vars],
             VarSupport::Prod(supports) => supports
                 .iter()
                 .map(|s| match s {
-                    SupportSet::Empty => 0,
-                    SupportSet::Range { end, .. } => {
-                        if let Some(end) = end {
-                            *end as usize + 1
-                        } else {
-                            self.min_degree
-                        }
+                    SupportSet::Empty => (0, Some(0)),
+                    SupportSet::Range { start, end } => {
+                        (*start as usize, end.map(|x| x as usize + 1))
                     }
                     SupportSet::Interval { .. } => todo!(),
                 })
                 .collect::<Vec<_>>(),
         };
-        let finite_supports = match &invariant_supports {
-            VarSupport::Empty(num_vars) => vec![true; *num_vars],
-            VarSupport::Prod(supports) => supports
-                .iter()
-                .map(|s| s.is_empty() || s.finite_nonempty_range().is_some())
-                .collect::<Vec<_>>(),
-        };
-        let (_, invariant_supports_enter, invariant_supports_exit) =
-            self.support
-                .analyze_while(cond, body, pre_loop.var_supports.clone());
         if self.evt {
             let invariant = BoundResult {
-                bound: self.new_bound(shape, &finite_supports),
-                var_supports: invariant_supports_exit,
+                bound: self.new_bound(shape, self.min_degree),
+                var_supports: invariant_supports,
             };
-            println!("Invariant: {invariant}");
-            dbg!(invariant.to_string());
+            println!("EVT-invariant: {invariant}");
             let (loop_entry, loop_exit) = self.transform_event(cond, invariant.clone());
             let one_iter = self.transform_statements(body, loop_entry);
             let rhs = self.add_bound_results(pre_loop, one_iter);
             self.assert_le(&rhs.bound, &invariant.bound);
             self.add_bound_results(loop_exit, rest)
         } else {
-            let invariant_supports = if self.do_while_transform {
-                invariant_supports_enter
-            } else {
-                invariant_supports
-            };
             let invariant = BoundResult {
-                bound: self.new_bound(shape, &finite_supports),
+                bound: self.new_bound(shape, self.min_degree),
                 var_supports: invariant_supports,
             };
             println!("Invariant: {invariant}");
@@ -657,21 +646,40 @@ impl BoundCtx {
         Ok(())
     }
 
-    fn new_masses(&mut self, shape: Vec<usize>) -> ArrayD<SymExpr<f64>> {
-        let mut coeffs = ArrayD::zeros(shape);
-        for c in &mut coeffs {
-            *c = self.new_coeff_var();
+    fn new_masses(&mut self, shape: Vec<(usize, usize)>) -> ArrayD<SymExpr<f64>> {
+        let dims = shape.iter().map(|(_, e)| *e).collect::<Vec<_>>();
+        let mut coeffs = ArrayD::zeros(dims);
+        for (idx, c) in coeffs.indexed_iter_mut() {
+            let is_nonzero = idx
+                .as_array_view()
+                .iter()
+                .zip(&shape)
+                .all(|(i, (start, end))| {
+                    assert!(i < end);
+                    i >= start || (start >= end && *i == end - 1)
+                });
+            if is_nonzero {
+                *c = self.new_coeff_var();
+            }
         }
         coeffs
     }
 
-    fn new_bound(&mut self, shape: Vec<usize>, finite_supports: &[bool]) -> GeometricBound {
+    fn new_bound(
+        &mut self,
+        shape: Vec<(usize, Option<usize>)>,
+        min_degree: usize,
+    ) -> GeometricBound {
         let mut geo_params = vec![SymExpr::zero(); shape.len()];
         for (v, p) in geo_params.iter_mut().enumerate() {
-            if !finite_supports[v] {
+            if shape[v].1.is_none() {
                 *p = self.new_geom_var();
             }
         }
+        let shape = shape
+            .into_iter()
+            .map(|(start, end)| (start, end.unwrap_or(min_degree)))
+            .collect::<Vec<_>>();
         GeometricBound {
             masses: self.new_masses(shape),
             geo_params,
