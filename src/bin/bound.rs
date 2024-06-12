@@ -39,6 +39,14 @@ enum Optimizer {
     AdamBarrier,
 }
 
+#[derive(Clone, ValueEnum)]
+enum Objective {
+    Total,
+    #[value(name = "ev")]
+    ExpectedValue,
+    Tail,
+}
+
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -66,6 +74,9 @@ struct CliArgs {
     /// The optimizer to use
     #[arg(long)]
     optimizer: Option<Optimizer>,
+    /// The optimization objective
+    #[arg(long, default_value = "ev")]
+    objective: Objective,
     #[arg(long)]
     evt: bool,
     /// Whether to optimize the linear parts of the bound at the end
@@ -143,7 +154,6 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
         coefficient_vars: ctx.coefficient_vars().to_owned(),
         constraints: ctx.constraints().to_owned(),
     };
-    let objective = result.bound.total_mass();
     let init_solution = match args.solver {
         Solver::Z3 => Z3Solver.solve(&problem, timeout),
         Solver::GradientDescent => GradientDescent::default().solve(&problem, timeout),
@@ -153,6 +163,12 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
     println!("Solver time: {solver_time:?}");
     match init_solution {
         Ok(solution) => {
+            let objective = match args.objective {
+                Objective::Total => result.bound.total_mass(),
+                Objective::ExpectedValue => result.bound.expected_value(program.result),
+                Objective::Tail => result.bound.tail_objective(program.result),
+            };
+            dbg!(objective.to_string());
             println!("Optimizing solution...");
             let optimized_solution = if let Some(optimizer) = &args.optimizer {
                 let start_optimizer = Instant::now();

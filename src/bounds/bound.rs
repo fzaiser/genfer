@@ -202,6 +202,28 @@ impl GeometricBound {
     pub fn total_mass(&self) -> SymExpr<f64> {
         self.eval_expr(&vec![1.0; self.masses.ndim()])
     }
+
+    pub fn expected_value(&self, Var(v): Var) -> SymExpr<f64> {
+        let len = self.masses.len_of(Axis(v));
+        let mut rest_params = self.geo_params.clone();
+        let alpha = rest_params.remove(v);
+        let mut res = Self::eval_expr_impl(
+            &self.masses.index_axis(Axis(v), len - 1),
+            &rest_params,
+            &vec![1.0; rest_params.len()],
+        );
+        let alpha_comp = SymExpr::one() - alpha.clone();
+        res *= (alpha / alpha_comp.clone() + SymExpr::from(f64::from(len as u32 - 1))) / alpha_comp;
+        for (n, subview) in self.masses.axis_iter(Axis(v)).enumerate().rev().skip(1) {
+            res += Self::eval_expr_impl(&subview, &rest_params, &vec![1.0; rest_params.len()])
+                * SymExpr::from(f64::from(n as u32));
+        }
+        res
+    }
+
+    pub fn tail_objective(&self, v: Var) -> SymExpr<f64> {
+        (SymExpr::one() - self.geo_params[v.id()].clone()).inverse()
+    }
 }
 
 impl std::fmt::Display for GeometricBound {
