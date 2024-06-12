@@ -142,31 +142,11 @@ impl GeometricBound {
         }
     }
 
-    pub fn evaluate_var<T: From<f64> + Number>(
-        &self,
-        inputs: &[T],
-        var: Var,
-        degree_p1: usize,
-    ) -> TaylorPoly<T> {
-        let vars = inputs
-            .iter()
-            .enumerate()
-            .map(|(w, val)| {
-                if w == var.id() {
-                    TaylorPoly::var(var, val.clone(), degree_p1)
-                } else {
-                    TaylorPoly::from(val.clone())
-                }
-            })
-            .collect::<Vec<_>>();
-        self.eval(&vars)
+    pub fn eval_taylor<T: From<f64> + Number>(&self, inputs: &[TaylorPoly<T>]) -> TaylorPoly<T> {
+        Self::eval_taylor_impl(&self.masses.view(), &self.geo_params, inputs)
     }
 
-    pub fn eval<T: From<f64> + Number>(&self, inputs: &[TaylorPoly<T>]) -> TaylorPoly<T> {
-        Self::eval_impl(&self.masses.view(), &self.geo_params, inputs)
-    }
-
-    pub fn eval_impl<T: From<f64> + Number>(
+    pub fn eval_taylor_impl<T: From<f64> + Number>(
         coeffs: &ArrayViewD<SymExpr<f64>>,
         geo_params: &[SymExpr<f64>],
         inputs: &[TaylorPoly<T>],
@@ -178,7 +158,7 @@ impl GeometricBound {
         let denominator = TaylorPoly::one()
             - TaylorPoly::from(T::from(geo_params[0].extract_constant().unwrap()))
                 * inputs[0].clone();
-        let mut res = Self::eval_impl(
+        let mut res = Self::eval_taylor_impl(
             &coeffs.index_axis(Axis(0), len - 1),
             &geo_params[1..],
             &inputs[1..],
@@ -186,9 +166,13 @@ impl GeometricBound {
         res /= denominator;
         for subview in coeffs.axis_iter(Axis(0)).rev().skip(1) {
             res *= inputs[0].clone();
-            res += Self::eval_impl(&subview, &geo_params[1..], &inputs[1..]);
+            res += Self::eval_taylor_impl(&subview, &geo_params[1..], &inputs[1..]);
         }
         res
+    }
+
+    pub fn eval_expr(&self, inputs: &[f64]) -> SymExpr<f64> {
+        Self::eval_expr_impl(&self.masses.view(), &self.geo_params, inputs)
     }
 
     fn eval_expr_impl(
@@ -216,11 +200,7 @@ impl GeometricBound {
     }
 
     pub fn total_mass(&self) -> SymExpr<f64> {
-        Self::eval_expr_impl(
-            &self.masses.view(),
-            &self.geo_params,
-            &vec![1.0; self.masses.ndim()],
-        )
+        self.eval_expr(&vec![1.0; self.masses.ndim()])
     }
 }
 

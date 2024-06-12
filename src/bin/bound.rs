@@ -12,6 +12,7 @@ use genfer::bounds::ctx::BoundCtx;
 use genfer::bounds::gradient_descent::{Adam, AdamBarrier, GradientDescent};
 use genfer::bounds::optimizer::{LinearProgrammingOptimizer, Optimizer as _, Z3Optimizer};
 use genfer::bounds::solver::{ConstraintProblem, Solver as _, SolverError, Z3Solver};
+use genfer::multivariate_taylor::TaylorPoly;
 use genfer::number::F64;
 use genfer::parser;
 use genfer::ppl::{Program, Var};
@@ -19,7 +20,7 @@ use genfer::semantics::support::VarSupport;
 use genfer::semantics::Transformer;
 
 use clap::{Parser, ValueEnum};
-use num_traits::{One, Zero};
+use num_traits::One;
 
 #[derive(Clone, ValueEnum)]
 enum Solver {
@@ -190,30 +191,28 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
             println!("{bound}");
 
             println!("\nProbability masses:");
-            let mut inputs = vec![F64::one(); result.var_supports.num_vars()];
-            inputs[program.result.id()] = F64::zero();
             let degree_p1 =
                 if let Some(range) = result.var_supports[program.result].finite_nonempty_range() {
                     *range.end() as usize + 1
                 } else {
-                    100
+                    50
                 };
-            let expansion = bound.evaluate_var(&inputs, program.result, degree_p1);
-            let mut index = vec![0; result.var_supports.num_vars()];
+            let mut inputs = vec![TaylorPoly::one(); result.var_supports.num_vars()];
+            inputs[program.result.id()] = TaylorPoly::var_at_zero(Var(0), degree_p1);
+            let expansion = bound.eval_taylor::<F64>(&inputs);
             for i in 0..degree_p1 {
-                index[program.result.id()] = i;
-                let prob = expansion.coefficient(&index);
+                let prob = expansion.coefficient(&[i]);
                 println!("p({i}) <= {prob}");
             }
-
             println!("\nMoments:");
-            let inputs = vec![F64::one(); result.var_supports.num_vars()];
-            let expansion = bound.evaluate_var(&inputs, program.result, 5);
-            let mut index = vec![0; result.var_supports.num_vars()];
+            let mut inputs = vec![TaylorPoly::one(); result.var_supports.num_vars()];
+            inputs[program.result.id()] = TaylorPoly::var_at_zero(Var(0), 5).exp();
+            let expansion = bound.eval_taylor::<F64>(&inputs);
+            let mut factorial = F64::one();
             for i in 0..5 {
-                index[program.result.id()] = i;
-                let factorial_moment = expansion.coefficient(&index);
-                println!("{i}-th factorial moment <= {factorial_moment}");
+                let moment = expansion.coefficient(&[i]) * factorial;
+                println!("{i}-th (raw) moment <= {moment}");
+                factorial *= F64::from((i + 1) as u32);
             }
         }
         Err(e) => match e {
