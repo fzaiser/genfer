@@ -348,8 +348,9 @@ impl BoundCtx {
     }
 
     pub fn add_constraint(&mut self, constraint: SymConstraint<f64>) {
-        // println!("Adding constraint {constraint}");
-        self.constraints.push(constraint);
+        if !constraint.is_trivial() {
+            self.constraints.push(constraint);
+        }
     }
 
     pub fn new_geom_var(&mut self) -> SymExpr<f64> {

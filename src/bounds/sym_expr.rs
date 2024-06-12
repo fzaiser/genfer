@@ -536,6 +536,17 @@ impl<T> SymConstraint<T> {
         Self::Or(constraints)
     }
 
+    pub fn is_trivial(&self) -> bool
+    where
+        T: PartialEq + Zero,
+    {
+        match self {
+            SymConstraint::Eq(lhs, rhs) | SymConstraint::Le(lhs, rhs) => lhs == rhs,
+            SymConstraint::Lt(..) => false,
+            SymConstraint::Or(constraints) => constraints.iter().any(SymConstraint::is_trivial),
+        }
+    }
+
     pub fn to_poly(&self) -> PolyConstraint<T>
     where
         T: Clone
