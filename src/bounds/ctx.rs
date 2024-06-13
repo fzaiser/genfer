@@ -612,17 +612,14 @@ impl BoundCtx {
     }
 
     fn new_masses(&mut self, shape: Vec<(usize, usize)>) -> ArrayD<SymExpr<f64>> {
-        let dims = shape.iter().map(|(_, e)| *e).collect::<Vec<_>>();
+        let dims = shape.iter().map(|(_, e)| (*e).max(1)).collect::<Vec<_>>();
         let mut coeffs = ArrayD::zeros(dims);
         for (idx, c) in coeffs.indexed_iter_mut() {
             let is_nonzero = idx
                 .as_array_view()
                 .iter()
                 .zip(&shape)
-                .all(|(i, (start, end))| {
-                    assert!(i < end);
-                    i >= start || (start >= end && *i == end - 1)
-                });
+                .all(|(i, (start, end))| i >= start || (start >= end && i + 1 == *end));
             if is_nonzero {
                 *c = self.new_coeff_var();
             }
