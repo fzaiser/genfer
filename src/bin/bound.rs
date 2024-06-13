@@ -168,7 +168,6 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
                 Objective::ExpectedValue => result.bound.expected_value(program.result),
                 Objective::Tail => result.bound.tail_objective(program.result),
             };
-            dbg!(objective.to_string());
             println!("Optimizing solution...");
             let optimized_solution = if let Some(optimizer) = &args.optimizer {
                 let start_optimizer = Instant::now();

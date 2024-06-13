@@ -4,6 +4,7 @@ use crate::{
 };
 use ndarray::{ArrayD, ArrayViewD, Axis, Slice};
 use num_traits::{One, Zero};
+use std::ops::AddAssign;
 
 #[derive(Debug, Clone)]
 pub struct BoundResult {
@@ -102,6 +103,48 @@ impl GeometricBound {
                     .index_axis(axis, i - 1)
                     .map(|e| e.clone() * self.geo_params[var.id()].clone()),
             );
+        }
+    }
+
+    pub fn shift_left(&mut self, Var(v): Var, offset: usize) {
+        self.extend_axis(Var(v), offset + 2);
+        let zero_elem = self
+            .masses
+            .slice_axis(Axis(v), Slice::from(0..=offset))
+            .sum_axis(Axis(v));
+        self.masses
+            .slice_axis_inplace(Axis(v), Slice::from(offset..));
+        self.masses.index_axis_mut(Axis(v), 0).assign(&zero_elem);
+    }
+
+    pub fn shift_right(&mut self, Var(v): Var, offset: usize) {
+        let mut zero_shape = self.masses.shape().to_owned();
+        zero_shape[v] = offset;
+        self.masses = ndarray::concatenate(
+            Axis(v),
+            &[ArrayD::zeros(zero_shape).view(), self.masses.view()],
+        )
+        .unwrap();
+    }
+
+    pub fn add_categorical(&mut self, Var(v): Var, categorical: &[f64]) {
+        let len = self.masses.len_of(Axis(v));
+        let max = categorical.len() - 1;
+        self.extend_axis(Var(v), len + max);
+        let mut new_shape = self.masses.shape().to_owned();
+        new_shape[v] = len + max;
+        let masses = self.masses.clone();
+        self.masses = ArrayD::zeros(new_shape);
+        for (offset, prob) in categorical.iter().enumerate() {
+            if prob > &0.0 {
+                self.masses
+                    .slice_axis_mut(Axis(v), Slice::from(offset..len + max))
+                    .add_assign(
+                        &masses
+                            .slice_axis(Axis(v), Slice::from(0..len + max - offset))
+                            .map(|e| e.clone() * SymExpr::from(*prob)),
+                    );
+            }
         }
     }
 

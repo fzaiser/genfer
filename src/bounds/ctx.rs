@@ -1,4 +1,4 @@
-use ndarray::{ArrayD, ArrayViewD, Axis, Dimension, Slice};
+use ndarray::{ArrayD, ArrayViewD, Axis, Dimension};
 use num_traits::{One, Zero};
 
 use crate::{
@@ -160,19 +160,8 @@ impl Transformer for BoundCtx {
                 };
                 match distribution {
                     Distribution::Bernoulli(p) => {
-                        let p = F64::from_ratio(p.numer, p.denom).to_f64();
-                        let mut new_shape = res.bound.masses.shape().to_owned();
-                        new_shape[var.id()] = 2;
-                        res.bound.masses =
-                            res.bound.masses.broadcast(new_shape).unwrap().to_owned();
-                        res.bound
-                            .masses
-                            .index_axis_mut(Axis(var.id()), 0)
-                            .map_inplace(|e| *e *= (1.0 - p).into());
-                        res.bound
-                            .masses
-                            .index_axis_mut(Axis(var.id()), 1)
-                            .map_inplace(|e| *e *= p.into());
+                        let p = p.numer as f64 / p.denom as f64;
+                        res.bound.add_categorical(*var, &[1.0 - p, p]);
                     }
                     Distribution::Geometric(p) if !add_previous_value => {
                         let p = F64::from_ratio(p.numer, p.denom).to_f64();
@@ -180,26 +169,20 @@ impl Transformer for BoundCtx {
                         res.bound.geo_params[var.id()] = SymExpr::from(1.0 - p);
                     }
                     Distribution::Uniform { start, end } => {
-                        let mut new_shape = res.bound.masses.shape().to_owned();
-                        let len = end.0 as usize;
-                        new_shape[var.id()] = len;
-                        res.bound.masses =
-                            res.bound.masses.broadcast(new_shape).unwrap().to_owned();
-                        for i in 0..len {
-                            if i < start.0 as usize {
-                                res.bound
-                                    .masses
-                                    .index_axis_mut(Axis(var.id()), i)
-                                    .fill(SymExpr::zero());
-                            } else {
-                                res.bound
-                                    .masses
-                                    .index_axis_mut(Axis(var.id()), i)
-                                    .map_inplace(|e| {
-                                        *e /= SymExpr::from(f64::from(end.0 - start.0));
-                                    });
-                            }
-                        }
+                        let p = 1.0 / (end.0 - start.0) as f64;
+                        let categorical = (0..end.0)
+                            .map(|x| if x < start.0 { 0.0 } else { p })
+                            .collect::<Vec<_>>();
+                        res.bound.add_categorical(*var, &categorical);
+                    }
+                    Distribution::Categorical(categorical) => {
+                        res.bound.add_categorical(
+                            *var,
+                            &categorical
+                                .iter()
+                                .map(|p| p.numer as f64 / p.denom as f64)
+                                .collect::<Vec<_>>(),
+                        );
                     }
                     _ => todo!(),
                 };
@@ -212,47 +195,28 @@ impl Transformer for BoundCtx {
                 addend,
                 offset,
             } => {
-                if let (None, Natural(n)) = (addend, offset) {
+                if let (None, offset) = (addend, offset) {
                     let mut new_bound = if *add_previous_value {
                         init
                     } else {
                         init.marginalize(*var)
                     };
-                    let mut zero_shape = new_bound.bound.masses.shape().to_owned();
-                    zero_shape[var.id()] = *n as usize;
-                    new_bound.bound.masses = ndarray::concatenate(
-                        Axis(var.id()),
-                        &[
-                            ArrayD::zeros(zero_shape).view(),
-                            new_bound.bound.masses.view(),
-                        ],
-                    )
-                    .unwrap();
+                    new_bound.bound.shift_right(*var, offset.0 as usize);
                     new_bound.var_supports = self
                         .support
                         .transform_statement(stmt, new_bound.var_supports);
                     new_bound
                 } else {
-                    todo!()
+                    todo!("{}", stmt.to_string())
                 }
             }
             Statement::Decrement { var, offset } => {
-                let mut cur = init;
-                cur.bound.extend_axis(*var, (offset.0 + 2) as usize);
-                let zero_elem = cur
-                    .bound
-                    .masses
-                    .slice_axis(Axis(var.id()), Slice::from(0..=offset.0 as usize))
-                    .sum_axis(Axis(var.id()));
-                cur.bound
-                    .masses
-                    .slice_axis_inplace(Axis(var.id()), Slice::from(offset.0 as usize..));
-                cur.bound
-                    .masses
-                    .index_axis_mut(Axis(var.id()), 0)
-                    .assign(&zero_elem);
-                cur.var_supports = self.support.transform_statement(stmt, cur.var_supports);
-                cur
+                let mut new_bound = init;
+                new_bound.bound.shift_left(*var, offset.0 as usize);
+                new_bound.var_supports = self
+                    .support
+                    .transform_statement(stmt, new_bound.var_supports);
+                new_bound
             }
             Statement::IfThenElse { cond, then, els } => {
                 let (then_res, else_res) = self.transform_event(cond, init);
