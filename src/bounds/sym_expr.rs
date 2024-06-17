@@ -1,48 +1,42 @@
 use std::{
-    fmt::Display,
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
     rc::Rc,
 };
 
 use ndarray::ArrayView1;
 use num_traits::{One, Zero};
-use rug::{ops::Pow, Rational};
 
-use crate::bounds::linear::{LinearConstraint, LinearExpr};
+use crate::{
+    bounds::linear::{LinearConstraint, LinearExpr},
+    number::Rational,
+};
 
 use super::{
+    float_rat::FloatRat,
     sym_poly::PolyConstraint,
     sym_rational::RationalFunction,
     util::{norm, pow},
 };
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum SymExpr<T> {
-    Constant(T),
+pub enum SymExpr {
+    Constant(FloatRat),
     Variable(usize),
-    Add(Rc<SymExpr<T>>, Rc<SymExpr<T>>),
-    Mul(Rc<SymExpr<T>>, Rc<SymExpr<T>>),
-    Pow(Rc<SymExpr<T>>, i32),
+    Add(Rc<SymExpr>, Rc<SymExpr>),
+    Mul(Rc<SymExpr>, Rc<SymExpr>),
+    Pow(Rc<SymExpr>, i32),
 }
 
-impl<T> SymExpr<T> {
+impl SymExpr {
     pub fn var(i: usize) -> Self {
         Self::Variable(i)
     }
 
-    pub fn inverse(self) -> Self
-    where
-        T: PartialEq,
-        Self: Zero + One,
-    {
+    pub fn inverse(self) -> Self {
         self.pow(-1)
     }
 
-    pub fn pow(self, n: i32) -> Self
-    where
-        T: PartialEq,
-        Self: Zero + One,
-    {
+    pub fn pow(self, n: i32) -> Self {
         if n == 0 {
             Self::one()
         } else if n == 1 || (n >= 0 && self.is_zero()) || self.is_one() {
@@ -53,35 +47,31 @@ impl<T> SymExpr<T> {
     }
 
     /// Must equal `rhs`.
-    pub fn must_eq(self, rhs: Self) -> SymConstraint<T> {
+    pub fn must_eq(self, rhs: Self) -> SymConstraint {
         SymConstraint::Eq(self, rhs)
     }
 
     /// Must be less than `rhs`.
-    pub fn must_lt(self, rhs: Self) -> SymConstraint<T> {
+    pub fn must_lt(self, rhs: Self) -> SymConstraint {
         SymConstraint::Lt(self, rhs)
     }
 
     /// Must be less than or equal to `rhs`.
-    pub fn must_le(self, rhs: Self) -> SymConstraint<T> {
+    pub fn must_le(self, rhs: Self) -> SymConstraint {
         SymConstraint::Le(self, rhs)
     }
 
     /// Must be greater than `rhs`.
-    pub fn must_gt(self, rhs: Self) -> SymConstraint<T> {
+    pub fn must_gt(self, rhs: Self) -> SymConstraint {
         SymConstraint::Lt(rhs, self)
     }
 
     /// Must be greater than or equal to `rhs`.
-    pub fn must_ge(self, rhs: Self) -> SymConstraint<T> {
+    pub fn must_ge(self, rhs: Self) -> SymConstraint {
         SymConstraint::Le(rhs, self)
     }
 
-    pub fn substitute(&self, replacements: &[Self]) -> Self
-    where
-        T: PartialEq,
-        Self: Clone + Zero + One + Add<Output = Self> + Mul<Output = Self>,
-    {
+    pub fn substitute(&self, replacements: &[Self]) -> Self {
         match self {
             Self::Constant(_) => self.clone(),
             Self::Variable(i) => replacements[*i].clone(),
@@ -91,20 +81,14 @@ impl<T> SymExpr<T> {
         }
     }
 
-    pub fn extract_constant(&self) -> Option<T>
-    where
-        T: Clone,
-    {
+    pub fn extract_constant(&self) -> Option<FloatRat> {
         match self {
             Self::Constant(c) => Some(c.clone()),
             _ => None,
         }
     }
 
-    pub fn extract_linear(&self) -> Option<LinearExpr<T>>
-    where
-        T: Clone + Zero + One + AddAssign + Add<Output = T> + MulAssign + Div<Output = T>,
-    {
+    pub fn extract_linear(&self) -> Option<LinearExpr> {
         match self {
             Self::Constant(c) => Some(LinearExpr::constant(c.clone())),
             Self::Variable(i) => Some(LinearExpr::var(*i)),
@@ -139,18 +123,7 @@ impl<T> SymExpr<T> {
         }
     }
 
-    pub fn to_rational_function(&self) -> RationalFunction<T>
-    where
-        T: Clone
-            + PartialEq
-            + Zero
-            + One
-            + AddAssign
-            + Add<Output = T>
-            + MulAssign
-            + Mul<Output = T>
-            + Div<Output = T>,
-    {
+    pub fn to_rational_function(&self) -> RationalFunction<FloatRat> {
         match self {
             Self::Constant(c) => RationalFunction::constant(c.clone()),
             Self::Variable(i) => RationalFunction::var(*i),
@@ -160,25 +133,14 @@ impl<T> SymExpr<T> {
         }
     }
 
-    fn eval_dual(&self, values: &[T], var: usize) -> (T, T)
-    where
-        T: Clone
-            + From<i32>
-            + AddAssign
-            + Add<Output = T>
-            + MulAssign
-            + Mul<Output = T>
-            + Div<Output = T>
-            + One
-            + Zero,
-    {
+    fn eval_dual(&self, values: &[f64], var: usize) -> (f64, f64) {
         match self {
-            Self::Constant(c) => (c.clone(), T::zero()),
+            Self::Constant(c) => (c.float(), 0.0),
             Self::Variable(v) => {
                 if *v == var {
-                    (values[*v].clone(), T::one())
+                    (values[*v], 1.0)
                 } else {
-                    (values[*v].clone(), T::zero())
+                    (values[*v], 0.0)
                 }
             }
             Self::Add(lhs, rhs) => {
@@ -189,51 +151,26 @@ impl<T> SymExpr<T> {
             Self::Mul(lhs, rhs) => {
                 let (lhs_val, lhs_grad) = lhs.eval_dual(values, var);
                 let (rhs_val, rhs_grad) = rhs.eval_dual(values, var);
-                (
-                    lhs_val.clone() * rhs_val.clone(),
-                    lhs_grad * rhs_val + rhs_grad * lhs_val,
-                )
+                (lhs_val * rhs_val, lhs_grad * rhs_val + rhs_grad * lhs_val)
             }
             Self::Pow(base, n) => {
                 if n == &0 {
-                    (T::one(), T::zero())
+                    (1.0, 0.0)
                 } else {
                     let (base_val, base_grad) = base.eval_dual(values, var);
-                    let outer_deriv = pow(base_val.clone(), *n - 1);
-                    let grad = base_grad * outer_deriv.clone() * T::from(*n);
+                    let outer_deriv = pow(base_val, *n - 1);
+                    let grad = base_grad * outer_deriv * f64::from(*n);
                     (outer_deriv * base_val, grad)
                 }
             }
         }
     }
 
-    pub fn derivative_at(&self, values: &[T], var: usize) -> T
-    where
-        T: Clone
-            + From<i32>
-            + AddAssign
-            + Add<Output = T>
-            + MulAssign
-            + Mul<Output = T>
-            + Div<Output = T>
-            + One
-            + Zero,
-    {
+    pub fn derivative_at(&self, values: &[f64], var: usize) -> f64 {
         self.eval_dual(values, var).1
     }
 
-    pub fn gradient_at(&self, values: &[T]) -> Vec<T>
-    where
-        T: Clone
-            + From<i32>
-            + AddAssign
-            + Add<Output = T>
-            + MulAssign
-            + Mul<Output = T>
-            + Div<Output = T>
-            + One
-            + Zero,
-    {
+    pub fn gradient_at(&self, values: &[f64]) -> Vec<f64> {
         (0..values.len())
             .map(|i| self.derivative_at(values, i))
             .collect()
@@ -242,10 +179,10 @@ impl<T> SymExpr<T> {
     pub fn to_z3<'a>(
         &self,
         ctx: &'a z3::Context,
-        conv: &impl Fn(&'a z3::Context, &T) -> z3::ast::Real<'a>,
+        conv: &impl Fn(&'a z3::Context, &Rational) -> z3::ast::Real<'a>,
     ) -> z3::ast::Real<'a> {
         match self {
-            Self::Constant(f) => conv(ctx, f),
+            Self::Constant(f) => conv(ctx, &f.rat()),
             Self::Variable(v) => z3::ast::Real::new_const(ctx, *v as u32),
             Self::Add(e1, e2) => e1.to_z3(ctx, conv) + e2.to_z3(ctx, conv),
             Self::Mul(e1, e2) => e1.to_z3(ctx, conv) * e2.to_z3(ctx, conv),
@@ -255,10 +192,7 @@ impl<T> SymExpr<T> {
         }
     }
 
-    pub fn to_python(&self) -> String
-    where
-        T: Display,
-    {
+    pub fn to_python(&self) -> String {
         match self {
             Self::Constant(c) => c.to_string(),
             Self::Variable(v) => format!("x[{v}]"),
@@ -268,13 +202,10 @@ impl<T> SymExpr<T> {
         }
     }
 
-    pub fn to_z3_string(&self) -> String
-    where
-        T: Display + Clone + Neg<Output = T> + Zero + One + PartialOrd,
-    {
+    pub fn to_z3_string(&self) -> String {
         match self {
             Self::Constant(value) => {
-                if value < &T::zero() {
+                if value.rat() < Rational::zero() {
                     format!("(- {})", -value.clone())
                 } else {
                     format!("{value}")
@@ -283,7 +214,7 @@ impl<T> SymExpr<T> {
             Self::Variable(i) => format!("x{i}"),
             Self::Add(lhs, rhs) => format!("(+ {lhs} {rhs})"),
             Self::Mul(lhs, rhs) => {
-                if Self::Constant(-T::zero()) == **rhs {
+                if Self::Constant(-FloatRat::one()) == **rhs {
                     format!("(- {lhs})")
                 } else {
                     format!("(* {lhs} {rhs})")
@@ -301,10 +232,7 @@ impl<T> SymExpr<T> {
         }
     }
 
-    pub fn to_python_z3(&self) -> String
-    where
-        T: Display,
-    {
+    pub fn to_python_z3(&self) -> String {
         match self {
             Self::Constant(c) => c.to_string(),
             Self::Variable(v) => format!("x{v}"),
@@ -314,9 +242,9 @@ impl<T> SymExpr<T> {
         }
     }
 
-    pub fn to_qepcad(&self, conv: &impl Fn(&T) -> String) -> String {
+    pub fn to_qepcad(&self, conv: &impl Fn(&Rational) -> String) -> String {
         match self {
-            Self::Constant(c) => conv(c),
+            Self::Constant(c) => conv(&c.rat()),
             Self::Variable(v) => format!("{}", crate::ppl::Var(*v)),
             Self::Add(lhs, rhs) => format!("({} + {})", lhs.to_qepcad(conv), rhs.to_qepcad(conv)),
             Self::Mul(lhs, rhs) => format!("({} {})", lhs.to_qepcad(conv), rhs.to_qepcad(conv)),
@@ -324,32 +252,20 @@ impl<T> SymExpr<T> {
         }
     }
 
-    pub fn eval(&self, values: &[T]) -> T
-    where
-        T: Clone
-            + AddAssign
-            + Add<Output = T>
-            + MulAssign
-            + Mul<Output = T>
-            + Div<Output = T>
-            + One
-            + Zero,
-    {
+    pub fn eval_float(&self, values: &[f64]) -> f64 {
         match self {
-            Self::Constant(c) => c.clone(),
-            Self::Variable(v) => values[*v].clone(),
-            Self::Add(lhs, rhs) => lhs.eval(values) + rhs.eval(values),
-            Self::Mul(lhs, rhs) => lhs.eval(values) * rhs.eval(values),
-            Self::Pow(base, n) => pow(base.eval(values), *n),
+            Self::Constant(c) => c.float(),
+            Self::Variable(v) => values[*v],
+            Self::Add(lhs, rhs) => lhs.eval_float(values) + rhs.eval_float(values),
+            Self::Mul(lhs, rhs) => lhs.eval_float(values) * rhs.eval_float(values),
+            Self::Pow(base, n) => pow(base.eval_float(values), *n),
         }
     }
-}
 
-impl SymExpr<f64> {
-    pub fn eval_exact(&self, values: &[f64]) -> Rational {
+    pub fn eval_exact(&self, values: &[Rational]) -> Rational {
         match self {
-            Self::Constant(c) => Rational::from_f64(*c).unwrap(),
-            Self::Variable(v) => Rational::from_f64(values[*v]).unwrap(),
+            Self::Constant(c) => c.rat().clone(),
+            Self::Variable(v) => values[*v].clone(),
             Self::Add(lhs, rhs) => lhs.eval_exact(values) + rhs.eval_exact(values),
             Self::Mul(lhs, rhs) => lhs.eval_exact(values) * rhs.eval_exact(values),
             Self::Pow(base, n) => base.eval_exact(values).pow(*n),
@@ -357,15 +273,15 @@ impl SymExpr<f64> {
     }
 }
 
-impl<T: From<f64>> From<f64> for SymExpr<T> {
-    fn from(value: f64) -> Self {
+impl From<Rational> for SymExpr {
+    fn from(value: Rational) -> Self {
         Self::Constant(value.into())
     }
 }
 
-impl<T: Zero> Zero for SymExpr<T> {
+impl Zero for SymExpr {
     fn zero() -> Self {
-        Self::Constant(T::zero())
+        Self::Constant(FloatRat::zero())
     }
 
     fn is_zero(&self) -> bool {
@@ -376,12 +292,9 @@ impl<T: Zero> Zero for SymExpr<T> {
     }
 }
 
-impl<T: Zero + One> One for SymExpr<T>
-where
-    T: One + PartialEq,
-{
+impl One for SymExpr {
     fn one() -> Self {
-        Self::Constant(T::one())
+        Self::Constant(FloatRat::one())
     }
 
     fn is_one(&self) -> bool {
@@ -392,11 +305,7 @@ where
     }
 }
 
-impl<T: Neg> Neg for SymExpr<T>
-where
-    T: Clone + Zero + One + Neg<Output = T>,
-    Self: Mul<Output = Self>,
-{
+impl Neg for SymExpr {
     type Output = Self;
 
     fn neg(self) -> Self::Output {
@@ -405,15 +314,12 @@ where
         } else if let Self::Constant(c) = self {
             Self::Constant(-c.clone())
         } else {
-            self * Self::Constant(-T::one())
+            self * Self::Constant(-FloatRat::one())
         }
     }
 }
 
-impl<T> Add for SymExpr<T>
-where
-    T: Zero + Add<Output = T>,
-{
+impl Add for SymExpr {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -427,7 +333,7 @@ where
     }
 }
 
-impl<T> AddAssign for SymExpr<T>
+impl AddAssign for SymExpr
 where
     Self: Clone + Add<Output = Self> + Zero,
 {
@@ -436,7 +342,7 @@ where
     }
 }
 
-impl<T> Sub for SymExpr<T>
+impl Sub for SymExpr
 where
     Self: PartialEq + Zero + Add<Output = Self> + Neg<Output = Self>,
 {
@@ -451,19 +357,13 @@ where
     }
 }
 
-impl<T> SubAssign for SymExpr<T>
-where
-    Self: Clone + Sub<Output = Self>,
-{
+impl SubAssign for SymExpr {
     fn sub_assign(&mut self, rhs: Self) {
         *self = self.clone() - rhs;
     }
 }
 
-impl<T> Mul for SymExpr<T>
-where
-    Self: Zero + One + PartialEq,
-{
+impl Mul for SymExpr {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
@@ -479,20 +379,13 @@ where
     }
 }
 
-impl<T> MulAssign for SymExpr<T>
-where
-    Self: Clone + Mul<Output = Self>,
-{
+impl MulAssign for SymExpr {
     fn mul_assign(&mut self, rhs: Self) {
         *self = self.clone() * rhs;
     }
 }
 
-impl<T> Div for SymExpr<T>
-where
-    T: PartialEq,
-    Self: Mul<Output = Self> + PartialEq + Zero + One + Clone,
-{
+impl Div for SymExpr {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self::Output {
@@ -500,7 +393,7 @@ where
     }
 }
 
-impl<T> DivAssign for SymExpr<T>
+impl DivAssign for SymExpr
 where
     Self: Div<Output = Self> + Clone,
 {
@@ -509,10 +402,7 @@ where
     }
 }
 
-impl<T> std::fmt::Display for SymExpr<T>
-where
-    T: Display,
-{
+impl std::fmt::Display for SymExpr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Constant(c) => write!(f, "{c}"),
@@ -525,21 +415,18 @@ where
 }
 
 #[derive(Clone, Debug)]
-pub enum SymConstraint<T> {
-    Eq(SymExpr<T>, SymExpr<T>),
-    Lt(SymExpr<T>, SymExpr<T>),
-    Le(SymExpr<T>, SymExpr<T>),
-    Or(Vec<SymConstraint<T>>),
+pub enum SymConstraint {
+    Eq(SymExpr, SymExpr),
+    Lt(SymExpr, SymExpr),
+    Le(SymExpr, SymExpr),
+    Or(Vec<SymConstraint>),
 }
-impl<T> SymConstraint<T> {
-    pub fn or(constraints: Vec<SymConstraint<T>>) -> Self {
+impl SymConstraint {
+    pub fn or(constraints: Vec<SymConstraint>) -> Self {
         Self::Or(constraints)
     }
 
-    pub fn is_trivial(&self) -> bool
-    where
-        T: PartialEq + Zero,
-    {
+    pub fn is_trivial(&self) -> bool {
         match self {
             SymConstraint::Eq(lhs, rhs) | SymConstraint::Le(lhs, rhs) => lhs == rhs,
             SymConstraint::Lt(..) => false,
@@ -547,18 +434,7 @@ impl<T> SymConstraint<T> {
         }
     }
 
-    pub fn to_poly(&self) -> PolyConstraint<T>
-    where
-        T: Clone
-            + PartialEq
-            + Zero
-            + One
-            + AddAssign
-            + Add<Output = T>
-            + MulAssign
-            + Mul<Output = T>
-            + Div<Output = T>,
-    {
+    pub fn to_poly(&self) -> PolyConstraint<FloatRat> {
         match self {
             SymConstraint::Eq(lhs, rhs) => {
                 let lhs = lhs.to_rational_function();
@@ -584,7 +460,7 @@ impl<T> SymConstraint<T> {
     pub fn to_z3<'a>(
         &self,
         ctx: &'a z3::Context,
-        conv: &impl Fn(&'a z3::Context, &T) -> z3::ast::Real<'a>,
+        conv: &impl Fn(&'a z3::Context, &Rational) -> z3::ast::Real<'a>,
     ) -> z3::ast::Bool<'a> {
         match self {
             SymConstraint::Eq(e1, e2) => {
@@ -602,7 +478,7 @@ impl<T> SymConstraint<T> {
         }
     }
 
-    pub fn to_qepcad(&self, conv: &impl Fn(&T) -> String) -> String {
+    pub fn to_qepcad(&self, conv: &impl Fn(&Rational) -> String) -> String {
         match self {
             SymConstraint::Eq(lhs, rhs) => {
                 format!("{} = {}", lhs.to_qepcad(conv), rhs.to_qepcad(conv))
@@ -629,10 +505,7 @@ impl<T> SymConstraint<T> {
         }
     }
 
-    pub fn to_python_z3(&self) -> String
-    where
-        T: Display,
-    {
+    pub fn to_python_z3(&self) -> String {
         match self {
             SymConstraint::Eq(lhs, rhs) => {
                 format!("{} == {}", lhs.to_python_z3(), rhs.to_python_z3())
@@ -659,11 +532,7 @@ impl<T> SymConstraint<T> {
         }
     }
 
-    pub fn substitute(&self, replacements: &[SymExpr<T>]) -> SymConstraint<T>
-    where
-        T: PartialEq,
-        SymExpr<T>: Clone + Zero + One + Add<Output = SymExpr<T>> + Mul<Output = SymExpr<T>>,
-    {
+    pub fn substitute(&self, replacements: &[SymExpr]) -> SymConstraint {
         match self {
             SymConstraint::Eq(e1, e2) => {
                 SymConstraint::Eq(e1.substitute(replacements), e2.substitute(replacements))
@@ -683,40 +552,17 @@ impl<T> SymConstraint<T> {
         }
     }
 
-    pub fn gradient_at(&self, values: &[T]) -> Vec<T>
-    where
-        T: Clone
-            + From<i32>
-            + AddAssign
-            + Add<Output = T>
-            + MulAssign
-            + Mul<Output = T>
-            + Div<Output = T>
-            + One
-            + Zero,
-        SymExpr<T>: Sub<Output = SymExpr<T>>,
-    {
+    pub fn gradient_at(&self, values: &[f64]) -> Vec<f64> {
         match self {
             SymConstraint::Lt(lhs, rhs) | SymConstraint::Le(lhs, rhs) => {
                 let term = rhs.clone() - lhs.clone();
                 term.gradient_at(values)
             }
-            _ => vec![T::zero(); values.len()],
+            _ => vec![0.0; values.len()],
         }
     }
 
-    pub fn extract_linear(&self) -> Option<LinearConstraint<T>>
-    where
-        T: Clone
-            + PartialOrd
-            + Zero
-            + One
-            + Neg<Output = T>
-            + AddAssign
-            + Add<Output = T>
-            + MulAssign
-            + Div<Output = T>,
-    {
+    pub fn extract_linear(&self) -> Option<LinearConstraint> {
         match self {
             SymConstraint::Eq(e1, e2) => Some(LinearConstraint::eq(
                 e1.extract_linear()?,
@@ -732,8 +578,8 @@ impl<T> SymConstraint<T> {
                     if let Some(linear_constraint) = constraint.extract_linear() {
                         if linear_constraint.eval_constant() == Some(true) {
                             return Some(LinearConstraint::eq(
-                                LinearExpr::constant(T::zero()),
-                                LinearExpr::constant(T::zero()),
+                                LinearExpr::constant(FloatRat::zero()),
+                                LinearExpr::constant(FloatRat::zero()),
                             ));
                         }
                     }
@@ -742,30 +588,34 @@ impl<T> SymConstraint<T> {
             }
         }
     }
-}
 
-impl SymConstraint<f64> {
-    pub fn holds_exact(&self, values: &[f64]) -> bool {
+    pub fn holds_exact_f64(&self, values: &[f64]) -> bool {
+        let values = values
+            .iter()
+            .map(|r| Rational::from(*r))
+            .collect::<Vec<_>>();
+        self.holds_exact(&values)
+    }
+
+    pub fn holds_exact(&self, values: &[Rational]) -> bool {
         match self {
             SymConstraint::Lt(lhs, rhs) => lhs.eval_exact(values) < rhs.eval_exact(values),
             SymConstraint::Le(lhs, rhs) => lhs.eval_exact(values) <= rhs.eval_exact(values),
             _ => true,
         }
     }
+
     pub fn is_close(&self, point: &[f64], min_dist: f64) -> bool {
         match self {
             SymConstraint::Lt(lhs, rhs) | SymConstraint::Le(lhs, rhs) => {
                 let term = lhs.clone() - rhs.clone();
-                let val = term.eval(point);
+                let val = term.eval_float(point);
                 let grad = term.gradient_at(point);
-                let grad_len_sq = grad
-                    .iter()
-                    .map(|g| g.clone() * g.clone())
-                    .fold(0.0, |acc, f| acc + f);
+                let grad_len_sq = grad.iter().map(|g| g * g).fold(0.0, |acc, f| acc + f);
                 if grad_len_sq.is_zero() {
                     return false;
                 }
-                let dist = -val.clone() / grad_len_sq.sqrt();
+                let dist = -val / grad_len_sq.sqrt();
                 dist < min_dist
             }
             _ => false,
@@ -775,7 +625,7 @@ impl SymConstraint<f64> {
         match self {
             SymConstraint::Lt(lhs, rhs) | SymConstraint::Le(lhs, rhs) => {
                 let term = lhs.clone() - rhs.clone();
-                let val = term.eval(point);
+                let val = term.eval_float(point);
                 let grad = term.gradient_at(point);
                 if val == 0.0 {
                     return 0.0;
@@ -787,10 +637,7 @@ impl SymConstraint<f64> {
     }
 }
 
-impl<T> std::fmt::Display for SymConstraint<T>
-where
-    T: Display,
-{
+impl std::fmt::Display for SymConstraint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Eq(e1, e2) => write!(f, "{e1} = {e2}"),

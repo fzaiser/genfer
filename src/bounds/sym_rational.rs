@@ -7,7 +7,10 @@ use num_traits::{One, Zero};
 
 use crate::bounds::linear::LinearExpr;
 
-use super::sym_poly::{PolyConstraint, SparsePoly};
+use super::{
+    float_rat::FloatRat,
+    sym_poly::{PolyConstraint, SparsePoly},
+};
 
 #[derive(Debug, Clone)]
 pub struct RationalFunction<T> {
@@ -112,18 +115,6 @@ where
         None
     }
 
-    pub fn extract_linear(&self) -> Option<LinearExpr<T>>
-    where
-        T: Div<Output = T>,
-    {
-        if let Some(numer) = self.numer.extract_linear() {
-            if let Some(denom) = self.denom.extract_constant() {
-                return Some(numer / denom.clone());
-            }
-        }
-        None
-    }
-
     pub fn to_z3<'a>(
         &self,
         ctx: &'a z3::Context,
@@ -191,6 +182,17 @@ where
             + MulAssign,
     {
         vars.iter().map(|&var| self.derive(var)).collect()
+    }
+}
+
+impl RationalFunction<FloatRat> {
+    pub fn extract_linear(&self) -> Option<LinearExpr> {
+        if let Some(numer) = self.numer.extract_linear() {
+            if let Some(denom) = self.denom.extract_constant() {
+                return Some(numer / denom.clone());
+            }
+        }
+        None
     }
 }
 

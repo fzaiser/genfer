@@ -1,8 +1,15 @@
 use std::time::Duration;
 
 use good_lp::{variable, ProblemVariables, Solution, SolverModel};
+use num_traits::Zero;
 
-use crate::bounds::util::{f64_to_z3, z3_real_to_f64};
+use crate::{
+    bounds::{
+        float_rat::FloatRat,
+        util::{rational_to_z3, z3_real_to_rational},
+    },
+    number::Rational,
+};
 
 use super::{solver::ConstraintProblem, sym_expr::SymExpr};
 
@@ -10,10 +17,10 @@ pub trait Optimizer {
     fn optimize(
         &mut self,
         problem: &ConstraintProblem,
-        objective: &SymExpr<f64>,
-        init: Vec<f64>,
+        objective: &SymExpr,
+        init: Vec<Rational>,
         timeout: Duration,
-    ) -> Vec<f64>;
+    ) -> Vec<Rational>;
 }
 
 pub struct Z3Optimizer;
@@ -22,32 +29,32 @@ impl Optimizer for Z3Optimizer {
     fn optimize(
         &mut self,
         problem: &ConstraintProblem,
-        objective: &SymExpr<f64>,
-        init: Vec<f64>,
+        objective: &SymExpr,
+        init: Vec<Rational>,
         timeout: Duration,
-    ) -> Vec<f64> {
+    ) -> Vec<Rational> {
         let mut cfg = z3::Config::new();
         cfg.set_model_generation(true);
         cfg.set_timeout_msec(timeout.as_millis() as u64);
         let ctx = z3::Context::new(&cfg);
         let solver = z3::Solver::new(&ctx);
         for constraint in &problem.constraints {
-            solver.assert(&constraint.to_z3(&ctx, &f64_to_z3));
+            solver.assert(&constraint.to_z3(&ctx, &rational_to_z3));
         }
         solver.push();
         let mut best = init;
-        let mut obj_lo = 0.0;
-        let mut obj_hi = objective.eval(&best);
-        while obj_hi - obj_lo > 0.1 * obj_hi {
+        let mut obj_lo = Rational::zero();
+        let mut obj_hi = objective.eval_exact(&best);
+        while obj_hi.clone() - obj_lo.clone() > Rational::from(0.1) * obj_hi.clone() {
             println!("Objective bound: [{obj_lo}, {obj_hi}]");
             solver.pop(1);
             solver.push();
-            let mid = (obj_lo + obj_hi) / 2.0;
+            let mid = (obj_lo.clone() + obj_hi.clone()) / Rational::from(2);
             println!("Trying objective bound: {mid}");
             solver.assert(
                 &objective
-                    .to_z3(&ctx, &f64_to_z3)
-                    .le(&SymExpr::from(mid).to_z3(&ctx, &f64_to_z3)),
+                    .to_z3(&ctx, &rational_to_z3)
+                    .le(&SymExpr::from(mid.clone()).to_z3(&ctx, &rational_to_z3)),
             );
             match solver.check() {
                 z3::SatResult::Sat => {
@@ -68,9 +75,9 @@ impl Optimizer for Z3Optimizer {
                 }
             }
             if let Some(model) = solver.get_model() {
-                let obj_val = z3_real_to_f64(
+                let obj_val = z3_real_to_rational(
                     &model
-                        .eval(&objective.to_z3(&ctx, &f64_to_z3), false)
+                        .eval(&objective.to_z3(&ctx, &rational_to_z3), false)
                         .unwrap(),
                 )
                 .unwrap();
@@ -80,9 +87,9 @@ impl Optimizer for Z3Optimizer {
                 best = (0..problem.var_count)
                     .map(|var| {
                         let val = model
-                            .eval(&SymExpr::var(var).to_z3(&ctx, &f64_to_z3), false)
+                            .eval(&SymExpr::var(var).to_z3(&ctx, &rational_to_z3), false)
                             .unwrap();
-                        z3_real_to_f64(&val)
+                        z3_real_to_rational(&val)
                             .unwrap_or_else(|| panic!("{val} cannot be converted to f64"))
                     })
                     .collect::<Vec<_>>();
@@ -101,10 +108,10 @@ impl Optimizer for LinearProgrammingOptimizer {
     fn optimize(
         &mut self,
         problem: &ConstraintProblem,
-        objective: &SymExpr<f64>,
-        init: Vec<f64>,
+        objective: &SymExpr,
+        init: Vec<Rational>,
         _timeout: Duration,
-    ) -> Vec<f64> {
+    ) -> Vec<Rational> {
         optimize_linear_parts(problem, objective, init.clone()).unwrap_or_else(|| {
             println!("LP solver failed to optimize linear parts. Returning initial solution.");
             init
@@ -114,12 +121,12 @@ impl Optimizer for LinearProgrammingOptimizer {
 
 pub fn optimize_linear_parts(
     problem: &ConstraintProblem,
-    objective: &SymExpr<f64>,
-    init: Vec<f64>,
-) -> Option<Vec<f64>> {
+    objective: &SymExpr,
+    init: Vec<Rational>,
+) -> Option<Vec<Rational>> {
     let mut replacements = (0..problem.var_count).map(SymExpr::var).collect::<Vec<_>>();
     for v in problem.geom_vars.iter().chain(problem.factor_vars.iter()) {
-        replacements[*v] = SymExpr::Constant(init[*v]);
+        replacements[*v] = SymExpr::from(init[*v].clone());
     }
     let objective = objective.substitute(&replacements);
     let constraints = problem
@@ -147,7 +154,7 @@ pub fn optimize_linear_parts(
                 var_list.push(lp.add_variable());
             }
             SymExpr::Constant(c) => {
-                var_list.push(lp.add(variable().min(c).max(c)));
+                var_list.push(lp.add(variable().min(c.float()).max(c.float())));
             }
             _ => unreachable!(),
         }
@@ -155,10 +162,10 @@ pub fn optimize_linear_parts(
     let linear_objective = objective
         .extract_linear()
         .unwrap_or_else(|| panic!("Objective is not linear in the program variables: {objective}"))
-        .to_lp_expr(&var_list, &|v| *v);
+        .to_lp_expr(&var_list, &FloatRat::float);
     let mut lp = lp.minimise(linear_objective).using(good_lp::default_solver);
     for constraint in &linear_constraints {
-        lp.add_constraint(constraint.to_lp_constraint(&var_list, &|v| *v));
+        lp.add_constraint(constraint.to_lp_constraint(&var_list, &FloatRat::float));
     }
     let solution = match lp.solve() {
         Ok(solution) => solution,
@@ -179,7 +186,7 @@ pub fn optimize_linear_parts(
     };
     let solution = var_list
         .iter()
-        .map(|v| solution.value(*v))
+        .map(|v| Rational::from(solution.value(*v)))
         .collect::<Vec<_>>();
     let solution = if problem.holds_exact(&solution) {
         solution
@@ -187,10 +194,14 @@ pub fn optimize_linear_parts(
         println!("Solution by LP solver does not satisfy the constraints.");
         return None;
     };
+    let objective_value = objective.eval_exact(&solution);
     println!(
         "Best objective: {} at {:?}",
-        objective.eval(&solution),
+        objective_value.round_to_f64(),
         solution
+            .iter()
+            .map(Rational::round_to_f64)
+            .collect::<Vec<_>>()
     );
     Some(solution)
 }

@@ -1,51 +1,41 @@
-use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
 use num_traits::{One, Zero};
 
 use crate::bounds::sym_expr::SymExpr;
 
+use super::float_rat::FloatRat;
+
 #[derive(Clone, Debug)]
-pub struct LinearExpr<T> {
-    pub coeffs: Vec<T>,
-    pub constant: T,
+pub struct LinearExpr {
+    pub coeffs: Vec<FloatRat>,
+    pub constant: FloatRat,
 }
 
-impl<T> LinearExpr<T> {
-    pub fn new(coeffs: Vec<T>, constant: T) -> Self {
+impl LinearExpr {
+    pub fn new(coeffs: Vec<FloatRat>, constant: FloatRat) -> Self {
         Self { coeffs, constant }
     }
 
-    pub fn zero() -> Self
-    where
-        T: Zero,
-    {
-        Self::new(vec![], T::zero())
+    pub fn zero() -> Self {
+        Self::new(vec![], FloatRat::zero())
     }
 
-    pub fn one() -> Self
-    where
-        T: Zero + One,
-    {
-        Self::new(vec![T::one()], T::zero())
+    pub fn one() -> Self {
+        Self::new(vec![FloatRat::one()], FloatRat::zero())
     }
 
-    pub fn constant(constant: T) -> Self {
+    pub fn constant(constant: FloatRat) -> Self {
         Self::new(vec![], constant)
     }
 
-    pub fn var(var: usize) -> Self
-    where
-        T: Clone + Zero + One,
-    {
-        let mut coeffs = vec![T::zero(); var + 1];
-        coeffs[var] = T::one();
-        Self::new(coeffs, T::zero())
+    pub fn var(var: usize) -> Self {
+        let mut coeffs = vec![FloatRat::zero(); var + 1];
+        coeffs[var] = FloatRat::one();
+        Self::new(coeffs, FloatRat::zero())
     }
 
-    pub fn as_constant(&self) -> Option<&T>
-    where
-        T: Zero,
-    {
+    pub fn as_constant(&self) -> Option<&FloatRat> {
         if self.coeffs.iter().all(Zero::is_zero) {
             Some(&self.constant)
         } else {
@@ -56,7 +46,7 @@ impl<T> LinearExpr<T> {
     pub fn to_lp_expr(
         &self,
         vars: &[good_lp::Variable],
-        conv: &impl Fn(&T) -> f64,
+        conv: &impl Fn(&FloatRat) -> f64,
     ) -> good_lp::Expression {
         let mut result = good_lp::Expression::from(conv(&self.constant));
         for (coeff, var) in self.coeffs.iter().zip(vars) {
@@ -64,11 +54,13 @@ impl<T> LinearExpr<T> {
         }
         result
     }
-}
 
-impl LinearExpr<f64> {
     pub fn grad_norm(&self) -> f64 {
-        self.coeffs.iter().map(|c| c * c).sum::<f64>().sqrt()
+        self.coeffs
+            .iter()
+            .map(|c| c.float() * c.float())
+            .sum::<f64>()
+            .sqrt()
     }
 
     pub fn normalize(&self) -> Self {
@@ -76,16 +68,18 @@ impl LinearExpr<f64> {
         if grad_len == 0.0 {
             return self.clone();
         }
-        let coeffs = self.coeffs.iter().map(|c| c / grad_len).collect();
-        let constant = self.constant / grad_len;
+        let grad_len = FloatRat::from_f64(grad_len);
+        let coeffs = self
+            .coeffs
+            .iter()
+            .map(|c| c.clone() / grad_len.clone())
+            .collect();
+        let constant = self.constant.clone() / grad_len;
         Self::new(coeffs, constant)
     }
 }
 
-impl<T: std::fmt::Display> std::fmt::Display for LinearExpr<T>
-where
-    T: Zero + One + PartialEq + Neg<Output = T>,
-{
+impl std::fmt::Display for LinearExpr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut first = true;
         for (i, coeff) in self.coeffs.iter().enumerate() {
@@ -98,11 +92,11 @@ where
                 write!(f, " + ")?;
             }
             if coeff.is_one() {
-                write!(f, "{}", SymExpr::<T>::var(i))?;
-            } else if *coeff == -T::one() {
-                write!(f, "-{}", SymExpr::<T>::var(i))?;
+                write!(f, "{}", SymExpr::var(i))?;
+            } else if *coeff == -FloatRat::one() {
+                write!(f, "-{}", SymExpr::var(i))?;
             } else {
-                write!(f, "{}{}", coeff, SymExpr::<T>::var(i))?;
+                write!(f, "{}{}", coeff, SymExpr::var(i))?;
             }
         }
         if !self.constant.is_zero() {
@@ -120,10 +114,7 @@ where
     }
 }
 
-impl<T> Neg for LinearExpr<T>
-where
-    T: Clone + Neg<Output = T>,
-{
+impl Neg for LinearExpr {
     type Output = Self;
 
     #[inline]
@@ -136,10 +127,7 @@ where
     }
 }
 
-impl<T> Add for LinearExpr<T>
-where
-    T: AddAssign,
-{
+impl Add for LinearExpr {
     type Output = Self;
 
     #[inline]
@@ -158,10 +146,7 @@ where
     }
 }
 
-impl<T> Sub for LinearExpr<T>
-where
-    T: Clone + AddAssign + Neg<Output = T>,
-{
+impl Sub for LinearExpr {
     type Output = Self;
 
     #[inline]
@@ -170,14 +155,11 @@ where
     }
 }
 
-impl<T> Mul<T> for LinearExpr<T>
-where
-    T: Mul<Output = T> + Clone,
-{
+impl Mul<FloatRat> for LinearExpr {
     type Output = Self;
 
     #[inline]
-    fn mul(self, other: T) -> Self::Output {
+    fn mul(self, other: FloatRat) -> Self::Output {
         Self::new(
             self.coeffs.into_iter().map(|c| c * other.clone()).collect(),
             self.constant * other.clone(),
@@ -185,14 +167,11 @@ where
     }
 }
 
-impl<T> Div<T> for LinearExpr<T>
-where
-    T: Div<Output = T> + Clone,
-{
+impl Div<FloatRat> for LinearExpr {
     type Output = Self;
 
     #[inline]
-    fn div(self, other: T) -> Self::Output {
+    fn div(self, other: FloatRat) -> Self::Output {
         Self::new(
             self.coeffs.into_iter().map(|c| c / other.clone()).collect(),
             self.constant / other.clone(),
@@ -201,16 +180,16 @@ where
 }
 
 #[derive(Clone, Debug)]
-pub struct LinearConstraint<T> {
-    pub expr: LinearExpr<T>,
+pub struct LinearConstraint {
+    pub expr: LinearExpr,
     /// If true, `expr` must be equal to zero, otherwise it must be nonnegative
     pub eq_zero: bool,
 }
 
-impl<T> LinearConstraint<T> {
-    pub fn eq(e1: LinearExpr<T>, e2: LinearExpr<T>) -> Self
+impl LinearConstraint {
+    pub fn eq(e1: LinearExpr, e2: LinearExpr) -> Self
     where
-        LinearExpr<T>: Sub<Output = LinearExpr<T>>,
+        LinearExpr: Sub<Output = LinearExpr>,
     {
         Self {
             expr: e2 - e1,
@@ -218,9 +197,9 @@ impl<T> LinearConstraint<T> {
         }
     }
 
-    pub fn le(e1: LinearExpr<T>, e2: LinearExpr<T>) -> Self
+    pub fn le(e1: LinearExpr, e2: LinearExpr) -> Self
     where
-        LinearExpr<T>: Sub<Output = LinearExpr<T>>,
+        LinearExpr: Sub<Output = LinearExpr>,
     {
         Self {
             expr: e2 - e1,
@@ -231,7 +210,7 @@ impl<T> LinearConstraint<T> {
     pub fn to_lp_constraint(
         &self,
         var_list: &[good_lp::Variable],
-        conv: &impl Fn(&T) -> f64,
+        conv: &impl Fn(&FloatRat) -> f64,
     ) -> good_lp::Constraint {
         let result = self.expr.to_lp_expr(var_list, conv);
         if self.eq_zero {
@@ -241,20 +220,15 @@ impl<T> LinearConstraint<T> {
         }
     }
 
-    pub fn eval_constant(&self) -> Option<bool>
-    where
-        T: Zero + PartialOrd,
-    {
+    pub fn eval_constant(&self) -> Option<bool> {
         let constant = self.expr.as_constant()?;
         if self.eq_zero {
             Some(constant.is_zero())
         } else {
-            Some(constant >= &T::zero())
+            Some(constant >= &FloatRat::zero())
         }
     }
-}
 
-impl LinearConstraint<f64> {
     pub fn normalize(&self) -> Self {
         Self {
             expr: self.expr.normalize(),
@@ -264,9 +238,9 @@ impl LinearConstraint<f64> {
 
     pub fn tighten(&self, eps: f64) -> Self {
         let constant = if self.expr.grad_norm() == 0.0 {
-            self.expr.constant
+            self.expr.constant.clone()
         } else {
-            self.expr.constant - eps
+            self.expr.constant.clone() - FloatRat::from_f64(eps)
         };
         Self {
             expr: LinearExpr::new(self.expr.coeffs.clone(), constant),
@@ -275,10 +249,7 @@ impl LinearConstraint<f64> {
     }
 }
 
-impl<T> std::fmt::Display for LinearConstraint<T>
-where
-    LinearExpr<T>: std::fmt::Display,
-{
+impl std::fmt::Display for LinearConstraint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.eq_zero {
             write!(f, "{} = 0", self.expr)

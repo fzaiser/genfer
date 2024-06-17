@@ -5,9 +5,9 @@ use crate::{
     bounds::{
         bound::{BoundResult, GeometricBound},
         sym_expr::{SymConstraint, SymExpr},
-        util::f64_to_qepcad,
+        util::rational_to_qepcad,
     },
-    number::{Number, F64},
+    number::{Number, Rational},
     ppl::{Distribution, Event, Natural, Program, Statement, Var},
     semantics::{
         support::{SupportTransformer, VarSupport},
@@ -29,7 +29,7 @@ pub struct BoundCtx {
     geom_vars: Vec<usize>,
     factor_vars: Vec<usize>,
     coeff_vars: Vec<usize>,
-    constraints: Vec<SymConstraint<f64>>,
+    constraints: Vec<SymConstraint>,
 }
 
 impl Default for BoundCtx {
@@ -94,13 +94,12 @@ impl Transformer for BoundCtx {
             }
             Event::DataFromDist(data, dist) => {
                 if let Distribution::Bernoulli(p) = dist {
-                    let p_compl = p.complement();
-                    let p = F64::from_ratio(p.numer, p.denom).into();
-                    let p_compl = F64::from_ratio(p_compl.numer, p_compl.denom).into();
+                    let p = Rational::from_ratio(p.numer, p.denom);
+                    let p_compl = Rational::one() - p.clone();
                     let (then, els) = match data.0 {
                         0 => (p_compl, p),
                         1 => (p, p_compl),
-                        _ => (0.0, 1.0),
+                        _ => (Rational::zero(), Rational::one()),
                     };
                     let mut then_res = init.clone();
                     let mut else_res = init;
@@ -160,18 +159,25 @@ impl Transformer for BoundCtx {
                 };
                 match distribution {
                     Distribution::Bernoulli(p) => {
-                        let p = p.numer as f64 / p.denom as f64;
-                        res.bound.add_categorical(*var, &[1.0 - p, p]);
+                        let p = Rational::from_ratio(p.numer, p.denom);
+                        res.bound
+                            .add_categorical(*var, &[Rational::one() - p.clone(), p]);
                     }
                     Distribution::Geometric(p) if !add_previous_value => {
-                        let p = F64::from_ratio(p.numer, p.denom).to_f64();
-                        res.bound *= SymExpr::from(p);
-                        res.bound.geo_params[var.id()] = SymExpr::from(1.0 - p);
+                        let p = Rational::from_ratio(p.numer, p.denom);
+                        res.bound *= SymExpr::from(p.clone());
+                        res.bound.geo_params[var.id()] = SymExpr::from(Rational::one() - p);
                     }
                     Distribution::Uniform { start, end } => {
-                        let p = 1.0 / (end.0 - start.0) as f64;
+                        let p = Rational::one() / Rational::from_int(end.0 - start.0);
                         let categorical = (0..end.0)
-                            .map(|x| if x < start.0 { 0.0 } else { p })
+                            .map(|x| {
+                                if x < start.0 {
+                                    Rational::zero()
+                                } else {
+                                    p.clone()
+                                }
+                            })
                             .collect::<Vec<_>>();
                         res.bound.add_categorical(*var, &categorical);
                     }
@@ -180,7 +186,7 @@ impl Transformer for BoundCtx {
                             *var,
                             &categorical
                                 .iter()
-                                .map(|p| p.numer as f64 / p.denom as f64)
+                                .map(|p| Rational::from_ratio(p.numer, p.denom))
                                 .collect::<Vec<_>>(),
                         );
                     }
@@ -301,7 +307,7 @@ impl BoundCtx {
         &self.coeff_vars
     }
 
-    pub fn constraints(&self) -> &[SymConstraint<f64>] {
+    pub fn constraints(&self) -> &[SymConstraint] {
         &self.constraints
     }
 
@@ -311,13 +317,13 @@ impl BoundCtx {
         var
     }
 
-    pub fn add_constraint(&mut self, constraint: SymConstraint<f64>) {
+    pub fn add_constraint(&mut self, constraint: SymConstraint) {
         if !constraint.is_trivial() {
             self.constraints.push(constraint);
         }
     }
 
-    pub fn new_geom_var(&mut self) -> SymExpr<f64> {
+    pub fn new_geom_var(&mut self) -> SymExpr {
         let idx = self.fresh_sym_var_idx();
         let var = SymExpr::var(idx);
         self.nonlinear_vars.push(idx);
@@ -327,7 +333,7 @@ impl BoundCtx {
         var
     }
 
-    pub fn new_factor_var(&mut self) -> SymExpr<f64> {
+    pub fn new_factor_var(&mut self) -> SymExpr {
         let idx = self.fresh_sym_var_idx();
         let var = SymExpr::var(idx);
         self.nonlinear_vars.push(idx);
@@ -337,7 +343,7 @@ impl BoundCtx {
         var
     }
 
-    pub fn new_coeff_var(&mut self) -> SymExpr<f64> {
+    pub fn new_coeff_var(&mut self) -> SymExpr {
         let idx = self.fresh_sym_var_idx();
         let var = SymExpr::var(idx);
         self.coeff_vars.push(idx);
@@ -554,7 +560,7 @@ impl BoundCtx {
         writeln!(out, "(set-option :pp.decimal true)")?;
         writeln!(out)?;
         for i in 0..self.sym_var_count() {
-            writeln!(out, "(declare-const {} Real)", SymExpr::<f64>::var(i))?;
+            writeln!(out, "(declare-const {} Real)", SymExpr::var(i))?;
         }
         writeln!(out)?;
         for constraint in &self.constraints {
@@ -598,7 +604,7 @@ impl BoundCtx {
             } else {
                 writeln!(out, r" /\")?;
             }
-            write!(out, "  {}", c.to_qepcad(&|f| f64_to_qepcad(*f)))?;
+            write!(out, "  {}", c.to_qepcad(&rational_to_qepcad))?;
         }
         writeln!(out, "\n].")?;
 
@@ -611,7 +617,7 @@ impl BoundCtx {
         Ok(())
     }
 
-    fn new_masses(&mut self, shape: Vec<(usize, usize)>) -> ArrayD<SymExpr<f64>> {
+    fn new_masses(&mut self, shape: Vec<(usize, usize)>) -> ArrayD<SymExpr> {
         let dims = shape.iter().map(|(_, e)| (*e).max(1)).collect::<Vec<_>>();
         let mut coeffs = ArrayD::zeros(dims);
         for (idx, c) in coeffs.indexed_iter_mut() {
@@ -650,12 +656,12 @@ impl BoundCtx {
 
     fn assert_le_helper(
         &mut self,
-        lhs_coeffs: &ArrayViewD<SymExpr<f64>>,
-        lhs_factor: SymExpr<f64>,
-        lhs_geo_params: &[SymExpr<f64>],
-        rhs_coeffs: &ArrayViewD<SymExpr<f64>>,
-        rhs_factor: SymExpr<f64>,
-        rhs_geo_params: &[SymExpr<f64>],
+        lhs_coeffs: &ArrayViewD<SymExpr>,
+        lhs_factor: SymExpr,
+        lhs_geo_params: &[SymExpr],
+        rhs_coeffs: &ArrayViewD<SymExpr>,
+        rhs_factor: SymExpr,
+        rhs_geo_params: &[SymExpr],
     ) {
         if lhs_geo_params.is_empty() {
             assert!(lhs_coeffs.len() == 1);

@@ -1,5 +1,6 @@
 pub mod bound;
 pub mod ctx;
+pub mod float_rat;
 pub mod gradient_descent;
 pub mod linear;
 pub mod optimizer;

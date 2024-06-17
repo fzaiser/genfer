@@ -11,7 +11,7 @@ use num_traits::{One, Zero};
 
 use crate::bounds::linear::{LinearConstraint, LinearExpr};
 
-use super::util::pow_nonneg;
+use super::{float_rat::FloatRat, util::pow_nonneg};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SparsePoly<T> {
@@ -88,32 +88,6 @@ impl<T> SparsePoly<T> {
             }
         }
         None
-    }
-
-    pub fn extract_linear(&self) -> Option<LinearExpr<T>>
-    where
-        T: Clone + Zero,
-    {
-        let mut coeffs = Vec::new();
-        let mut constant = T::zero();
-        for (monomial, coeff) in &self.monomials {
-            if monomial.is_empty() {
-                constant = coeff.clone();
-                continue;
-            }
-            if monomial.len() == 1 {
-                let (var, exp) = monomial.iter().next().unwrap();
-                if *exp == 1 {
-                    if coeffs.len() <= *var + 1 {
-                        coeffs.extend((coeffs.len()..=*var).map(|_| T::zero()));
-                    }
-                    coeffs[*var] = coeff.clone();
-                    continue;
-                }
-            }
-            return None;
-        }
-        Some(LinearExpr::new(coeffs, constant))
     }
 
     pub fn to_z3<'a>(
@@ -239,6 +213,31 @@ impl<T> SparsePoly<T> {
         T: From<u32> + Clone + Zero + One + PartialEq + AddAssign + MulAssign,
     {
         vars.iter().map(|&var| self.derive(var)).collect()
+    }
+}
+
+impl SparsePoly<FloatRat> {
+    pub fn extract_linear(&self) -> Option<LinearExpr> {
+        let mut coeffs = Vec::new();
+        let mut constant = FloatRat::zero();
+        for (monomial, coeff) in &self.monomials {
+            if monomial.is_empty() {
+                constant = coeff.clone();
+                continue;
+            }
+            if monomial.len() == 1 {
+                let (var, exp) = monomial.iter().next().unwrap();
+                if *exp == 1 {
+                    if coeffs.len() <= *var + 1 {
+                        coeffs.extend((coeffs.len()..=*var).map(|_| FloatRat::zero()));
+                    }
+                    coeffs[*var] = coeff.clone();
+                    continue;
+                }
+            }
+            return None;
+        }
+        Some(LinearExpr::new(coeffs, constant))
     }
 }
 
@@ -567,12 +566,10 @@ impl<T> PolyConstraint<T> {
             ),
         }
     }
+}
 
-    pub fn extract_linear(&self) -> Option<LinearConstraint<T>>
-    where
-        T: Clone + Zero + PartialOrd,
-        LinearExpr<T>: Sub<Output = LinearExpr<T>>,
-    {
+impl PolyConstraint<FloatRat> {
+    pub fn extract_linear(&self) -> Option<LinearConstraint> {
         match self {
             PolyConstraint::Eq(e1, e2) => Some(LinearConstraint::eq(
                 e1.extract_linear()?,

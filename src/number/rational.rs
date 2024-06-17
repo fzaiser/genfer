@@ -55,6 +55,28 @@ impl Rational {
         Self::Frac(Rc::new(r))
     }
 
+    pub fn round_to_f64(&self) -> f64 {
+        match self {
+            Rational::Frac(r) => r.to_f64(),
+            Rational::Special(s) => match s {
+                Special::NaR => f64::NAN,
+                Special::PosInf => f64::INFINITY,
+                Special::NegInf => f64::NEG_INFINITY,
+            },
+        }
+    }
+
+    pub fn to_integer_ratio(&self) -> (rug::Integer, rug::Integer) {
+        match self {
+            Self::Frac(r) => (r.numer().clone(), r.denom().clone()),
+            Self::Special(s) => match s {
+                Special::NaR => (rug::Integer::new(), rug::Integer::new()),
+                Special::PosInf => (rug::Integer::from(1), rug::Integer::new()),
+                Special::NegInf => (rug::Integer::from(-1), rug::Integer::new()),
+            },
+        }
+    }
+
     pub fn not_a_rational() -> Self {
         Self::Special(Special::NaR)
     }
@@ -65,6 +87,30 @@ impl Rational {
 
     pub fn neg_infinity() -> Self {
         Self::Special(Special::NegInf)
+    }
+
+    pub fn pow(&self, exp: i32) -> Rational {
+        if exp == 0 {
+            return Self::one();
+        }
+        if exp == 1 {
+            return self.clone();
+        }
+        match self {
+            Self::Special(s) => match s {
+                Special::NaR => Self::not_a_rational(),
+                _ if exp < 0 => Self::zero(),
+                Special::PosInf => Self::infinity(),
+                Special::NegInf => {
+                    if exp % 2 == 0 {
+                        Self::infinity()
+                    } else {
+                        Self::neg_infinity()
+                    }
+                }
+            },
+            Self::Frac(r) => Self::Frac(Rc::new(rug::Rational::from(r.as_ref().pow(exp)))),
+        }
     }
 }
 
@@ -138,14 +184,7 @@ impl From<f64> for Rational {
 impl From<Rational> for f64 {
     #[inline]
     fn from(r: Rational) -> Self {
-        match r {
-            Rational::Frac(r) => r.to_f64(),
-            Rational::Special(s) => match s {
-                Special::NaR => f64::NAN,
-                Special::PosInf => f64::INFINITY,
-                Special::NegInf => f64::NEG_INFINITY,
-            },
-        }
+        r.round_to_f64()
     }
 }
 

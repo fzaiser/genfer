@@ -13,7 +13,7 @@ use genfer::bounds::gradient_descent::{Adam, AdamBarrier, GradientDescent};
 use genfer::bounds::optimizer::{LinearProgrammingOptimizer, Optimizer as _, Z3Optimizer};
 use genfer::bounds::solver::{ConstraintProblem, Solver as _, SolverError, Z3Solver};
 use genfer::multivariate_taylor::TaylorPoly;
-use genfer::number::F64;
+use genfer::number::Rational;
 use genfer::parser;
 use genfer::ppl::{Program, Var};
 use genfer::semantics::support::VarSupport;
@@ -214,20 +214,20 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
                 };
             let mut inputs = vec![TaylorPoly::one(); result.var_supports.num_vars()];
             inputs[program.result.id()] = TaylorPoly::var_at_zero(Var(0), degree_p1);
-            let expansion = bound.eval_taylor::<F64>(&inputs);
+            let expansion = bound.eval_taylor::<Rational>(&inputs);
             for i in 0..degree_p1 {
-                let prob = expansion.coefficient(&[i]);
+                let prob = expansion.coefficient(&[i]).round_to_f64();
                 println!("p({i}) <= {prob}");
             }
             println!("\nMoments:");
             let mut inputs = vec![TaylorPoly::one(); result.var_supports.num_vars()];
             inputs[program.result.id()] = TaylorPoly::var_at_zero(Var(0), 5).exp();
-            let expansion = bound.eval_taylor::<F64>(&inputs);
-            let mut factorial = F64::one();
+            let expansion = bound.eval_taylor::<Rational>(&inputs);
+            let mut factorial = Rational::one();
             for i in 0..5 {
-                let moment = expansion.coefficient(&[i]) * factorial;
+                let moment = (expansion.coefficient(&[i]) * factorial.clone()).round_to_f64();
                 println!("{i}-th (raw) moment <= {moment}");
-                factorial *= F64::from((i + 1) as u32);
+                factorial *= Rational::from_int(i + 1);
             }
         }
         Err(e) => match e {
