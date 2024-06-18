@@ -6,6 +6,7 @@ use num_traits::Zero;
 use crate::{
     bounds::{
         float_rat::FloatRat,
+        sym_expr::SymExprKind,
         util::{rational_to_z3, z3_real_to_rational},
     },
     number::Rational,
@@ -149,11 +150,11 @@ pub fn optimize_linear_parts(
     let mut lp = ProblemVariables::new();
     let mut var_list = Vec::new();
     for replacement in replacements {
-        match replacement {
-            SymExpr::Variable(_) => {
+        match replacement.kind() {
+            SymExprKind::Variable(_) => {
                 var_list.push(lp.add_variable());
             }
-            SymExpr::Constant(c) => {
+            SymExprKind::Constant(c) => {
                 var_list.push(lp.add(variable().min(c.float()).max(c.float())));
             }
             _ => unreachable!(),

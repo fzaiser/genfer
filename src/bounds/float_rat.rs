@@ -28,6 +28,11 @@ impl FloatRat {
         let rat = Rational::from(float);
         FloatRat { rat, float }
     }
+
+    pub fn pow(&self, exp: i32) -> Self {
+        let rat = self.rat.pow(exp);
+        FloatRat::new(rat)
+    }
 }
 
 impl From<u32> for FloatRat {

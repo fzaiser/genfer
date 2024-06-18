@@ -172,11 +172,11 @@ impl GeometricBound {
     pub fn resolve(&self, assignments: &[Rational]) -> GeometricBound {
         let masses = self
             .masses
-            .map(|c| SymExpr::Constant(c.eval_exact(assignments).into()));
+            .map(|c| SymExpr::from(c.eval_exact(assignments)));
         let geo_params = self
             .geo_params
             .iter()
-            .map(|p| SymExpr::Constant(p.eval_exact(assignments).into()))
+            .map(|p| SymExpr::from(p.eval_exact(assignments)))
             .collect();
         Self { masses, geo_params }
     }
@@ -238,8 +238,7 @@ impl GeometricBound {
             return coeffs.first().unwrap().clone();
         }
         let len = coeffs.len_of(Axis(0));
-        let denominator = SymExpr::one()
-            - geo_params[0].clone() * SymExpr::Constant(FloatRat::new(inputs[0].clone()));
+        let denominator = SymExpr::one() - geo_params[0].clone() * SymExpr::from(inputs[0].clone());
         let mut res = Self::eval_expr_impl(
             &coeffs.index_axis(Axis(0), len - 1),
             &geo_params[1..],
@@ -247,7 +246,7 @@ impl GeometricBound {
         );
         res /= denominator;
         for subview in coeffs.axis_iter(Axis(0)).rev().skip(1) {
-            res *= SymExpr::Constant(FloatRat::new(inputs[0].clone()));
+            res *= SymExpr::from(inputs[0].clone());
             res += Self::eval_expr_impl(&subview, &geo_params[1..], &inputs[1..]);
         }
         res

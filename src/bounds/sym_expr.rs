@@ -19,30 +19,45 @@ use super::{
 };
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum SymExpr {
+pub enum SymExprKind {
     Constant(FloatRat),
     Variable(usize),
-    Add(Rc<SymExpr>, Rc<SymExpr>),
-    Mul(Rc<SymExpr>, Rc<SymExpr>),
-    Pow(Rc<SymExpr>, i32),
+    Add(SymExpr, SymExpr),
+    Mul(SymExpr, SymExpr),
+    Pow(SymExpr, i32),
 }
 
+impl SymExprKind {
+    pub fn into_expr(self) -> SymExpr {
+        SymExpr(Rc::new(self))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SymExpr(Rc<SymExprKind>);
+
 impl SymExpr {
+    pub(crate) fn kind(&self) -> &SymExprKind {
+        self.0.as_ref()
+    }
+
     pub fn var(i: usize) -> Self {
-        Self::Variable(i)
+        SymExprKind::Variable(i).into_expr()
     }
 
     pub fn inverse(self) -> Self {
         self.pow(-1)
     }
 
-    pub fn pow(self, n: i32) -> Self {
-        if n == 0 {
+    pub fn pow(self, exp: i32) -> Self {
+        if exp == 0 {
             Self::one()
-        } else if n == 1 || (n >= 0 && self.is_zero()) || self.is_one() {
+        } else if exp == 1 || (exp >= 0 && self.is_zero()) || self.is_one() {
             self
+        } else if let SymExprKind::Constant(c) = self.kind() {
+            SymExprKind::Constant(c.pow(exp)).into_expr()
         } else {
-            Self::Pow(Rc::new(self), n)
+            SymExprKind::Pow(self, exp).into_expr()
         }
     }
 
@@ -72,32 +87,36 @@ impl SymExpr {
     }
 
     pub fn substitute(&self, replacements: &[Self]) -> Self {
-        match self {
-            Self::Constant(_) => self.clone(),
-            Self::Variable(i) => replacements[*i].clone(),
-            Self::Add(lhs, rhs) => lhs.substitute(replacements) + rhs.substitute(replacements),
-            Self::Mul(lhs, rhs) => lhs.substitute(replacements) * rhs.substitute(replacements),
-            Self::Pow(base, n) => base.substitute(replacements).pow(*n),
+        match self.kind() {
+            SymExprKind::Constant(_) => self.clone(),
+            SymExprKind::Variable(i) => replacements[*i].clone(),
+            SymExprKind::Add(lhs, rhs) => {
+                lhs.substitute(replacements) + rhs.substitute(replacements)
+            }
+            SymExprKind::Mul(lhs, rhs) => {
+                lhs.substitute(replacements) * rhs.substitute(replacements)
+            }
+            SymExprKind::Pow(base, n) => base.substitute(replacements).pow(*n),
         }
     }
 
     pub fn extract_constant(&self) -> Option<FloatRat> {
-        match self {
-            Self::Constant(c) => Some(c.clone()),
+        match self.kind() {
+            SymExprKind::Constant(c) => Some(c.clone()),
             _ => None,
         }
     }
 
     pub fn extract_linear(&self) -> Option<LinearExpr> {
-        match self {
-            Self::Constant(c) => Some(LinearExpr::constant(c.clone())),
-            Self::Variable(i) => Some(LinearExpr::var(*i)),
-            Self::Add(lhs, rhs) => {
+        match self.kind() {
+            SymExprKind::Constant(c) => Some(LinearExpr::constant(c.clone())),
+            SymExprKind::Variable(i) => Some(LinearExpr::var(*i)),
+            SymExprKind::Add(lhs, rhs) => {
                 let lhs = lhs.extract_linear()?;
                 let rhs = rhs.extract_linear()?;
                 Some(lhs + rhs)
             }
-            Self::Mul(lhs, rhs) => {
+            SymExprKind::Mul(lhs, rhs) => {
                 let lhs = lhs.extract_linear()?;
                 let rhs = rhs.extract_linear()?;
                 if let Some(factor) = lhs.as_constant() {
@@ -106,7 +125,7 @@ impl SymExpr {
                     rhs.as_constant().map(|factor| lhs * factor.clone())
                 }
             }
-            Self::Pow(base, n) => {
+            SymExprKind::Pow(base, n) => {
                 if *n == 0 {
                     return Some(LinearExpr::one());
                 }
@@ -124,36 +143,36 @@ impl SymExpr {
     }
 
     pub fn to_rational_function(&self) -> RationalFunction<FloatRat> {
-        match self {
-            Self::Constant(c) => RationalFunction::constant(c.clone()),
-            Self::Variable(i) => RationalFunction::var(*i),
-            Self::Add(lhs, rhs) => lhs.to_rational_function() + rhs.to_rational_function(),
-            Self::Mul(lhs, rhs) => lhs.to_rational_function() * rhs.to_rational_function(),
-            Self::Pow(base, n) => base.to_rational_function().pow(*n),
+        match self.kind() {
+            SymExprKind::Constant(c) => RationalFunction::constant(c.clone()),
+            SymExprKind::Variable(i) => RationalFunction::var(*i),
+            SymExprKind::Add(lhs, rhs) => lhs.to_rational_function() + rhs.to_rational_function(),
+            SymExprKind::Mul(lhs, rhs) => lhs.to_rational_function() * rhs.to_rational_function(),
+            SymExprKind::Pow(base, n) => base.to_rational_function().pow(*n),
         }
     }
 
     fn eval_dual(&self, values: &[f64], var: usize) -> (f64, f64) {
-        match self {
-            Self::Constant(c) => (c.float(), 0.0),
-            Self::Variable(v) => {
+        match self.kind() {
+            SymExprKind::Constant(c) => (c.float(), 0.0),
+            SymExprKind::Variable(v) => {
                 if *v == var {
                     (values[*v], 1.0)
                 } else {
                     (values[*v], 0.0)
                 }
             }
-            Self::Add(lhs, rhs) => {
+            SymExprKind::Add(lhs, rhs) => {
                 let (lhs_val, lhs_grad) = lhs.eval_dual(values, var);
                 let (rhs_val, rhs_grad) = rhs.eval_dual(values, var);
                 (lhs_val + rhs_val, lhs_grad + rhs_grad)
             }
-            Self::Mul(lhs, rhs) => {
+            SymExprKind::Mul(lhs, rhs) => {
                 let (lhs_val, lhs_grad) = lhs.eval_dual(values, var);
                 let (rhs_val, rhs_grad) = rhs.eval_dual(values, var);
                 (lhs_val * rhs_val, lhs_grad * rhs_val + rhs_grad * lhs_val)
             }
-            Self::Pow(base, n) => {
+            SymExprKind::Pow(base, n) => {
                 if n == &0 {
                     (1.0, 0.0)
                 } else {
@@ -181,46 +200,46 @@ impl SymExpr {
         ctx: &'a z3::Context,
         conv: &impl Fn(&'a z3::Context, &Rational) -> z3::ast::Real<'a>,
     ) -> z3::ast::Real<'a> {
-        match self {
-            Self::Constant(f) => conv(ctx, &f.rat()),
-            Self::Variable(v) => z3::ast::Real::new_const(ctx, *v as u32),
-            Self::Add(e1, e2) => e1.to_z3(ctx, conv) + e2.to_z3(ctx, conv),
-            Self::Mul(e1, e2) => e1.to_z3(ctx, conv) * e2.to_z3(ctx, conv),
-            Self::Pow(e, n) => e
+        match self.kind() {
+            SymExprKind::Constant(f) => conv(ctx, &f.rat()),
+            SymExprKind::Variable(v) => z3::ast::Real::new_const(ctx, *v as u32),
+            SymExprKind::Add(e1, e2) => e1.to_z3(ctx, conv) + e2.to_z3(ctx, conv),
+            SymExprKind::Mul(e1, e2) => e1.to_z3(ctx, conv) * e2.to_z3(ctx, conv),
+            SymExprKind::Pow(e, n) => e
                 .to_z3(ctx, conv)
                 .power(&z3::ast::Int::from_i64(ctx, (*n).into()).to_real()),
         }
     }
 
     pub fn to_python(&self) -> String {
-        match self {
-            Self::Constant(c) => c.to_string(),
-            Self::Variable(v) => format!("x[{v}]"),
-            Self::Add(lhs, rhs) => format!("({} + {})", lhs.to_python(), rhs.to_python()),
-            Self::Mul(lhs, rhs) => format!("({} * {})", lhs.to_python(), rhs.to_python()),
-            Self::Pow(lhs, rhs) => format!("({} ** {})", lhs.to_python(), rhs),
+        match self.kind() {
+            SymExprKind::Constant(c) => c.to_string(),
+            SymExprKind::Variable(v) => format!("x[{v}]"),
+            SymExprKind::Add(lhs, rhs) => format!("({} + {})", lhs.to_python(), rhs.to_python()),
+            SymExprKind::Mul(lhs, rhs) => format!("({} * {})", lhs.to_python(), rhs.to_python()),
+            SymExprKind::Pow(lhs, rhs) => format!("({} ** {})", lhs.to_python(), rhs),
         }
     }
 
     pub fn to_z3_string(&self) -> String {
-        match self {
-            Self::Constant(value) => {
+        match self.kind() {
+            SymExprKind::Constant(value) => {
                 if value.rat() < Rational::zero() {
                     format!("(- {})", -value.clone())
                 } else {
                     format!("{value}")
                 }
             }
-            Self::Variable(i) => format!("x{i}"),
-            Self::Add(lhs, rhs) => format!("(+ {lhs} {rhs})"),
-            Self::Mul(lhs, rhs) => {
-                if Self::Constant(-FloatRat::one()) == **rhs {
+            SymExprKind::Variable(i) => format!("x{i}"),
+            SymExprKind::Add(lhs, rhs) => format!("(+ {lhs} {rhs})"),
+            SymExprKind::Mul(lhs, rhs) => {
+                if SymExpr::from(-Rational::one()) == *rhs {
                     format!("(- {lhs})")
                 } else {
                     format!("(* {lhs} {rhs})")
                 }
             }
-            Self::Pow(expr, n) => {
+            SymExprKind::Pow(expr, n) => {
                 if *n == -1 {
                     format!("(/ 1 {expr})")
                 } else if *n < 0 {
@@ -233,60 +252,74 @@ impl SymExpr {
     }
 
     pub fn to_python_z3(&self) -> String {
-        match self {
-            Self::Constant(c) => c.to_string(),
-            Self::Variable(v) => format!("x{v}"),
-            Self::Add(lhs, rhs) => format!("({} + {})", lhs.to_python_z3(), rhs.to_python_z3()),
-            Self::Mul(lhs, rhs) => format!("({} * {})", lhs.to_python_z3(), rhs.to_python_z3()),
-            Self::Pow(lhs, rhs) => format!("({} ^ {})", lhs.to_python_z3(), rhs),
+        match self.kind() {
+            SymExprKind::Constant(c) => c.to_string(),
+            SymExprKind::Variable(v) => format!("x{v}"),
+            SymExprKind::Add(lhs, rhs) => {
+                format!("({} + {})", lhs.to_python_z3(), rhs.to_python_z3())
+            }
+            SymExprKind::Mul(lhs, rhs) => {
+                format!("({} * {})", lhs.to_python_z3(), rhs.to_python_z3())
+            }
+            SymExprKind::Pow(lhs, rhs) => format!("({} ^ {})", lhs.to_python_z3(), rhs),
         }
     }
 
     pub fn to_qepcad(&self, conv: &impl Fn(&Rational) -> String) -> String {
-        match self {
-            Self::Constant(c) => conv(&c.rat()),
-            Self::Variable(v) => format!("{}", crate::ppl::Var(*v)),
-            Self::Add(lhs, rhs) => format!("({} + {})", lhs.to_qepcad(conv), rhs.to_qepcad(conv)),
-            Self::Mul(lhs, rhs) => format!("({} {})", lhs.to_qepcad(conv), rhs.to_qepcad(conv)),
-            Self::Pow(lhs, rhs) => format!("({} ^ {})", lhs.to_qepcad(conv), rhs),
+        match self.kind() {
+            SymExprKind::Constant(c) => conv(&c.rat()),
+            SymExprKind::Variable(v) => format!("{}", crate::ppl::Var(*v)),
+            SymExprKind::Add(lhs, rhs) => {
+                format!("({} + {})", lhs.to_qepcad(conv), rhs.to_qepcad(conv))
+            }
+            SymExprKind::Mul(lhs, rhs) => {
+                format!("({} {})", lhs.to_qepcad(conv), rhs.to_qepcad(conv))
+            }
+            SymExprKind::Pow(lhs, rhs) => format!("({} ^ {})", lhs.to_qepcad(conv), rhs),
         }
     }
 
     pub fn eval_float(&self, values: &[f64]) -> f64 {
-        match self {
-            Self::Constant(c) => c.float(),
-            Self::Variable(v) => values[*v],
-            Self::Add(lhs, rhs) => lhs.eval_float(values) + rhs.eval_float(values),
-            Self::Mul(lhs, rhs) => lhs.eval_float(values) * rhs.eval_float(values),
-            Self::Pow(base, n) => pow(base.eval_float(values), *n),
+        match self.kind() {
+            SymExprKind::Constant(c) => c.float(),
+            SymExprKind::Variable(v) => values[*v],
+            SymExprKind::Add(lhs, rhs) => lhs.eval_float(values) + rhs.eval_float(values),
+            SymExprKind::Mul(lhs, rhs) => lhs.eval_float(values) * rhs.eval_float(values),
+            SymExprKind::Pow(base, n) => pow(base.eval_float(values), *n),
         }
     }
 
     pub fn eval_exact(&self, values: &[Rational]) -> Rational {
-        match self {
-            Self::Constant(c) => c.rat().clone(),
-            Self::Variable(v) => values[*v].clone(),
-            Self::Add(lhs, rhs) => lhs.eval_exact(values) + rhs.eval_exact(values),
-            Self::Mul(lhs, rhs) => lhs.eval_exact(values) * rhs.eval_exact(values),
-            Self::Pow(base, n) => base.eval_exact(values).pow(*n),
+        match self.kind() {
+            SymExprKind::Constant(c) => c.rat().clone(),
+            SymExprKind::Variable(v) => values[*v].clone(),
+            SymExprKind::Add(lhs, rhs) => lhs.eval_exact(values) + rhs.eval_exact(values),
+            SymExprKind::Mul(lhs, rhs) => lhs.eval_exact(values) * rhs.eval_exact(values),
+            SymExprKind::Pow(base, n) => base.eval_exact(values).pow(*n),
         }
     }
 }
 
 impl From<Rational> for SymExpr {
     fn from(value: Rational) -> Self {
-        Self::Constant(value.into())
+        SymExprKind::Constant(value.into()).into_expr()
+    }
+}
+
+impl From<FloatRat> for SymExpr {
+    fn from(value: FloatRat) -> Self {
+        SymExprKind::Constant(value).into_expr()
     }
 }
 
 impl Zero for SymExpr {
     fn zero() -> Self {
-        Self::Constant(FloatRat::zero())
+        SymExprKind::Constant(FloatRat::zero()).into_expr()
     }
 
     fn is_zero(&self) -> bool {
-        match self {
-            Self::Constant(x) => x.is_zero(),
+        match self.kind() {
+            SymExprKind::Constant(x) => x.is_zero(),
             _ => false,
         }
     }
@@ -294,12 +327,12 @@ impl Zero for SymExpr {
 
 impl One for SymExpr {
     fn one() -> Self {
-        Self::Constant(FloatRat::one())
+        SymExprKind::Constant(FloatRat::one()).into_expr()
     }
 
     fn is_one(&self) -> bool {
-        match self {
-            Self::Constant(x) => x.is_one(),
+        match self.kind() {
+            SymExprKind::Constant(x) => x.is_one(),
             _ => false,
         }
     }
@@ -311,10 +344,10 @@ impl Neg for SymExpr {
     fn neg(self) -> Self::Output {
         if self.is_zero() {
             self
-        } else if let Self::Constant(c) = self {
-            Self::Constant(-c.clone())
+        } else if let SymExprKind::Constant(c) = self.kind() {
+            SymExprKind::Constant(-c.clone()).into_expr()
         } else {
-            self * Self::Constant(-FloatRat::one())
+            SymExprKind::Constant(-FloatRat::one()).into_expr() * self
         }
     }
 }
@@ -328,7 +361,12 @@ impl Add for SymExpr {
         } else if rhs.is_zero() {
             self
         } else {
-            Self::Add(Rc::new(self), Rc::new(rhs))
+            match (self.kind(), rhs.kind()) {
+                (SymExprKind::Constant(c1), SymExprKind::Constant(c2)) => {
+                    Self::from(c1.clone() + c2.clone())
+                }
+                _ => SymExprKind::Add(self, rhs).into_expr(),
+            }
         }
     }
 }
@@ -374,7 +412,12 @@ impl Mul for SymExpr {
         } else if rhs.is_one() {
             self
         } else {
-            Self::Mul(Rc::new(self), Rc::new(rhs))
+            match (self.kind(), rhs.kind()) {
+                (SymExprKind::Constant(c1), SymExprKind::Constant(c2)) => {
+                    Self::from(c1.clone() * c2.clone())
+                }
+                _ => SymExprKind::Mul(self, rhs).into_expr(),
+            }
         }
     }
 }
@@ -404,12 +447,12 @@ where
 
 impl std::fmt::Display for SymExpr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Constant(c) => write!(f, "{c}"),
-            Self::Variable(v) => write!(f, "x{v}"),
-            Self::Add(lhs, rhs) => write!(f, "({lhs} + {rhs})"),
-            Self::Mul(lhs, rhs) => write!(f, "({lhs} * {rhs})"),
-            Self::Pow(base, n) => write!(f, "({base} ^ {n})"),
+        match self.kind() {
+            SymExprKind::Constant(c) => write!(f, "{c}"),
+            SymExprKind::Variable(v) => write!(f, "x{v}"),
+            SymExprKind::Add(lhs, rhs) => write!(f, "({lhs} + {rhs})"),
+            SymExprKind::Mul(lhs, rhs) => write!(f, "({lhs} * {rhs})"),
+            SymExprKind::Pow(base, n) => write!(f, "({base} ^ {n})"),
         }
     }
 }
