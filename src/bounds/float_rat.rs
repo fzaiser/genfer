@@ -148,7 +148,7 @@ impl Div<FloatRat> for FloatRat {
 
 impl std::fmt::Display for FloatRat {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{} ({})", F64::from(self.float()), self.rat())
+        write!(f, "{}", F64::from(self.float()))
     }
 }
 

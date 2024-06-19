@@ -3,8 +3,6 @@
 process1 := 0;
 process2 := 0;
 process3 := 0;
-process4 := 0;
-process5 := 0;
 
 if 0 ~ Bernoulli(0.5) {
   process1 := 1;
@@ -69,11 +67,19 @@ while sum = 1 {
         process3 := oldprocess2;
     }
 
+    oldprocess1 := 0;
+    oldprocess2 := 0;
+    oldprocess3 := 0;
+
     sum := process1;
     sum += process2;
     sum += process3;
     count += 1;
 }
+
+process1 := 0;
+process2 := 0;
+process3 := 0;
 
 return count;
 

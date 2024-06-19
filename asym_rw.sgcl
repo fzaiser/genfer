@@ -5,7 +5,7 @@ X := 1;
 C := 0;
 while X != 0 {
     C += 1;
-    if 0 ~ Bernoulli(0.4) {
+    if 0 ~ Bernoulli(0.25) {
         X -= 1;
     } else {
         X += 1;

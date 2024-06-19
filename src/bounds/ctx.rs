@@ -1,4 +1,4 @@
-use ndarray::{ArrayD, ArrayViewD, Axis, Dimension};
+use ndarray::{ArrayD, ArrayViewD, Axis, Dimension, Slice};
 use num_traits::{One, Zero};
 
 use crate::{
@@ -201,20 +201,48 @@ impl Transformer for BoundCtx {
                 addend,
                 offset,
             } => {
-                if let (None, offset) = (addend, offset) {
-                    let mut new_bound = if *add_previous_value {
-                        init
-                    } else {
-                        init.marginalize(*var)
-                    };
-                    new_bound.bound.shift_right(*var, offset.0 as usize);
-                    new_bound.var_supports = self
-                        .support
-                        .transform_statement(stmt, new_bound.var_supports);
-                    new_bound
+                let mut new_bound = if *add_previous_value {
+                    init
                 } else {
-                    todo!("{}", stmt.to_string())
+                    init.marginalize(*var)
+                };
+                match (addend, offset) {
+                    (Some((Natural(1), w)), Natural(0)) => {
+                        if let Some(range) = new_bound.var_supports[w].finite_nonempty_range() {
+                            let mut new_shape = new_bound.bound.masses.shape().to_vec();
+                            new_shape[var.id()] += *range.end() as usize;
+                            let new_len = new_shape[var.id()];
+                            new_bound.bound.extend_axis(*var, new_len);
+                            let masses = &new_bound.bound.masses;
+                            let mut res_masses = ArrayD::zeros(new_shape);
+                            for i in range {
+                                let i = i as usize;
+                                res_masses
+                                    .slice_axis_mut(Axis(w.id()), Slice::from(i..=i))
+                                    .slice_axis_mut(Axis(var.id()), Slice::from(i..new_len))
+                                    .assign(
+                                        &masses
+                                            .slice_axis(Axis(w.id()), Slice::from(i..=i))
+                                            .slice_axis(
+                                                Axis(var.id()),
+                                                Slice::from(0..new_len - i),
+                                            ),
+                                    );
+                            }
+                            new_bound.bound.masses = res_masses;
+                        } else {
+                            todo!("Addition of a variable is not implemented for infinite support: {}", stmt.to_string());
+                        }
+                    }
+                    (None, offset) => {
+                        new_bound.bound.shift_right(*var, offset.0 as usize);
+                    }
+                    _ => todo!("{}", stmt.to_string()),
                 }
+                new_bound.var_supports = self
+                    .support
+                    .transform_statement(stmt, new_bound.var_supports);
+                new_bound
             }
             Statement::Decrement { var, offset } => {
                 let mut new_bound = init;

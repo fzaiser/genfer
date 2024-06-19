@@ -6,7 +6,7 @@ use num_traits::Zero;
 use crate::{
     bounds::{
         float_rat::FloatRat,
-        sym_expr::SymExprKind,
+        sym_expr::{SymConstraint, SymExprKind},
         util::{rational_to_z3, z3_real_to_rational},
     },
     number::Rational,
@@ -137,6 +137,7 @@ pub fn optimize_linear_parts(
         .collect::<Vec<_>>();
     let linear_constraints = constraints
         .iter()
+        .filter(|constraint| !matches!(constraint, SymConstraint::Or(..)))
         .map(|constraint| {
             constraint
                 .extract_linear()
