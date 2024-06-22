@@ -3,8 +3,13 @@ Support is a subset of: {0, ..., 1}
 Computing moments...
 Total measure:             Z = 0.09396962339185345
 Expected value:            E = 0.4087897029119459
+2nd raw moment:         μ'_2 = 0.4087897029119459
+3rd raw moment:         μ'_3 = 0.4087897029119459
+4th raw moment:         μ'_4 = 0.4087897029119459
 Standard deviation:        σ = 0.4916102945475297
-Variance:                  V = 0.24168068170510892
+Variance (2nd central):    V = 0.24168068170510892
+3rd central moment:      μ_3 = 0.04408753355753284
+4th central moment:      μ_4 = 0.06645202597677041
 Skewness (3rd std moment): S = 0.3710674821079676
 Kurtosis (4th std moment): K = 1.1376910762779469
 

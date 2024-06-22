@@ -476,8 +476,13 @@ fn print_probs<T: IntervalNumber + Into<f64>>(
 struct Moments<T> {
     total: T,
     mean: T,
+    raw2nd: T,
+    raw3rd: T,
+    raw4th: T,
     variance: T,
     stddev: T,
+    central3rd: T,
+    central4th: T,
     skewness: T,
     kurtosis: T,
 }
@@ -487,8 +492,13 @@ impl<T> Moments<T> {
         Moments {
             total: f(self.total),
             mean: f(self.mean),
+            raw2nd: f(self.raw2nd),
+            raw3rd: f(self.raw3rd),
+            raw4th: f(self.raw4th),
             variance: f(self.variance),
             stddev: f(self.stddev),
+            central3rd: f(self.central3rd),
+            central4th: f(self.central4th),
             skewness: f(self.skewness),
             kurtosis: f(self.kurtosis),
         }
@@ -496,7 +506,9 @@ impl<T> Moments<T> {
 }
 
 fn moments_to_moments_struct<T: FloatNumber + PartialOrd>(total: T, moments: &[T]) -> Moments<T> {
+    let (raw2nd, raw3rd, raw4th) = (moments[1].clone(), moments[2].clone(), moments[3].clone());
     let (mean, central_moments) = moments_to_central_moments(moments);
+    let (central3rd, central4th) = (central_moments[1].clone(), central_moments[2].clone());
     let (variance, std_moments) = central_to_standardized_moments(&central_moments);
     let skewness = std_moments[0].clone();
     let kurtosis = std_moments[1].clone();
@@ -518,8 +530,13 @@ fn moments_to_moments_struct<T: FloatNumber + PartialOrd>(total: T, moments: &[T
     Moments {
         total,
         mean,
+        raw2nd,
+        raw3rd,
+        raw4th,
         variance,
         stddev,
+        central3rd,
+        central4th,
         skewness,
         kurtosis,
     }
@@ -529,7 +546,12 @@ fn print_moments<T: IntervalNumber>(moments: &Moments<Interval<T>>, print_interv
     let Moments {
         total,
         mean,
+        raw2nd,
+        raw3rd,
+        raw4th,
         variance,
+        central3rd,
+        central4th,
         stddev,
         skewness,
         kurtosis,
@@ -537,8 +559,19 @@ fn print_moments<T: IntervalNumber>(moments: &Moments<Interval<T>>, print_interv
     let pi = print_intervals;
     println!("Total measure:             Z {}", in_interval(total, pi));
     println!("Expected value:            E {}", in_interval(mean, pi));
+    println!("2nd raw moment:         μ'_2 {}", in_interval(raw2nd, pi));
+    println!("3rd raw moment:         μ'_3 {}", in_interval(raw3rd, pi));
+    println!("4th raw moment:         μ'_4 {}", in_interval(raw4th, pi));
     println!("Standard deviation:        σ {}", in_interval(stddev, pi));
-    println!("Variance:                  V {}", in_interval(variance, pi));
+    println!("Variance (2nd central):    V {}", in_interval(variance, pi));
+    println!(
+        "3rd central moment:      μ_3 {}",
+        in_interval(central3rd, pi)
+    );
+    println!(
+        "4th central moment:      μ_4 {}",
+        in_interval(central4th, pi)
+    );
     println!("Skewness (3rd std moment): S {}", in_interval(skewness, pi));
     println!("Kurtosis (4th std moment): K {}", in_interval(kurtosis, pi));
 }
@@ -577,6 +610,7 @@ fn print_json<T: Number>(
         stddev,
         skewness,
         kurtosis,
+        ..
     } = moments_data;
     std::fs::write(
         json_path,

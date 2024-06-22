@@ -3,7 +3,12 @@ Support is a subset of: ∅
 Computing moments...
 Total measure:             Z = 0.0
 Expected value:            E = NaN
+2nd raw moment:         μ'_2 = NaN
+3rd raw moment:         μ'_3 = NaN
+4th raw moment:         μ'_4 = NaN
 Standard deviation:        σ = NaN
-Variance:                  V = NaN
+Variance (2nd central):    V = NaN
+3rd central moment:      μ_3 = NaN
+4th central moment:      μ_4 = NaN
 Skewness (3rd std moment): S = NaN
 Kurtosis (4th std moment): K = NaN
