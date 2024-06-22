@@ -145,8 +145,12 @@ pub fn run() {
 fn run_program_intervals<T: IntervalNumber + Into<f64>>(program: &Program, args: &CliArgs) {
     let inference_start = Instant::now();
     let uses_observe = program.uses_observe();
-    let GfTranslation { var_info, gf, rest } =
-        translate_program_to_gf::<Interval<T>>(program, args);
+    let GfTranslation {
+        var_info,
+        gf,
+        rest,
+        rest_info,
+    } = translate_program_to_gf::<Interval<T>>(program, args);
     let gf_translation_time = inference_start.elapsed();
     if args.symbolic {
         let gf = gf.to_computation();
@@ -156,6 +160,7 @@ fn run_program_intervals<T: IntervalNumber + Into<f64>>(program: &Program, args:
             |limit| moments_symbolic(&gf, program.result, &var_info, limit),
             |limit| probs_symbolic(&gf, program.result, &var_info, limit),
             &var_info[program.result],
+            &rest_info[program.result],
             uses_observe,
             args,
             inference_start,
@@ -170,6 +175,7 @@ fn run_program_intervals<T: IntervalNumber + Into<f64>>(program: &Program, args:
             |limit| moments_taylor(&gf, program.result, &var_info, limit),
             |limit| probs_taylor(&gf, program.result, &var_info, limit),
             &var_info[program.result],
+            &rest_info[program.result],
             uses_observe,
             args,
             inference_start,
@@ -181,7 +187,12 @@ fn run_program_intervals<T: IntervalNumber + Into<f64>>(program: &Program, args:
 fn run_program<T: IntervalNumber + Into<f64>>(program: &Program, args: &CliArgs) {
     let inference_start = Instant::now();
     let uses_observe = program.uses_observe();
-    let GfTranslation { var_info, gf, rest } = translate_program_to_gf::<T>(program, args);
+    let GfTranslation {
+        var_info,
+        gf,
+        rest,
+        rest_info,
+    } = translate_program_to_gf::<T>(program, args);
     let gf_translation_time = inference_start.elapsed();
     if args.symbolic {
         let gf = gf.to_computation();
@@ -191,6 +202,7 @@ fn run_program<T: IntervalNumber + Into<f64>>(program: &Program, args: &CliArgs)
             |limit| moments_symbolic(&gf, program.result, &var_info, limit),
             |limit| probs_symbolic(&gf, program.result, &var_info, limit),
             &var_info[program.result],
+            &rest_info[program.result],
             uses_observe,
             args,
             inference_start,
@@ -205,6 +217,7 @@ fn run_program<T: IntervalNumber + Into<f64>>(program: &Program, args: &CliArgs)
             |limit| moments_taylor(&gf, program.result, &var_info, limit),
             |limit| probs_taylor(&gf, program.result, &var_info, limit),
             &var_info[program.result],
+            &rest_info[program.result],
             uses_observe,
             args,
             inference_start,
@@ -224,7 +237,13 @@ fn translate_program_to_gf<T: Number>(program: &Program, args: &CliArgs) -> GfTr
         let gf = translation.gf.simplify();
         let var_info = translation.var_info;
         let rest = translation.rest.simplify();
-        GfTranslation { var_info, gf, rest }
+        let rest_info = translation.rest_info;
+        GfTranslation {
+            var_info,
+            gf,
+            rest,
+            rest_info,
+        }
     };
     if args.print_gf {
         println!("Generating function:\n{}\n", translation.gf);
@@ -239,6 +258,7 @@ fn print_moments_and_probs<T: IntervalNumber + Into<f64>>(
     moments_fn: impl Fn(usize) -> (T, Vec<T>),
     probs_fn: impl Fn(usize) -> Vec<T>,
     var_info: &SupportSet,
+    rest_info: &SupportSet,
     uses_observe: bool,
     args: &CliArgs,
     inference_start: Instant,
@@ -260,6 +280,7 @@ fn print_moments_and_probs<T: IntervalNumber + Into<f64>>(
                 .collect()
         },
         var_info,
+        rest_info,
         uses_observe,
         args,
         inference_start,
@@ -282,6 +303,7 @@ fn print_moments_and_probs_interval<T: IntervalNumber + Into<f64>>(
     moments_fn: impl Fn(usize) -> (Interval<T>, Vec<Interval<T>>),
     probs_fn: impl Fn(usize) -> Vec<Interval<T>>,
     var_info: &SupportSet,
+    rest_info: &SupportSet,
     uses_observe: bool,
     args: &CliArgs,
     inference_start: Instant,
@@ -299,14 +321,19 @@ fn print_moments_and_probs_interval<T: IntervalNumber + Into<f64>>(
     let total = total
         .ensure_lower_bound(T::zero())
         .ensure_upper_bound(T::one());
+    let total_without_rest = total.clone();
+    let max_rest = Interval::one() - total_without_rest.clone();
+    let rest = rest.ensure_upper_bound(max_rest.hi);
     let total = (total + rest.clone()).ensure_upper_bound(T::one());
     let mut moments = moments
         .into_iter()
         .map(|x| x.ensure_lower_bound(T::zero()))
         .collect::<Vec<_>>();
-    if !rest.is_zero() {
-        for x in &mut moments {
-            *x = x.union(&T::infinity());
+    if let Some(range) = rest_info.to_interval::<T>() {
+        for (i, mom) in moments.iter_mut().enumerate() {
+            let exponent = i as u32 + 1;
+            let added = rest.hi.clone() * range.hi.clone().pow(exponent);
+            *mom += Interval::exact(T::zero(), added);
         }
     }
     let mut moments_struct = moments_to_moments_struct(total.clone(), &moments);
@@ -323,9 +350,10 @@ fn print_moments_and_probs_interval<T: IntervalNumber + Into<f64>>(
         let probs = print_probs(
             args,
             &rest,
-            &total,
+            &total_without_rest,
             &moments,
             var_info,
+            rest_info,
             uses_observe,
             probs_fn,
             probs_start,
@@ -356,14 +384,16 @@ fn print_moments_and_probs_interval<T: IntervalNumber + Into<f64>>(
 fn print_probs<T: IntervalNumber + Into<f64>>(
     args: &CliArgs,
     rest: &Interval<T>,
-    total: &Interval<T>,
+    total_without_rest: &Interval<T>,
     moments: &[Interval<T>],
     var_info: &SupportSet,
+    rest_info: &SupportSet,
     uses_observe: bool,
     probs_fn: impl Fn(usize) -> Vec<Interval<T>>,
     probs_start: Instant,
 ) -> Vec<Interval<T>> {
     println!();
+    let total = (total_without_rest.clone() + rest.clone()).ensure_upper_bound(T::one());
     let limit = if let Some(limit) = args.limit {
         limit
     } else if total.is_zero() {
@@ -387,15 +417,16 @@ fn print_probs<T: IntervalNumber + Into<f64>>(
     };
     println!("Computing probabilities up to {limit}...");
     let is_normalized = !uses_observe || total.is_one();
-    let mut mass_missing = total.clone();
-    let mut probs = probs_fn(limit)
-        .iter()
-        .map(|p| p.clone() + rest.clone())
-        .collect::<Vec<_>>();
+    let mut mass_missing = total_without_rest.clone();
+    let mut probs = probs_fn(limit);
     let print_intervals = args.bounds || !rest.is_zero();
     let mut normalized_probs = Vec::new();
     for i in 0..limit {
-        let p = probs[i].clone();
+        let mut p = probs[i].clone();
+        mass_missing -= p.clone();
+        if rest_info.contains(i as u32) {
+            p += rest.clone();
+        }
         assert!(
             !(p < Interval::zero() || p > Interval::one()),
             "p({i}) = {p} is not a probability"
@@ -415,12 +446,16 @@ fn print_probs<T: IntervalNumber + Into<f64>>(
             println!("Normalized:   p({i}) / Z {normalized}");
             normalized_probs.push(normalized_p);
         }
-        mass_missing -= p.clone();
     }
-    if let Some(range) = var_info.finite_nonempty_range() {
-        if (*range.end() as usize) < limit {
-            mass_missing = Interval::zero();
-        }
+    let up_to_limit = SupportSet::Range {
+        start: 0,
+        end: Some(limit as u32 - 1),
+    };
+    if !rest_info.is_subset_of(&up_to_limit) {
+        mass_missing += rest.clone();
+    }
+    if var_info.is_subset_of(&up_to_limit) {
+        mass_missing = Interval::zero();
     }
     let mass_missing_unnorm = mass_missing.hi.max(&T::zero()).min(&T::one());
     let mass_missing_norm = (mass_missing / total.clone())

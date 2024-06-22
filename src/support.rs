@@ -2,7 +2,10 @@ use std::ops::{Range, RangeFrom, RangeInclusive};
 
 use num_traits::Zero;
 
-use crate::number::{Number, Rational};
+use crate::{
+    interval::Interval,
+    number::{FloatNumber, IntervalNumber, Number, Rational},
+};
 
 /// Support set of a random variable (overapproximated as a range)
 #[derive(Clone, Debug, PartialEq)]
@@ -249,6 +252,38 @@ impl SupportSet {
                 if *start > end.unwrap_or(u32::MAX) {
                     *self = Self::Empty;
                 }
+            }
+        }
+    }
+
+    pub fn to_interval<T: IntervalNumber>(&self) -> Option<Interval<T>> {
+        match self {
+            Self::Empty => None,
+            Self::Range { start, end } => Some(Interval::exact(
+                T::from(*start),
+                end.map_or(T::infinity(), T::from),
+            )),
+            Self::Interval { start, end } => {
+                let (start_n, start_d) = start.to_ratio().unwrap();
+                let start = T::from_ratio(start_n.try_into().unwrap(), start_d.try_into().unwrap());
+                let end = if end.is_infinite() {
+                    T::infinity()
+                } else {
+                    let (end_n, end_d) = end.to_ratio().unwrap();
+                    T::from_ratio(end_n.try_into().unwrap(), end_d)
+                };
+                Some(Interval::exact(start, end))
+            }
+        }
+    }
+
+    pub fn contains(&self, i: u32) -> bool {
+        match self {
+            Self::Empty => false,
+            Self::Range { start, end } => i >= *start && end.map_or(true, |end| i <= end),
+            Self::Interval { start, end } => {
+                let i = Rational::from_int(i);
+                &i >= start && &i <= end
             }
         }
     }

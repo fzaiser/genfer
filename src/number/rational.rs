@@ -66,6 +66,14 @@ impl Rational {
     pub fn neg_infinity() -> Self {
         Self::Special(Special::NegInf)
     }
+
+    pub fn to_ratio(&self) -> Option<(i64, u64)> {
+        if let Self::Frac(r) = self {
+            Some((r.numer().to_i64().unwrap(), r.denom().to_u64().unwrap()))
+        } else {
+            None
+        }
+    }
 }
 
 impl Display for Rational {

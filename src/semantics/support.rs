@@ -201,8 +201,23 @@ impl Transformer for SupportTransformer {
                 then_res.join(&else_res)
             }
             Statement::While { cond, body, .. } => {
-                let (_, _loop_entry, loop_exit) = self.analyze_while(cond, body, init);
-                loop_exit
+                let u = if let Some((u, _, _)) = self.find_unroll_fixpoint(cond, body, init.clone())
+                {
+                    u
+                } else {
+                    100 // TODO: this should correspond to the unrolling limit
+                };
+                let mut pre_loop = init;
+                let mut rest = VarSupport::empty(pre_loop.num_vars());
+                for _ in 0..u {
+                    let (new_pre_loop, loop_exit) =
+                        self.one_iteration(pre_loop.clone(), body, cond);
+                    rest = rest.join(&loop_exit);
+                    pre_loop = new_pre_loop;
+                }
+                let invariant = self.find_while_invariant(cond, body, pre_loop);
+                let (_, loop_exit) = self.transform_event(cond, invariant.clone());
+                rest.join(&loop_exit)
             }
             Statement::Fail => VarSupport::empty(init.num_vars()),
             Statement::Normalize { given_vars, stmts } => {
@@ -231,98 +246,89 @@ impl SupportTransformer {
         result
     }
 
-    fn analyze_while(
+    pub fn find_unroll_fixpoint(
         &mut self,
         cond: &Event,
         body: &[Statement],
         init: VarSupport,
-    ) -> (Option<usize>, VarSupport, VarSupport) {
-        let (mut loop_entry, mut loop_exit) = self.transform_event(cond, init);
+    ) -> Option<(usize, VarSupport, VarSupport)> {
+        let mut pre_loop = init;
+        let mut rest = VarSupport::empty(pre_loop.num_vars());
         // TODO: upper bound of this for loop should be the highest constant occurring in the loop or something like that
         for i in 0..100 {
-            let (new_loop_entry, new_loop_exit) =
-                self.one_iteration(loop_entry.clone(), loop_exit.clone(), body, cond);
-            if loop_entry == new_loop_entry && loop_exit == new_loop_exit {
-                return (Some(i), loop_entry, loop_exit);
+            let (new_pre_loop, loop_exit) = self.one_iteration(pre_loop.clone(), body, cond);
+            rest = rest.join(&loop_exit);
+            if pre_loop == new_pre_loop {
+                return Some((i, pre_loop, rest));
             }
-            loop_entry = new_loop_entry;
-            loop_exit = new_loop_exit;
+            pre_loop = new_pre_loop;
         }
-        // The number of widening steps needed is at most the number of variables:
-        for _ in 0..=loop_entry.num_vars() {
-            let (new_loop_entry, new_loop_exit) =
-                self.one_iteration(loop_entry.clone(), loop_exit.clone(), body, cond);
-            if new_loop_entry.is_subset_of(&loop_entry) && new_loop_exit.is_subset_of(&loop_exit) {
-                assert_eq!(loop_exit, new_loop_exit);
-                return (None, loop_entry, loop_exit);
+        None
+    }
+
+    pub fn find_while_invariant(
+        &mut self,
+        cond: &Event,
+        body: &[Statement],
+        init: VarSupport,
+    ) -> VarSupport {
+        let mut pre_loop = init;
+        // Try to widen using join a few times
+        // TODO: upper bound of this for loop should be the highest constant occurring in the loop or something like that
+        for _ in 0..100 {
+            let (new_pre_loop, _) = self.one_iteration(pre_loop.clone(), body, cond);
+            if new_pre_loop.is_subset_of(&pre_loop) {
+                return pre_loop;
             }
-            for v in 0..loop_entry.num_vars() {
+            pre_loop = pre_loop.join(&new_pre_loop);
+        }
+        // If widening with `join` did not work, use an actual widening operation.
+        // The number of widening steps needed is at most twice the number of variables,
+        // because each variable can be widened at most twice (once in each direction).
+        for _ in 0..=2 * pre_loop.num_vars() {
+            let (new_pre_loop, _) = self.one_iteration(pre_loop.clone(), body, cond);
+            if new_pre_loop.is_subset_of(&pre_loop) {
+                return pre_loop;
+            }
+            for v in 0..pre_loop.num_vars() {
                 let v = Var(v);
-                match (&loop_entry[v], &new_loop_entry[v]) {
-                    (
-                        SupportSet::Range { start, end },
-                        SupportSet::Range {
-                            start: new_start,
-                            end: new_end,
-                        },
-                    ) => {
-                        if end.is_some() && new_end.is_none() {
-                            unreachable!();
-                        }
-                        if (new_end.is_some() && new_end < end) || new_start < start {
-                            panic!("More iterations needed");
-                        }
-                        if new_end > end {
-                            loop_entry.set(v, (*start..).into());
-                        }
-                    }
-                    _ => {
-                        dbg!(v, &loop_entry[v], &new_loop_entry[v]);
-                        unreachable!("Unexpected variable supports")
-                    }
-                }
-                match (&loop_exit[v], &new_loop_exit[v]) {
-                    (
-                        SupportSet::Range { start, end },
-                        SupportSet::Range {
-                            start: new_start,
-                            end: new_end,
-                        },
-                    ) => {
-                        if end.is_some() && new_end.is_none() {
-                            unreachable!();
-                        }
-                        if (new_end.is_some() && new_end < end) || new_start < start {
-                            panic!("More iterations needed");
-                        }
-                        if new_end > end {
-                            loop_exit.set(v, (*start..).into());
-                        }
-                    }
-                    _ => unreachable!("Unexpected variable supports"),
-                }
+                pre_loop.set(v, Self::widen(&pre_loop[v], &new_pre_loop[v]));
             }
         }
-        let (new_loop_entry, new_loop_exit) =
-            self.one_iteration(loop_entry.clone(), loop_exit.clone(), body, cond);
-        assert!(
-            new_loop_entry.is_subset_of(&loop_entry) && new_loop_exit.is_subset_of(&loop_exit),
-            "Widening failed."
-        );
-        (None, loop_entry, loop_exit)
+        let (new_pre_loop, _) = self.one_iteration(pre_loop.clone(), body, cond);
+        assert!(new_pre_loop.is_subset_of(&pre_loop), "Widening failed.");
+        pre_loop
+    }
+
+    fn widen(cur: &SupportSet, new: &SupportSet) -> SupportSet {
+        match (cur, new) {
+            (
+                SupportSet::Range { start, end },
+                SupportSet::Range {
+                    start: new_start,
+                    end: new_end,
+                },
+            ) => {
+                let start = if start <= new_start { *start } else { 0 };
+                let end = match (end, new_end) {
+                    (Some(end), Some(new_end)) if new_end <= end => Some(*end),
+                    _ => None,
+                };
+                SupportSet::Range { start, end }
+            }
+            _ => panic!("Cannot widen non-range supports"),
+        }
     }
 
     fn one_iteration(
         &mut self,
-        loop_entry: VarSupport,
-        loop_exit: VarSupport,
+        init: VarSupport,
         body: &[Statement],
         cond: &Event,
     ) -> (VarSupport, VarSupport) {
-        let after_loop = self.transform_statements(body, loop_entry);
-        let (repeat_supports, exit_supports) = self.transform_event(cond, after_loop);
-        let loop_exit = loop_exit.join(&exit_supports);
-        (repeat_supports, loop_exit)
+        let (enter, exit) = self.transform_event(cond, init);
+        let post = self.transform_statements(body, enter);
+        (post, exit)
     }
 
     pub fn transform_normalize(

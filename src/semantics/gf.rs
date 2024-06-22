@@ -16,6 +16,8 @@ pub struct GfTranslation<T> {
     pub gf: GenFun<T>,
     /// Remaining probability mass not captured in `gf`
     pub rest: GenFun<T>,
+    /// Overapproximation of the support of the remaining probability mass
+    pub rest_info: VarSupport,
 }
 
 impl<T: Number> GfTranslation<T> {
@@ -24,6 +26,7 @@ impl<T: Number> GfTranslation<T> {
             var_info: VarSupport::empty(num_vars),
             gf: GenFun::zero(),
             rest: GenFun::zero(),
+            rest_info: VarSupport::empty(num_vars),
         }
     }
 
@@ -37,6 +40,7 @@ impl<T: Number> GfTranslation<T> {
             var_info: self.var_info.join(&other.var_info),
             gf: self.gf + other.gf,
             rest: self.rest.max(&other.rest),
+            rest_info: self.rest_info.join(&other.rest_info),
         }
     }
 }
@@ -49,6 +53,7 @@ impl<T: Number> std::ops::Add for GfTranslation<T> {
             var_info: self.var_info.join(&other.var_info),
             gf: self.gf + other.gf,
             rest: self.rest + other.rest,
+            rest_info: self.rest_info.join(&other.rest_info),
         }
     }
 }
@@ -83,7 +88,13 @@ impl<T: Number> Transformer for GfTransformer<T> {
         let var_info = self.support.init(program);
         let gf = GenFun::one();
         let rest = GenFun::zero();
-        GfTranslation { var_info, gf, rest }
+        let rest_info = VarSupport::empty(var_info.num_vars());
+        GfTranslation {
+            var_info,
+            gf,
+            rest,
+            rest_info,
+        }
     }
 
     fn transform_event(
@@ -100,6 +111,7 @@ impl<T: Number> Transformer for GfTransformer<T> {
             }
         }
         let var_info = init.var_info.clone();
+        let rest_info = init.rest_info.clone();
         let rest = init.rest.clone();
         let gf = init.gf.clone();
         let gf = match event {
@@ -160,7 +172,7 @@ impl<T: Number> Transformer for GfTransformer<T> {
                 if let Some(factor) = event.recognize_const_prob() {
                     GenFun::constant(factor) * gf
                 } else {
-                    self.transform_data_from_dist(*data, dist, &var_info, gf, rest.clone())
+                    self.transform_data_from_dist(*data, dist, &var_info, gf)
                 }
             }
             Event::Complement(e) => {
@@ -177,16 +189,19 @@ impl<T: Number> Transformer for GfTransformer<T> {
             }
         };
         let (then_info, else_info) = self.support.transform_event(event, var_info);
+        let (then_rest_info, else_rest_info) = self.support.transform_event(event, rest_info);
         (
             GfTranslation {
                 var_info: then_info,
                 gf: gf.clone(),
                 rest: rest.clone(),
+                rest_info: then_rest_info,
             },
             GfTranslation {
                 var_info: else_info,
                 gf: init.gf - gf,
                 rest,
+                rest_info: else_rest_info,
             },
         )
     }
@@ -222,6 +237,7 @@ impl<T: Number> Transformer for GfTransformer<T> {
                 let mut gf = init.gf;
                 let var_info = init.var_info;
                 let rest = init.rest;
+                let rest_info = init.rest_info;
                 let var = GenFun::var(v);
                 let mut v_exp = if *add_previous_value { 1 } else { 0 };
                 let w_subst = if let Some((factor, w)) = addend {
@@ -252,25 +268,38 @@ impl<T: Number> Transformer for GfTransformer<T> {
                     gf = gf.substitute_var(w, w_subst);
                 }
                 let var_info = self.support.transform_statement(stmt, var_info);
+                let rest_info = self.support.transform_statement(stmt, rest_info);
                 let gf = if var_info[v].is_discrete() {
                     gf * var.pow(offset.0)
                 } else {
                     gf * (var * GenFun::from_u32(offset.0)).exp()
                 };
-                GfTranslation { var_info, gf, rest }
+                GfTranslation {
+                    var_info,
+                    gf,
+                    rest,
+                    rest_info,
+                }
             }
             Decrement { var, offset } => {
                 let v = *var;
                 let gf = init.gf;
                 let var_info = init.var_info;
                 let rest = init.rest;
+                let rest_info = init.rest_info;
                 assert!(
                     var_info[v].is_discrete(),
                     "cannot decrement continuous variables"
                 );
                 let var_info = self.support.transform_statement(stmt, var_info);
+                let rest_info = self.support.transform_statement(stmt, rest_info);
                 let gf = gf.shift_down_taylor_at_zero(v, offset.0 as usize);
-                GfTranslation { var_info, gf, rest }
+                GfTranslation {
+                    var_info,
+                    gf,
+                    rest,
+                    rest_info,
+                }
             }
             IfThenElse { cond, then, els } => {
                 if let Some(factor) = cond.recognize_const_prob::<T>() {
@@ -292,22 +321,19 @@ impl<T: Number> Transformer for GfTransformer<T> {
                 eprintln!("WARNING: support for while loops is EXPERIMENTAL");
                 println!("WARNING: results are APPROXIMATE due to presence of loops: exact inference is only possible for loop-free programs");
                 let mut result = GfTranslation::zero(init.var_info.num_vars());
-                let var_info = self
-                    .support
-                    .transform_statement(stmt, init.var_info.clone());
                 let mut rest = init;
-                for _ in 0..unroll.unwrap_or(self.default_unroll) {
+                let unroll = unroll.unwrap_or(self.default_unroll);
+                for _ in 0..unroll {
                     let (loop_enter, loop_exit) = self.transform_event(cond, rest);
                     result = result.join(loop_exit);
                     rest = self.transform_statements(body, loop_enter);
                 }
-                let new_rest = marginalize_all(rest.gf, &var_info);
-                let rest = rest.rest + new_rest;
-                GfTranslation {
-                    var_info,
-                    rest,
-                    ..result
-                }
+                result.rest += marginalize_all(rest.gf, &rest.var_info);
+                let invariant = self.support.find_while_invariant(cond, body, rest.var_info);
+                let (_, loop_exit) = self.support.transform_event(cond, invariant.clone());
+                result.rest_info = result.rest_info.join(&loop_exit);
+                result.var_info = result.var_info.join(&result.rest_info);
+                result
             }
             Fail => GfTranslation::zero(init.var_info.num_vars()),
             Normalize {
@@ -378,6 +404,12 @@ impl<T: Number> GfTransformer<T> {
             dist,
             v,
             translation.var_info.clone(),
+            add_previous_value,
+        );
+        let new_rest_info = SupportTransformer::transform_distribution(
+            dist,
+            v,
+            translation.rest_info.clone(),
             add_previous_value,
         );
         let gf = &translation.gf;
@@ -501,6 +533,7 @@ impl<T: Number> GfTransformer<T> {
             gf,
             var_info: new_var_info,
             rest: translation.rest,
+            rest_info: new_rest_info,
         }
     }
 
@@ -510,7 +543,6 @@ impl<T: Number> GfTransformer<T> {
         dist: &Distribution,
         var_info: &VarSupport,
         gf: GenFun<T>,
-        rest: GenFun<T>,
     ) -> GenFun<T> {
         match dist {
             Distribution::BernoulliVarProb(var) => {
@@ -544,7 +576,8 @@ impl<T: Number> GfTransformer<T> {
                 let translation = GfTranslation {
                     var_info: var_info.clone(),
                     gf,
-                    rest,
+                    rest: GenFun::zero(),
+                    rest_info: VarSupport::empty(var_info.num_vars()),
                 };
                 let new_translation = self.transform_statement(&sample_stmt, translation);
                 let gf = new_translation
@@ -573,6 +606,7 @@ impl<T: Number> GfTransformer<T> {
                 var_info: translation.var_info,
                 gf: min_factor * translation.gf,
                 rest: max_factor * translation.rest,
+                rest_info: translation.rest_info,
             }
         } else {
             let v = given_vars[0];
@@ -583,12 +617,15 @@ impl<T: Number> GfTransformer<T> {
             for i in range {
                 let summand =
                     translation.gf.taylor_coeff_at_zero(v, i as usize) * GenFun::var(v).pow(i);
-                let mut new_var_info = translation.var_info.clone();
-                new_var_info.set(v, SupportSet::from(i));
+                let mut var_info = translation.var_info.clone();
+                var_info.set(v, SupportSet::from(i));
+                let mut rest_info = translation.rest_info.clone();
+                rest_info.set(v, SupportSet::from(i));
                 let summand = GfTranslation {
-                    var_info: new_var_info,
+                    var_info,
                     gf: summand,
                     rest: translation.rest.clone(),
+                    rest_info,
                 };
                 let result = self.transform_normalize(rest, block, summand);
                 joined = joined.join(result);
