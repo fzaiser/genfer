@@ -568,6 +568,7 @@ impl<T: Number> GfTransformer<T> {
             let total_after = marginalize_all(translation.gf.clone(), &translation.var_info);
             let rest_after = translation.rest.clone();
             let min_factor = total_before.clone() / (total_after.clone() + rest_after);
+            // TODO: can this be optimized? For a global normalize this seems to be too pessimistic:
             let max_factor = (total_before + rest_before) / total_after;
             GfTranslation {
                 var_info: translation.var_info,

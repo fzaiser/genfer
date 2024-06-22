@@ -91,6 +91,9 @@ struct CliArgs {
     /// Optionally output a QEPCAD file (to feed to qepcad via stdin) at this path
     #[arg(long)]
     qepcad: Option<PathBuf>,
+    /// Whether to print the generated constraints
+    #[arg(short, long)]
+    verbose: bool,
 }
 
 pub fn main() -> std::io::Result<()> {
@@ -112,23 +115,25 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
         .with_evt(args.evt)
         .with_do_while_transform(!args.keep_while);
     let result = ctx.semantics(program);
-    match &result.var_supports {
-        VarSupport::Empty(_) => println!("Support: empty"),
-        VarSupport::Prod(supports) => {
-            for (v, support) in supports.iter().enumerate() {
-                println!("Support of {}: {support}", Var(v));
+    if args.verbose {
+        match &result.var_supports {
+            VarSupport::Empty(_) => println!("Support: empty"),
+            VarSupport::Prod(supports) => {
+                for (v, support) in supports.iter().enumerate() {
+                    println!("Support of {}: {support}", Var(v));
+                }
             }
         }
-    }
-    println!("Bound result:");
-    println!("{result}");
-    println!("Constraints:");
-    for constraint in ctx.constraints() {
-        println!("  {constraint}");
-    }
-    println!("Polynomial constraints:");
-    for constraint in ctx.constraints() {
-        println!("  {}", constraint.to_poly());
+        println!("Bound result:");
+        println!("{result}");
+        println!("Constraints:");
+        for constraint in ctx.constraints() {
+            println!("  {constraint}");
+        }
+        println!("Polynomial constraints:");
+        for constraint in ctx.constraints() {
+            println!("  {}", constraint.to_poly());
+        }
     }
     // println!("Python:");
     // println!("{}", ctx.output_python_z3());

@@ -17,6 +17,7 @@ use crate::{
 };
 
 pub struct BoundCtx {
+    verbose: bool,
     default_unroll: usize,
     min_degree: usize,
     evt: bool,
@@ -278,6 +279,7 @@ impl Transformer for BoundCtx {
 impl BoundCtx {
     pub fn new() -> Self {
         Self {
+            verbose: false,
             default_unroll: 8,
             min_degree: 1,
             evt: false,
@@ -452,7 +454,9 @@ impl BoundCtx {
         } else {
             unroll_count
         };
-        println!("Unrolling {unroll_count} times");
+        if self.verbose {
+            println!("Unrolling {unroll_count} times");
+        }
         for _ in 0..unroll_count {
             let (then_bound, else_bound) = self.transform_event(cond, pre_loop.clone());
             pre_loop = self.transform_statements(body, then_bound);
@@ -485,7 +489,9 @@ impl BoundCtx {
                 bound: self.new_bound(shape, self.min_degree),
                 var_supports: invariant_supports,
             };
-            println!("EVT-invariant: {invariant}");
+            if self.verbose {
+                println!("EVT-invariant: {invariant}");
+            }
             let (loop_entry, loop_exit) = self.transform_event(cond, invariant.clone());
             let one_iter = self.transform_statements(body, loop_entry);
             let rhs = self.add_bound_results(pre_loop, one_iter);
@@ -496,7 +502,9 @@ impl BoundCtx {
                 bound: self.new_bound(shape, self.min_degree),
                 var_supports: invariant_supports,
             };
-            println!("Invariant: {invariant}");
+            if self.verbose {
+                println!("Invariant: {invariant}");
+            }
             let (post_loop, mut exit) = if self.do_while_transform {
                 let (loop_entry, loop_exit) = self.transform_event(cond, pre_loop);
                 rest = self.add_bound_results(rest, loop_exit);
@@ -510,7 +518,9 @@ impl BoundCtx {
                 (post_loop, loop_exit)
             };
             let c = self.new_factor_var();
-            println!("Invariant-c: {c}");
+            if self.verbose {
+                println!("Invariant-c: {c}");
+            }
             self.add_constraint(c.clone().must_ge(SymExpr::zero()));
             self.add_constraint(c.clone().must_lt(SymExpr::one()));
             self.assert_le(&post_loop.bound, &(invariant.bound.clone() * c.clone()));
