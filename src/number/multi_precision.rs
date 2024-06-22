@@ -176,9 +176,7 @@ impl Div for MultiPrecFloat {
 
     fn div(self, rhs: Self) -> Self::Output {
         assert_eq!(self.0.prec(), rhs.0.prec());
-        if rhs.is_zero() {
-            panic!("Division by zero")
-        } else if self.is_zero() || rhs.is_one() {
+        if self.is_zero() || rhs.is_one() {
             return self;
         }
         Self(Rc::new(rug::Float::with_val(
