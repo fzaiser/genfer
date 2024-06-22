@@ -265,7 +265,7 @@ impl SupportSet {
             )),
             Self::Interval { start, end } => {
                 let (start_n, start_d) = start.to_ratio().unwrap();
-                let start = T::from_ratio(start_n.try_into().unwrap(), start_d.try_into().unwrap());
+                let start = T::from_ratio(start_n.try_into().unwrap(), start_d);
                 let end = if end.is_infinite() {
                     T::infinity()
                 } else {
