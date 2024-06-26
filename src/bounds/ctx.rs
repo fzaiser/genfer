@@ -317,6 +317,10 @@ impl BoundCtx {
         }
     }
 
+    pub fn with_verbose(self, verbose: bool) -> Self {
+        Self { verbose, ..self }
+    }
+
     pub fn sym_var_count(&self) -> usize {
         self.sym_var_count
     }
@@ -495,6 +499,9 @@ impl BoundCtx {
             let (loop_entry, loop_exit) = self.transform_event(cond, invariant.clone());
             let one_iter = self.transform_statements(body, loop_entry);
             let rhs = self.add_bound_results(pre_loop, one_iter);
+            if self.verbose {
+                println!("Post loop body: {rhs}");
+            }
             self.assert_le(&rhs.bound, &invariant.bound);
             self.add_bound_results(loop_exit, rest)
         } else {
@@ -517,6 +524,9 @@ impl BoundCtx {
                 let post_loop = self.transform_statements(body, loop_entry);
                 (post_loop, loop_exit)
             };
+            if self.verbose {
+                println!("Post loop body: {post_loop}");
+            }
             let c = self.new_factor_var();
             if self.verbose {
                 println!("Invariant-c: {c}");
@@ -612,7 +622,7 @@ impl BoundCtx {
 
     pub fn output_qepcad<W: std::io::Write>(&self, out: &mut W) -> std::io::Result<()> {
         // Name:
-        writeln!(out, "[Geometric bounds constraints]")?;
+        writeln!(out, "[Constraints]")?;
 
         // List of variables:
         write!(out, "(")?;

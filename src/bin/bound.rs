@@ -110,6 +110,7 @@ pub fn main() -> std::io::Result<()> {
 fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
     let start = Instant::now();
     let mut ctx = BoundCtx::new()
+        .with_verbose(args.verbose)
         .with_min_degree(args.min_degree)
         .with_default_unroll(args.unroll)
         .with_evt(args.evt)
