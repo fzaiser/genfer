@@ -21,6 +21,14 @@ pub struct GradientDescent {
     pub step_size: f64,
     pub max_iters: usize,
     pub dir_selection_strategy: DirSelectionStrategy,
+    verbose: bool,
+}
+
+impl GradientDescent {
+    pub fn with_verbose(mut self, verbose: bool) -> Self {
+        self.verbose = verbose;
+        self
+    }
 }
 
 impl Default for GradientDescent {
@@ -29,6 +37,7 @@ impl Default for GradientDescent {
             step_size: 1e-4,
             max_iters: 100,
             dir_selection_strategy: DirSelectionStrategy::ProjectPolyhedralCone,
+            verbose: false,
         }
     }
 }
@@ -106,9 +115,11 @@ impl Solver for GradientDescent {
             }
             trajectory.push(point.clone());
         }
-        println!("Points:");
-        for p in &trajectory {
-            println!("{p},");
+        if self.verbose {
+            println!("Points:");
+            for p in &trajectory {
+                println!("{p},");
+            }
         }
         let exact_point = point.mapv(Rational::from);
         if !problem.holds_exact(exact_point.as_slice().unwrap()) {
@@ -285,12 +296,16 @@ impl Optimizer for GradientDescent {
                 best_objective = objective;
                 best_point = point.clone();
             }
-            println!("Objective: {objective} at {point}");
+            if self.verbose {
+                println!("Objective: {objective} at {point}");
+            }
             trajectory.push(point.clone());
         }
-        println!("Points:");
-        for p in &trajectory {
-            println!("{p},");
+        if self.verbose {
+            println!("Points:");
+            for p in &trajectory {
+                println!("{p},");
+            }
         }
         println!("Best objective: {best_objective} at {best_point}");
         best_point.mapv(Rational::from).to_vec()
@@ -303,6 +318,14 @@ pub struct Adam {
     beta2: f64,
     epsilon: f64,
     dir_selection_strategy: DirSelectionStrategy,
+    verbose: bool,
+}
+
+impl Adam {
+    pub fn with_verbose(mut self, verbose: bool) -> Self {
+        self.verbose = verbose;
+        self
+    }
 }
 
 impl Default for Adam {
@@ -313,6 +336,7 @@ impl Default for Adam {
             beta2: 0.999,
             epsilon: 1e-8,
             dir_selection_strategy: DirSelectionStrategy::ProjectPolyhedralCone,
+            verbose: false,
         }
     }
 }
@@ -371,13 +395,17 @@ impl Optimizer for Adam {
                 best_objective = objective;
                 best_point = point_exact;
             }
-            println!("Objective: {objective} at {point}");
+            if self.verbose {
+                println!("Objective: {objective} at {point}");
+            }
             trajectory.push(point.clone());
             t += 1;
         }
-        println!("Points:");
-        for p in &trajectory {
-            println!("{p},");
+        if self.verbose {
+            println!("Points:");
+            for p in &trajectory {
+                println!("{p},");
+            }
         }
         println!(
             "Best objective: {best_objective} at {}",
@@ -394,6 +422,14 @@ pub struct AdamBarrier {
     beta1: f64,
     beta2: f64,
     epsilon: f64,
+    verbose: bool,
+}
+
+impl AdamBarrier {
+    pub fn with_verbose(mut self, verbose: bool) -> Self {
+        self.verbose = verbose;
+        self
+    }
 }
 
 impl Default for AdamBarrier {
@@ -403,6 +439,7 @@ impl Default for AdamBarrier {
             beta1: 0.9,
             beta2: 0.999,
             epsilon: 1e-8,
+            verbose: false,
         }
     }
 }
@@ -469,9 +506,11 @@ impl Optimizer for AdamBarrier {
             trajectory.push(point.clone());
             t += 1;
         }
-        println!("Points:");
-        for p in trajectory.iter().step_by(t as usize / 100) {
-            println!("{p},");
+        if self.verbose {
+            println!("Points:");
+            for p in trajectory.iter().step_by(t as usize / 100) {
+                println!("{p},");
+            }
         }
         println!(
             "Best objective: {best_objective} at {}",

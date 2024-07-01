@@ -12,6 +12,7 @@ use genfer::bounds::ctx::BoundCtx;
 use genfer::bounds::gradient_descent::{Adam, AdamBarrier, GradientDescent};
 use genfer::bounds::optimizer::{LinearProgrammingOptimizer, Optimizer as _, Z3Optimizer};
 use genfer::bounds::solver::{ConstraintProblem, Solver as _, SolverError, Z3Solver};
+use genfer::interval::Interval;
 use genfer::multivariate_taylor::TaylorPoly;
 use genfer::number::Rational;
 use genfer::parser;
@@ -20,7 +21,7 @@ use genfer::semantics::support::VarSupport;
 use genfer::semantics::Transformer;
 
 use clap::{Parser, ValueEnum};
-use num_traits::One;
+use num_traits::{One, Zero};
 
 #[derive(Clone, ValueEnum)]
 enum Solver {
@@ -115,7 +116,8 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
         .with_default_unroll(args.unroll)
         .with_evt(args.evt)
         .with_do_while_transform(!args.keep_while);
-    let result = ctx.semantics(program);
+    let mut result = ctx.semantics(program);
+    println!("Generated {} constraints", ctx.constraints().len());
     if args.verbose {
         match &result.var_supports {
             VarSupport::Empty(_) => println!("Support: empty"),
@@ -170,9 +172,9 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
     match init_solution {
         Ok(solution) => {
             let objective = match args.objective {
-                Objective::Total => result.bound.total_mass(),
-                Objective::ExpectedValue => result.bound.expected_value(program.result),
-                Objective::Tail => result.bound.tail_objective(program.result),
+                Objective::Total => result.upper.total_mass(),
+                Objective::ExpectedValue => result.upper.expected_value(program.result),
+                Objective::Tail => result.upper.tail_objective(program.result),
             };
             println!("Optimizing solution...");
             let optimized_solution = if let Some(optimizer) = &args.optimizer {
@@ -181,15 +183,15 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
                     Optimizer::Z3 => {
                         Z3Optimizer.optimize(&problem, &objective, solution.clone(), timeout)
                     }
-                    Optimizer::GradientDescent => {
-                        GradientDescent::default().optimize(&problem, &objective, solution, timeout)
-                    }
-                    Optimizer::Adam => {
-                        Adam::default().optimize(&problem, &objective, solution, timeout)
-                    }
-                    Optimizer::AdamBarrier => {
-                        AdamBarrier::default().optimize(&problem, &objective, solution, timeout)
-                    }
+                    Optimizer::GradientDescent => GradientDescent::default()
+                        .with_verbose(args.verbose)
+                        .optimize(&problem, &objective, solution, timeout),
+                    Optimizer::Adam => Adam::default()
+                        .with_verbose(args.verbose)
+                        .optimize(&problem, &objective, solution, timeout),
+                    Optimizer::AdamBarrier => AdamBarrier::default()
+                        .with_verbose(args.verbose)
+                        .optimize(&problem, &objective, solution, timeout),
                 };
                 let optimizer_time = start_optimizer.elapsed();
                 println!("Optimizer time: {optimizer_time:?}");
@@ -207,32 +209,40 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
                     timeout,
                 )
             };
-            let bound = result.bound.resolve(&optimized_solution);
+            result.upper = result.upper.resolve(&optimized_solution);
             println!("\nFinal bound:\n");
-            println!("{bound}");
+            println!("{result}");
 
             println!("\nProbability masses:");
-            let degree_p1 =
+            let limit =
                 if let Some(range) = result.var_supports[program.result].finite_nonempty_range() {
                     *range.end() as usize + 1
                 } else {
                     50
                 };
             let mut inputs = vec![TaylorPoly::one(); result.var_supports.num_vars()];
-            inputs[program.result.id()] = TaylorPoly::var_at_zero(Var(0), degree_p1);
-            let expansion = bound.eval_taylor::<Rational>(&inputs);
-            for i in 0..degree_p1 {
-                let prob = expansion.coefficient(&[i]).round_to_f64();
-                println!("p({i}) <= {prob}");
+            inputs[program.result.id()] = TaylorPoly::var_at_zero(Var(0), limit);
+            let lower_probs = result.lower.probs(program.result);
+            let expansion = result.upper.eval_taylor::<Rational>(&inputs);
+            for i in 0..limit {
+                let prob = Interval::exact(
+                    lower_probs.get(i).unwrap_or(&Rational::zero()).clone(),
+                    expansion.coefficient(&[i]),
+                );
+                println!("p({i}) {}", in_iv(prob));
             }
             println!("\nMoments:");
+            let lower_moments = result.lower.moments(program.result, 5);
             let mut inputs = vec![TaylorPoly::one(); result.var_supports.num_vars()];
             inputs[program.result.id()] = TaylorPoly::var_at_zero(Var(0), 5).exp();
-            let expansion = bound.eval_taylor::<Rational>(&inputs);
+            let expansion = result.upper.eval_taylor::<Rational>(&inputs);
             let mut factorial = Rational::one();
             for i in 0..5 {
-                let moment = (expansion.coefficient(&[i]) * factorial.clone()).round_to_f64();
-                println!("{i}-th (raw) moment <= {moment}");
+                let moment = Interval::exact(
+                    lower_moments[i].clone(),
+                    expansion.coefficient(&[i]) * factorial.clone(),
+                );
+                println!("{i}-th (raw) moment {}", in_iv(moment));
                 factorial *= Rational::from_int(i + 1);
             }
         }
@@ -247,4 +257,12 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
     }
     println!("Total time: {:?}", start.elapsed());
     Ok(())
+}
+
+fn in_iv(iv: Interval<Rational>) -> String {
+    if iv.lo == iv.hi {
+        format!("= {}", iv.lo.round_to_f64())
+    } else {
+        format!("∈ [{}, {}]", iv.lo.round_to_f64(), iv.hi.round_to_f64())
+    }
 }

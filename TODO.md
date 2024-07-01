@@ -1,5 +1,12 @@
 # Implementation TODO
 
+Loop Bounds
+===========
+
+- [ ] Ignore 0 <= ... constraints
+- [ ] IPOPT optimizer
+- [x] Lower bounds
+
 Features
 ========
 

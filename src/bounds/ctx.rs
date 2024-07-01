@@ -1,9 +1,11 @@
 use ndarray::{ArrayD, ArrayViewD, Axis, Dimension, Slice};
 use num_traits::{One, Zero};
 
+use std::ops::AddAssign;
+
 use crate::{
     bounds::{
-        bound::{BoundResult, GeometricBound},
+        bound::{BoundResult, FiniteDiscrete, GeometricBound},
         sym_expr::{SymConstraint, SymExpr},
         util::rational_to_qepcad,
     },
@@ -44,13 +46,18 @@ impl Transformer for BoundCtx {
 
     fn init(&mut self, program: &Program) -> Self::Domain {
         self.program_var_count = program.used_vars().num_vars();
-        let init_bound = GeometricBound {
+        let lower = FiniteDiscrete {
+            masses: ArrayD::ones(vec![1; self.program_var_count]),
+        };
+        let upper = GeometricBound {
             masses: ArrayD::ones(vec![1; self.program_var_count]),
             geo_params: vec![SymExpr::zero(); self.program_var_count],
         };
+        let var_supports = self.support.init(program);
         BoundResult {
-            bound: init_bound,
-            var_supports: self.support.init(program),
+            lower,
+            upper,
+            var_supports,
         }
     }
 
@@ -62,20 +69,35 @@ impl Transformer for BoundCtx {
         match event {
             Event::InSet(v, set) => {
                 let max = set.iter().fold(0, |acc, x| acc.max(x.0 as usize));
-                init.bound.extend_axis(*v, max + 2);
+                init.upper.extend_axis(*v, max + 2);
                 let axis = Axis(v.id());
-                let len = init.bound.masses.len_of(axis);
-                let mut then_bound = init.bound.clone();
-                let mut else_bound = init.bound;
-                then_bound.geo_params[v.id()] = SymExpr::zero();
-                for i in 0..len {
+                let len_lower = init.lower.masses.len_of(axis);
+                let len_upper = init.upper.masses.len_of(axis);
+                let mut then_lower_bound = init.lower.clone();
+                let mut else_lower_bound = init.lower;
+                let mut then_upper_bound = init.upper.clone();
+                let mut else_upper_bound = init.upper;
+                then_upper_bound.geo_params[v.id()] = SymExpr::zero();
+                for i in 0..len_upper {
                     if set.contains(&Natural(i as u32)) {
-                        else_bound
+                        if i < len_lower {
+                            else_lower_bound
+                                .masses
+                                .index_axis_mut(axis, i)
+                                .fill(Rational::zero());
+                        }
+                        else_upper_bound
                             .masses
                             .index_axis_mut(axis, i)
                             .fill(SymExpr::zero());
                     } else {
-                        then_bound
+                        if i < len_lower {
+                            then_lower_bound
+                                .masses
+                                .index_axis_mut(axis, i)
+                                .fill(Rational::zero());
+                        }
+                        then_upper_bound
                             .masses
                             .index_axis_mut(axis, i)
                             .fill(SymExpr::zero());
@@ -84,11 +106,13 @@ impl Transformer for BoundCtx {
                 let (then_support, else_support) =
                     self.support.transform_event(event, init.var_supports);
                 let then_res = BoundResult {
-                    bound: then_bound,
+                    lower: then_lower_bound,
+                    upper: then_upper_bound,
                     var_supports: then_support,
                 };
                 let else_res = BoundResult {
-                    bound: else_bound,
+                    lower: else_lower_bound,
+                    upper: else_upper_bound,
                     var_supports: else_support,
                 };
                 (then_res, else_res)
@@ -104,8 +128,10 @@ impl Transformer for BoundCtx {
                     };
                     let mut then_res = init.clone();
                     let mut else_res = init;
-                    then_res.bound *= SymExpr::from(then);
-                    else_res.bound *= SymExpr::from(els);
+                    then_res.lower *= then.clone();
+                    else_res.lower *= els.clone();
+                    then_res.upper *= SymExpr::from(then);
+                    else_res.upper *= SymExpr::from(els);
                     (then_res, else_res)
                 } else {
                     todo!()
@@ -117,10 +143,7 @@ impl Transformer for BoundCtx {
                 (else_res, then_res)
             }
             Event::Intersection(events) => {
-                let mut else_res = BoundResult {
-                    bound: GeometricBound::zero(init.bound.geo_params.len()),
-                    var_supports: VarSupport::Empty(init.var_supports.num_vars()),
-                };
+                let mut else_res = BoundResult::zero(self.program_var_count);
                 let mut then_res = init;
                 for event in events {
                     let (new_then, new_else) = self.transform_event(event, then_res);
@@ -161,13 +184,17 @@ impl Transformer for BoundCtx {
                 match distribution {
                     Distribution::Bernoulli(p) => {
                         let p = Rational::from_ratio(p.numer, p.denom);
-                        res.bound
+                        res.lower
+                            .add_categorical(*var, &[Rational::one() - p.clone(), p.clone()]);
+                        res.upper
                             .add_categorical(*var, &[Rational::one() - p.clone(), p]);
                     }
                     Distribution::Geometric(p) if !add_previous_value => {
                         let p = Rational::from_ratio(p.numer, p.denom);
-                        res.bound *= SymExpr::from(p.clone());
-                        res.bound.geo_params[var.id()] = SymExpr::from(Rational::one() - p);
+                        res.lower *= p.clone();
+                        // TODO: should we extend lower in the `var` dimension? If so, how far?
+                        res.upper *= SymExpr::from(p.clone());
+                        res.upper.geo_params[var.id()] = SymExpr::from(Rational::one() - p);
                     }
                     Distribution::Uniform { start, end } => {
                         let p = Rational::one() / Rational::from_int(end.0 - start.0);
@@ -180,16 +207,16 @@ impl Transformer for BoundCtx {
                                 }
                             })
                             .collect::<Vec<_>>();
-                        res.bound.add_categorical(*var, &categorical);
+                        res.lower.add_categorical(*var, &categorical);
+                        res.upper.add_categorical(*var, &categorical);
                     }
                     Distribution::Categorical(categorical) => {
-                        res.bound.add_categorical(
-                            *var,
-                            &categorical
-                                .iter()
-                                .map(|p| Rational::from_ratio(p.numer, p.denom))
-                                .collect::<Vec<_>>(),
-                        );
+                        let categorical = categorical
+                            .iter()
+                            .map(|p| Rational::from_ratio(p.numer, p.denom))
+                            .collect::<Vec<_>>();
+                        res.lower.add_categorical(*var, &categorical);
+                        res.upper.add_categorical(*var, &categorical);
                     }
                     _ => todo!(),
                 };
@@ -209,34 +236,55 @@ impl Transformer for BoundCtx {
                 };
                 match (addend, offset) {
                     (Some((Natural(1), w)), Natural(0)) => {
+                        assert_ne!(var, w, "Cannot assign/add a variable to itself");
                         if let Some(range) = new_bound.var_supports[w].finite_nonempty_range() {
-                            let mut new_shape = new_bound.bound.masses.shape().to_vec();
-                            new_shape[var.id()] += *range.end() as usize;
-                            let new_len = new_shape[var.id()];
-                            new_bound.bound.extend_axis(*var, new_len);
-                            let masses = &new_bound.bound.masses;
-                            let mut res_masses = ArrayD::zeros(new_shape);
+                            let mut new_lower_shape = new_bound.lower.masses.shape().to_vec();
+                            let lower_len = new_lower_shape[var.id()];
+                            let mut new_upper_shape = new_bound.upper.masses.shape().to_vec();
+                            new_lower_shape[var.id()] += *range.end() as usize;
+                            new_upper_shape[var.id()] += *range.end() as usize;
+                            let new_upper_len = new_upper_shape[var.id()];
+                            new_bound.upper.extend_axis(*var, new_upper_len);
+                            let lower_masses = &new_bound.lower.masses;
+                            let upper_masses = &new_bound.upper.masses;
+                            let mut res_lower_masses = ArrayD::zeros(new_lower_shape);
+                            let mut res_upper_masses = ArrayD::zeros(new_upper_shape);
                             for i in range {
                                 let i = i as usize;
-                                res_masses
+                                if i < res_lower_masses.len_of(Axis(w.id())) {
+                                    res_lower_masses
+                                        .slice_axis_mut(Axis(w.id()), Slice::from(i..=i))
+                                        .slice_axis_mut(
+                                            Axis(var.id()),
+                                            Slice::from(i..lower_len + i),
+                                        )
+                                        .add_assign(
+                                            &lower_masses
+                                                .slice_axis(Axis(w.id()), Slice::from(i..=i))
+                                                .slice_axis(Axis(var.id()), Slice::from(0..)),
+                                        );
+                                }
+                                res_upper_masses
                                     .slice_axis_mut(Axis(w.id()), Slice::from(i..=i))
-                                    .slice_axis_mut(Axis(var.id()), Slice::from(i..new_len))
-                                    .assign(
-                                        &masses
+                                    .slice_axis_mut(Axis(var.id()), Slice::from(i..new_upper_len))
+                                    .add_assign(
+                                        &upper_masses
                                             .slice_axis(Axis(w.id()), Slice::from(i..=i))
                                             .slice_axis(
                                                 Axis(var.id()),
-                                                Slice::from(0..new_len - i),
+                                                Slice::from(0..new_upper_len - i),
                                             ),
                                     );
                             }
-                            new_bound.bound.masses = res_masses;
+                            new_bound.lower.masses = res_lower_masses;
+                            new_bound.upper.masses = res_upper_masses;
                         } else {
                             todo!("Addition of a variable is not implemented for infinite support: {}", stmt.to_string());
                         }
                     }
                     (None, offset) => {
-                        new_bound.bound.shift_right(*var, offset.0 as usize);
+                        new_bound.lower.shift_right(*var, offset.0 as usize);
+                        new_bound.upper.shift_right(*var, offset.0 as usize);
                     }
                     _ => todo!("{}", stmt.to_string()),
                 }
@@ -247,7 +295,8 @@ impl Transformer for BoundCtx {
             }
             Statement::Decrement { var, offset } => {
                 let mut new_bound = init;
-                new_bound.bound.shift_left(*var, offset.0 as usize);
+                new_bound.lower.shift_left(*var, offset.0 as usize);
+                new_bound.upper.shift_left(*var, offset.0 as usize);
                 new_bound.var_supports = self
                     .support
                     .transform_statement(stmt, new_bound.var_supports);
@@ -260,10 +309,7 @@ impl Transformer for BoundCtx {
                 self.add_bound_results(then_res, else_res)
             }
             Statement::While { cond, unroll, body } => self.bound_while(cond, *unroll, body, init),
-            Statement::Fail => BoundResult {
-                bound: GeometricBound::zero(self.program_var_count),
-                var_supports: VarSupport::empty(init.var_supports.num_vars()),
-            },
+            Statement::Fail => BoundResult::zero(self.program_var_count),
             Statement::Normalize { .. } => todo!(),
         };
         if let Some(direct_var_info) = direct_var_supports {
@@ -429,10 +475,12 @@ impl BoundCtx {
     }
 
     pub fn add_bound_results(&mut self, lhs: BoundResult, rhs: BoundResult) -> BoundResult {
-        let bound = self.add_bounds(lhs.bound, rhs.bound);
+        let lower = &lhs.lower + &rhs.lower;
+        let upper = self.add_bounds(lhs.upper, rhs.upper);
         let var_supports = lhs.var_supports.join(&rhs.var_supports);
         BoundResult {
-            bound,
+            lower,
+            upper,
             var_supports,
         }
     }
@@ -445,10 +493,7 @@ impl BoundCtx {
         init: BoundResult,
     ) -> BoundResult {
         let mut pre_loop = init;
-        let mut rest = BoundResult {
-            bound: GeometricBound::zero(self.program_var_count),
-            var_supports: VarSupport::empty(pre_loop.var_supports.num_vars()),
-        };
+        let mut rest = BoundResult::zero(self.program_var_count);
         let unroll_count = unroll.unwrap_or(self.default_unroll);
         let unroll_result =
             self.support
@@ -490,7 +535,8 @@ impl BoundCtx {
         };
         if self.evt {
             let invariant = BoundResult {
-                bound: self.new_bound(shape, self.min_degree),
+                lower: FiniteDiscrete::zero(self.program_var_count),
+                upper: self.new_bound(shape, self.min_degree),
                 var_supports: invariant_supports,
             };
             if self.verbose {
@@ -502,11 +548,12 @@ impl BoundCtx {
             if self.verbose {
                 println!("Post loop body: {rhs}");
             }
-            self.assert_le(&rhs.bound, &invariant.bound);
+            self.assert_le(&rhs.upper, &invariant.upper);
             self.add_bound_results(loop_exit, rest)
         } else {
             let invariant = BoundResult {
-                bound: self.new_bound(shape, self.min_degree),
+                lower: FiniteDiscrete::zero(self.program_var_count),
+                upper: self.new_bound(shape, self.min_degree),
                 var_supports: invariant_supports,
             };
             if self.verbose {
@@ -515,11 +562,11 @@ impl BoundCtx {
             let (post_loop, mut exit) = if self.do_while_transform {
                 let (loop_entry, loop_exit) = self.transform_event(cond, pre_loop);
                 rest = self.add_bound_results(rest, loop_exit);
-                self.assert_le(&loop_entry.bound, &invariant.bound);
+                self.assert_le(&loop_entry.upper, &invariant.upper);
                 let post_loop = self.transform_statements(body, invariant.clone());
                 self.transform_event(cond, post_loop)
             } else {
-                self.assert_le(&pre_loop.bound, &invariant.bound);
+                self.assert_le(&pre_loop.upper, &invariant.upper);
                 let (loop_entry, loop_exit) = self.transform_event(cond, invariant.clone());
                 let post_loop = self.transform_statements(body, loop_entry);
                 (post_loop, loop_exit)
@@ -533,8 +580,8 @@ impl BoundCtx {
             }
             self.add_constraint(c.clone().must_ge(SymExpr::zero()));
             self.add_constraint(c.clone().must_lt(SymExpr::one()));
-            self.assert_le(&post_loop.bound, &(invariant.bound.clone() * c.clone()));
-            exit.bound /= SymExpr::one() - c.clone();
+            self.assert_le(&post_loop.upper, &(invariant.upper.clone() * c.clone()));
+            exit.upper /= SymExpr::one() - c.clone();
             self.add_bound_results(exit, rest)
         }
     }
