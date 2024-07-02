@@ -49,6 +49,7 @@ enum Objective {
     #[value(name = "ev")]
     ExpectedValue,
     Tail,
+    Balance,
 }
 
 #[allow(clippy::struct_excessive_bools)]
@@ -191,6 +192,9 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
                 Objective::Total => result.upper.total_mass(),
                 Objective::ExpectedValue => result.upper.expected_value(program.result),
                 Objective::Tail => result.upper.tail_objective(program.result),
+                Objective::Balance => {
+                    result.upper.total_mass() * result.upper.tail_objective(program.result).pow(4)
+                }
             };
             println!("Optimizing solution...");
             let optimized_solution = if let Some(optimizer) = &args.optimizer {

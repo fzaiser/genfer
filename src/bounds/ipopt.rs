@@ -32,6 +32,7 @@ impl Ipopt {
         init: Option<&[Rational]>,
     ) -> (Vec<Var>, IpoptModel) {
         let mut model = IpoptModel::new();
+        model.set_num_option("constr_viol_tol", self.tol);
         let mut vars = Vec::new();
         for (v, (lo, hi)) in problem.var_bounds.iter().enumerate() {
             let (lo, hi) = (lo.round_to_f64(), hi.round_to_f64());
@@ -65,7 +66,7 @@ impl Default for Ipopt {
     fn default() -> Self {
         Ipopt {
             verbose: false,
-            tol: 1e-8,
+            tol: 1e-7,
         }
     }
 }
@@ -123,37 +124,49 @@ impl Optimizer for Ipopt {
         init: Vec<Rational>,
         _timeout: Duration,
     ) -> Vec<Rational> {
+        let init_obj = objective.eval_exact(&init);
         let (vars, mut model) = self.construct_model(problem, Some(&init));
         model.set_obj(ipopt_expr(objective, &vars));
         match Self::solve(&vars, &mut model) {
-            Ok((status, solution)) => match status {
-                SolutionStatus::Solved => {
-                    println!("IPOPT found the following solution:");
-                    print!(
-                        "Objective: {} at {:?}",
-                        objective.eval_exact(&solution).round_to_f64(),
-                        solution
-                            .iter()
-                            .map(Rational::round_to_f64)
-                            .collect::<Vec<_>>()
-                    );
-                    if problem.holds_exact(&solution) {
-                        println!("The solution satisfies all constraints.");
-                        solution
-                    } else {
-                        println!("The solution does not satisfy all constraints (rounding errors?); returning initial solution.");
+            Ok((status, solution)) => {
+                let obj_value = objective.eval_exact(&solution);
+                let holds_exact = problem.holds_exact(&solution);
+                match status {
+                    SolutionStatus::Solved => {
+                        println!("IPOPT found the following solution:");
+                        println!(
+                            "Objective: {} at {:?}",
+                            obj_value.round_to_f64(),
+                            solution
+                                .iter()
+                                .map(Rational::round_to_f64)
+                                .collect::<Vec<_>>()
+                        );
+                        if holds_exact {
+                            println!("The solution satisfies all constraints.");
+                            solution
+                        } else {
+                            println!("The solution does not satisfy all constraints (rounding errors?); returning initial solution.");
+                            init
+                        }
+                    }
+                    SolutionStatus::Infeasible => {
+                        println!("IPOPT found the problem infeasible; returning initial solution.");
                         init
                     }
+                    SolutionStatus::Other => {
+                        if holds_exact && obj_value <= init_obj {
+                            println!("IPOPT failed to find an optimal solution; continuing with nonoptimal solution.");
+                            solution
+                        } else {
+                            println!(
+                                "IPOPT failed to solve the problem; returning initial solution."
+                            );
+                            init
+                        }
+                    }
                 }
-                SolutionStatus::Infeasible => {
-                    println!("IPOPT found the problem infeasible; returning initial solution.");
-                    init
-                }
-                SolutionStatus::Other => {
-                    println!("IPOPT failed to solve the problem; returning initial solution.");
-                    init
-                }
-            },
+            }
             Err(e) => {
                 println!("IPOPT failed: {e}\nReturning initial solution.");
                 init
@@ -183,7 +196,7 @@ fn ipopt_constraint(constraint: &SymConstraint, vars: &[Var], tol: f64) -> (Expr
         }
         SymConstraint::Lt(lhs, rhs) | SymConstraint::Le(lhs, rhs) => {
             let expr = ipopt_expr(lhs, vars) - ipopt_expr(rhs, vars);
-            (expr, f64::NEG_INFINITY, -tol)
+            (expr, f64::NEG_INFINITY, -2.0 * tol)
         }
         SymConstraint::Or(_) => (0.0.into(), 0.0, 0.0),
     }
