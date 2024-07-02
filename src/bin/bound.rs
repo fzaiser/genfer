@@ -22,6 +22,7 @@ use genfer::semantics::support::VarSupport;
 use genfer::semantics::Transformer;
 
 use clap::{Parser, ValueEnum};
+use ndarray::Axis;
 use num_traits::{One, Zero};
 
 #[derive(Clone, ValueEnum)]
@@ -236,6 +237,72 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
             println!("\nFinal bound:\n");
             println!("{result}");
 
+            for v in 0..result.var_supports.num_vars() {
+                if Var(v) != program.result {
+                    result = result.marginalize(Var(v));
+                }
+            }
+            println!("\nMarginalized bound:");
+            let ax = Axis(program.result.id());
+            let upper_len = result.upper.masses.len_of(ax);
+            let lower_len = result.lower.masses.len_of(ax);
+            let thresh = lower_len.max(upper_len - 1);
+            let decay = result.upper.geo_params[program.result.id()]
+                .extract_constant()
+                .unwrap()
+                .rat();
+            for i in 0..thresh {
+                let lo = if i < lower_len {
+                    result
+                        .lower
+                        .masses
+                        .index_axis(ax, i)
+                        .first()
+                        .unwrap()
+                        .clone()
+                } else {
+                    Rational::zero()
+                };
+                let hi = if i < upper_len {
+                    result
+                        .upper
+                        .masses
+                        .index_axis(ax, i)
+                        .first()
+                        .unwrap()
+                        .extract_constant()
+                        .unwrap()
+                        .rat()
+                } else {
+                    result
+                        .upper
+                        .masses
+                        .index_axis(ax, upper_len - 1)
+                        .first()
+                        .unwrap()
+                        .extract_constant()
+                        .unwrap()
+                        .rat()
+                        * decay.pow(i as i32 - upper_len as i32 + 1)
+                };
+                println!("{i}: [{}, {}]", lo.round_to_f64(), hi.round_to_f64());
+            }
+            let thresh_hi = result
+                .upper
+                .masses
+                .index_axis(ax, upper_len - 1)
+                .first()
+                .unwrap()
+                .extract_constant()
+                .unwrap()
+                .rat()
+                * decay.pow(thresh as i32 - upper_len as i32 + 1);
+            println!(
+                "n >= {thresh}: [0, {} * {}^(n - {thresh})]",
+                thresh_hi.round_to_f64(),
+                decay.round_to_f64()
+            );
+
             println!("\nProbability masses:");
             let limit =
                 if let Some(range) = result.var_supports[program.result].finite_nonempty_range() {
@@ -254,6 +321,15 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
                 );
                 println!("p({i}) {}", in_iv(&prob));
             }
+
+            let factor = thresh_hi * decay.pow(-(thresh as i32));
+            println!(
+                "\nAsymptotics: p(n) <= {} * {}^n for n >= {}",
+                factor.round_to_f64(),
+                decay.round_to_f64(),
+                thresh
+            );
+
             println!("\nMoments:");
             let lower_moments = result.lower.moments(program.result, 5);
             let mut inputs = vec![TaylorPoly::one(); result.var_supports.num_vars()];

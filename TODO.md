@@ -7,7 +7,8 @@ Loop Bounds
 - [x] Lower bounds
 - [x] IPOPT optimizer
 - [x] Adjust tolerance for linear solver
-- [ ] Add --objective tail-balance option
+- [x] Add --objective balance option
+- [x] Output marginalized bound and asymptotics
 - [ ] Turn upper bounds into bounds on the remainder besides the lower bound
 
 Features
