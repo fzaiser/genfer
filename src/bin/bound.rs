@@ -283,7 +283,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
                         .extract_constant()
                         .unwrap()
                         .rat()
-                        * decay.pow(i as i32 - upper_len as i32 + 1)
+                        * decay.pow((i - upper_len).try_into().unwrap())
                 };
                 println!("{i}: [{}, {}]", lo.round_to_f64(), hi.round_to_f64());
             }
@@ -296,7 +296,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
                 .extract_constant()
                 .unwrap()
                 .rat()
-                * decay.pow(thresh as i32 - upper_len as i32 + 1);
+                * decay.pow((thresh - upper_len + 1).try_into().unwrap());
             println!(
                 "n >= {thresh}: [0, {} * {}^(n - {thresh})]",
                 thresh_hi.round_to_f64(),
@@ -322,7 +322,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
                 println!("p({i}) {}", in_iv(&prob));
             }
 
-            let factor = thresh_hi * decay.pow(-(thresh as i32));
+            let factor = thresh_hi * decay.pow(-(i32::try_from(thresh).unwrap()));
             println!(
                 "\nAsymptotics: p(n) <= {} * {}^n for n >= {}",
                 factor.round_to_f64(),

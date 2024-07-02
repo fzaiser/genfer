@@ -1,6 +1,8 @@
 use std::time::Duration;
 
-use good_lp::{variable, ProblemVariables, Solution, SolverModel};
+use good_lp::{
+    solvers::coin_cbc::CoinCbcProblem, variable, ProblemVariables, Solution, SolverModel, Variable,
+};
 use num_traits::Zero;
 
 use crate::{
@@ -116,17 +118,17 @@ impl Optimizer for LinearProgrammingOptimizer {
         _timeout: Duration,
     ) -> Vec<Rational> {
         optimize_linear_parts(problem, objective, init.clone()).unwrap_or_else(|| {
-            println!("LP solver failed to optimize linear parts. Returning initial solution.");
+            println!("LP solver failed; returning previous solution.");
             init
         })
     }
 }
 
-pub fn optimize_linear_parts(
+fn construct_model(
     problem: &ConstraintProblem,
     objective: &SymExpr,
-    init: Vec<Rational>,
-) -> Option<Vec<Rational>> {
+    init: &[Rational],
+) -> (Vec<Variable>, CoinCbcProblem) {
     let mut replacements = (0..problem.var_count).map(SymExpr::var).collect::<Vec<_>>();
     for v in problem.geom_vars.iter().chain(problem.factor_vars.iter()) {
         replacements[*v] = SymExpr::from(init[*v].clone());
@@ -176,6 +178,15 @@ pub fn optimize_linear_parts(
     for constraint in &linear_constraints {
         lp.add_constraint(constraint.to_lp_constraint(&var_list, &FloatRat::float));
     }
+    (var_list, lp)
+}
+
+pub fn optimize_linear_parts(
+    problem: &ConstraintProblem,
+    objective: &SymExpr,
+    init: Vec<Rational>,
+) -> Option<Vec<Rational>> {
+    let (var_list, mut lp) = construct_model(problem, objective, &init);
     // For a feasible solution no primal infeasibility, i.e., constraint violation, may exceed this value:
     lp.set_parameter("primalT", &TOL.to_string());
     // For an optimal solution no dual infeasibility may exceed this value:
@@ -207,7 +218,14 @@ pub fn optimize_linear_parts(
         println!("Solution by LP solver does not satisfy the constraints.");
         return None;
     };
+    let init_obj = objective.eval_exact(&init);
     let objective_value = objective.eval_exact(&solution);
+    if init_obj < objective_value {
+        println!(
+            "LP solver found a solution with a worse objective value than the initial solution."
+        );
+        return None;
+    }
     println!(
         "Best objective: {} at {:?}",
         objective_value.round_to_f64(),

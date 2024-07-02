@@ -46,7 +46,7 @@ impl Ipopt {
             vars.push(model.add_var(lo, hi, start));
         }
         for constraint in &problem.constraints {
-            let (expr, lo, hi) = ipopt_constraint(&constraint, &vars, self.tol);
+            let (expr, lo, hi) = ipopt_constraint(constraint, &vars, self.tol);
             model.add_con(expr, lo, hi);
         }
         (vars, model)
