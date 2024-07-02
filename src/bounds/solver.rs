@@ -11,6 +11,7 @@ use super::sym_expr::{SymConstraint, SymExpr};
 pub enum SolverError {
     Infeasible,
     Timeout,
+    Other,
 }
 
 pub struct ConstraintProblem {

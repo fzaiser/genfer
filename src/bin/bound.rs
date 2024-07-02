@@ -10,6 +10,7 @@ use std::time::{Duration, Instant};
 
 use genfer::bounds::ctx::BoundCtx;
 use genfer::bounds::gradient_descent::{Adam, AdamBarrier, GradientDescent};
+use genfer::bounds::ipopt::Ipopt;
 use genfer::bounds::optimizer::{LinearProgrammingOptimizer, Optimizer as _, Z3Optimizer};
 use genfer::bounds::solver::{ConstraintProblem, Solver as _, SolverError, Z3Solver};
 use genfer::interval::Interval;
@@ -29,6 +30,7 @@ enum Solver {
     #[value(name = "gd")]
     GradientDescent,
     AdamBarrier,
+    Ipopt,
 }
 
 #[derive(Clone, ValueEnum)]
@@ -38,6 +40,7 @@ enum Optimizer {
     GradientDescent,
     Adam,
     AdamBarrier,
+    Ipopt,
 }
 
 #[derive(Clone, ValueEnum)]
@@ -170,8 +173,15 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
     };
     let init_solution = match args.solver {
         Solver::Z3 => Z3Solver.solve(&problem, timeout),
-        Solver::GradientDescent => GradientDescent::default().solve(&problem, timeout),
-        Solver::AdamBarrier => AdamBarrier::default().solve(&problem, timeout),
+        Solver::GradientDescent => GradientDescent::default()
+            .with_verbose(args.verbose)
+            .solve(&problem, timeout),
+        Solver::AdamBarrier => AdamBarrier::default()
+            .with_verbose(args.verbose)
+            .solve(&problem, timeout),
+        Solver::Ipopt => Ipopt::default()
+            .with_verbose(args.verbose)
+            .solve(&problem, timeout),
     };
     let solver_time = start_solver.elapsed();
     println!("Solver time: {solver_time:?}");
@@ -196,6 +206,9 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
                         .with_verbose(args.verbose)
                         .optimize(&problem, &objective, solution, timeout),
                     Optimizer::AdamBarrier => AdamBarrier::default()
+                        .with_verbose(args.verbose)
+                        .optimize(&problem, &objective, solution, timeout),
+                    Optimizer::Ipopt => Ipopt::default()
                         .with_verbose(args.verbose)
                         .optimize(&problem, &objective, solution, timeout),
                 };
@@ -258,6 +271,9 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
             }
             SolverError::Infeasible => {
                 println!("Solver proved that there is no bound of the required form");
+            }
+            SolverError::Other => {
+                println!("Solver failed for some other reason");
             }
         },
     }
