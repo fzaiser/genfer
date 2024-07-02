@@ -3,9 +3,10 @@
 Loop Bounds
 ===========
 
-- [ ] Ignore 0 <= ... constraints
-- [ ] IPOPT optimizer
+- [x] Ignore 0 <= ... constraints
 - [x] Lower bounds
+- [ ] IPOPT optimizer
+- [ ] Turn upper bounds into bounds on the remainder besides the lower bound
 
 Features
 ========

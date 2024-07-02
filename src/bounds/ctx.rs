@@ -6,10 +6,10 @@ use std::ops::AddAssign;
 use crate::{
     bounds::{
         bound::{BoundResult, FiniteDiscrete, GeometricBound},
-        sym_expr::{SymConstraint, SymExpr},
+        sym_expr::{SymConstraint, SymExpr, SymExprKind},
         util::rational_to_qepcad,
     },
-    number::{Number, Rational},
+    number::{FloatNumber, Number, Rational},
     ppl::{Distribution, Event, Natural, Program, Statement, Var},
     semantics::{
         support::{SupportTransformer, VarSupport},
@@ -26,12 +26,12 @@ pub struct BoundCtx {
     do_while_transform: bool,
     support: SupportTransformer,
     program_var_count: usize,
-    sym_var_count: usize,
     // Variables used nonlinearly, in [0,1)
     nonlinear_vars: Vec<usize>,
     geom_vars: Vec<usize>,
     factor_vars: Vec<usize>,
     coeff_vars: Vec<usize>,
+    sym_var_bounds: Vec<(Rational, Rational)>,
     constraints: Vec<SymConstraint>,
 }
 
@@ -332,11 +332,11 @@ impl BoundCtx {
             do_while_transform: false,
             support: SupportTransformer,
             program_var_count: 0,
-            sym_var_count: 0,
             nonlinear_vars: Vec::new(),
             geom_vars: Vec::new(),
             factor_vars: Vec::new(),
             coeff_vars: Vec::new(),
+            sym_var_bounds: Vec::new(),
             constraints: Vec::new(),
         }
     }
@@ -368,7 +368,7 @@ impl BoundCtx {
     }
 
     pub fn sym_var_count(&self) -> usize {
-        self.sym_var_count
+        self.sym_var_bounds.len()
     }
 
     pub fn nonlinear_vars(&self) -> &[usize] {
@@ -387,20 +387,56 @@ impl BoundCtx {
         &self.coeff_vars
     }
 
+    pub fn sym_var_bounds(&self) -> &[(Rational, Rational)] {
+        &self.sym_var_bounds
+    }
+
     pub fn constraints(&self) -> &[SymConstraint] {
         &self.constraints
     }
 
     fn fresh_sym_var_idx(&mut self) -> usize {
-        let var = self.sym_var_count;
-        self.sym_var_count += 1;
+        let var = self.sym_var_count();
+        self.sym_var_bounds
+            .push((Rational::zero(), Rational::infinity()));
         var
     }
 
     pub fn add_constraint(&mut self, constraint: SymConstraint) {
-        if !constraint.is_trivial() {
-            self.constraints.push(constraint);
+        // Remove 0 <= ... constraints (trivially true because everything is nonnegative)
+        if let SymConstraint::Le(lhs, _) = &constraint {
+            if let SymExprKind::Constant(c) = lhs.kind() {
+                if c.is_zero() {
+                    return;
+                }
+            }
         }
+        // Recognize variable bounds (lo <= v and v < hi) constraints
+        match &constraint {
+            SymConstraint::Le(lhs, rhs) => {
+                if let (SymExprKind::Constant(lo), SymExprKind::Variable(v)) =
+                    (lhs.kind(), rhs.kind())
+                {
+                    let bound = &mut self.sym_var_bounds[*v];
+                    bound.0 = bound.0.max(&lo.rat());
+                    return;
+                }
+            }
+            SymConstraint::Lt(lhs, rhs) => {
+                if let (SymExprKind::Variable(v), SymExprKind::Constant(hi)) =
+                    (lhs.kind(), rhs.kind())
+                {
+                    let bound = &mut self.sym_var_bounds[*v];
+                    bound.1 = bound.1.min(&hi.rat());
+                    return;
+                }
+            }
+            _ => {}
+        }
+        if constraint.is_trivial() {
+            return;
+        }
+        self.constraints.push(constraint);
     }
 
     pub fn new_geom_var(&mut self) -> SymExpr {
@@ -586,63 +622,22 @@ impl BoundCtx {
         }
     }
 
-    pub fn output_python(&self, bound: &GeometricBound) -> String {
-        use std::fmt::Write;
-        let mut out = String::new();
-        writeln!(out, "import numpy as np").unwrap();
-        writeln!(out, "from scipy.optimize import *").unwrap();
-        writeln!(out).unwrap();
-        writeln!(out, "nvars = {}", self.sym_var_count).unwrap();
-        writeln!(out, "bounds = Bounds(").unwrap();
-        write!(out, "  [").unwrap();
-        for i in 0..self.sym_var_count {
-            if self.nonlinear_vars.contains(&i) {
-                write!(out, "0, ").unwrap();
-            } else {
-                write!(out, "-np.inf, ").unwrap();
-            }
-        }
-        writeln!(out, "],").unwrap();
-        write!(out, "  [").unwrap();
-        for i in 0..self.sym_var_count {
-            if self.nonlinear_vars.contains(&i) {
-                write!(out, "1, ").unwrap();
-            } else {
-                write!(out, "np.inf, ").unwrap();
-            }
-        }
-        writeln!(out, "])").unwrap();
-        writeln!(out).unwrap();
-        writeln!(out, "def constraint_fun(x):").unwrap();
-        writeln!(out, "  return [").unwrap();
-        for c in &self.constraints {
-            match c {
-                SymConstraint::Eq(_, _) | SymConstraint::Or(_) => continue,
-                SymConstraint::Lt(lhs, rhs) | SymConstraint::Le(lhs, rhs) => {
-                    writeln!(out, "    ({}) - ({}),", rhs.to_python(), lhs.to_python()).unwrap();
-                }
-            }
-        }
-        writeln!(out, "  ]").unwrap();
-        writeln!(out, "constraints = NonlinearConstraint(constraint_fun, 0, np.inf, jac='2-point', hess=BFGS())").unwrap();
-        writeln!(out).unwrap();
-        writeln!(out, "def objective(x):").unwrap();
-        let total = bound.total_mass();
-        write!(out, "  return ({})", total.to_python()).unwrap();
-        writeln!(out, "x0 = np.full((nvars,), 0.9)").unwrap();
-        out
-    }
-
     pub fn output_python_z3(&self) -> String {
         use std::fmt::Write;
         let mut out = String::new();
         writeln!(out, "import z3").unwrap();
         writeln!(out, "z3.set_option(precision=5)").unwrap();
         writeln!(out).unwrap();
-        for i in 0..self.sym_var_count {
+        for i in 0..self.sym_var_count() {
             writeln!(out, "x{i} = Real('x{i}')").unwrap();
         }
         writeln!(out, "s = Solver()").unwrap();
+        for (v, (lo, hi)) in self.sym_var_bounds.iter().enumerate() {
+            writeln!(out, "s.add(x{v} >= {lo})").unwrap();
+            if hi.is_finite() {
+                writeln!(out, "s.add(x{v} < {hi})").unwrap();
+            }
+        }
         for constraint in &self.constraints {
             writeln!(out, "s.add({})", constraint.to_python_z3()).unwrap();
         }
@@ -658,6 +653,12 @@ impl BoundCtx {
             writeln!(out, "(declare-const {} Real)", SymExpr::var(i))?;
         }
         writeln!(out)?;
+        for (v, (lo, hi)) in self.sym_var_bounds.iter().enumerate() {
+            writeln!(out, "(assert (<= {} {}))", lo, SymExpr::var(v))?;
+            if hi.is_finite() {
+                writeln!(out, "(assert (< {} {}))", SymExpr::var(v), hi)?;
+            }
+        }
         for constraint in &self.constraints {
             writeln!(out, "(assert {constraint})")?;
         }
@@ -674,7 +675,7 @@ impl BoundCtx {
         // List of variables:
         write!(out, "(")?;
         let mut first = true;
-        for i in 0..self.sym_var_count {
+        for i in 0..self.sym_var_count() {
             if first {
                 first = false;
             } else {
@@ -688,11 +689,22 @@ impl BoundCtx {
         writeln!(out, "2")?; // two variables for plotting
 
         // Formula:
-        for i in 2..self.sym_var_count {
+        for i in 2..self.sym_var_count() {
             writeln!(out, "(E {})", crate::ppl::Var(i))?;
         }
         writeln!(out, "[")?;
         let mut first = true;
+        for (v, (lo, hi)) in self.sym_var_bounds.iter().enumerate() {
+            if first {
+                first = false;
+            } else {
+                writeln!(out, r" /\")?;
+            }
+            write!(out, "  {lo} <= {v}", v = SymExpr::var(v))?;
+            if hi.is_finite() {
+                write!(out, r" /\ {v} < {hi}", v = SymExpr::var(v))?;
+            }
+        }
         for c in self.constraints() {
             if first {
                 first = false;

@@ -9,7 +9,7 @@ use crate::{
         sym_expr::{SymConstraint, SymExprKind},
         util::{rational_to_z3, z3_real_to_rational},
     },
-    number::Rational,
+    number::{FloatNumber, Rational},
 };
 
 use super::{solver::ConstraintProblem, sym_expr::SymExpr};
@@ -39,7 +39,7 @@ impl Optimizer for Z3Optimizer {
         cfg.set_timeout_msec(timeout.as_millis() as u64);
         let ctx = z3::Context::new(&cfg);
         let solver = z3::Solver::new(&ctx);
-        for constraint in &problem.constraints {
+        for constraint in problem.all_constraints() {
             solver.assert(&constraint.to_z3(&ctx, &rational_to_z3));
         }
         solver.push();
@@ -131,8 +131,7 @@ pub fn optimize_linear_parts(
     }
     let objective = objective.substitute(&replacements);
     let constraints = problem
-        .constraints
-        .iter()
+        .all_constraints()
         .map(|c| c.substitute(&replacements))
         .collect::<Vec<_>>();
     let linear_constraints = constraints
@@ -150,10 +149,16 @@ pub fn optimize_linear_parts(
         .collect::<Vec<_>>();
     let mut lp = ProblemVariables::new();
     let mut var_list = Vec::new();
-    for replacement in replacements {
+    for (replacement, (lo, hi)) in replacements.iter().zip(&problem.var_bounds) {
         match replacement.kind() {
             SymExprKind::Variable(_) => {
-                var_list.push(lp.add_variable());
+                let var = variable().min(lo.round_to_f64());
+                let var = if hi.is_finite() {
+                    var.max(hi.round_to_f64())
+                } else {
+                    var
+                };
+                var_list.push(lp.add(var));
             }
             SymExprKind::Constant(c) => {
                 var_list.push(lp.add(variable().min(c.float()).max(c.float())));

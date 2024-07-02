@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use crate::{
     bounds::util::{rational_to_z3, z3_real_to_rational},
-    number::Rational,
+    number::{FloatNumber, Rational},
 };
 
 use super::sym_expr::{SymConstraint, SymExpr};
@@ -18,6 +18,7 @@ pub struct ConstraintProblem {
     pub geom_vars: Vec<usize>,
     pub factor_vars: Vec<usize>,
     pub coefficient_vars: Vec<usize>,
+    pub var_bounds: Vec<(Rational, Rational)>,
     pub constraints: Vec<SymConstraint>,
 }
 
@@ -31,7 +32,23 @@ impl ConstraintProblem {
     }
 
     pub fn holds_exact(&self, assignment: &[Rational]) -> bool {
-        self.constraints.iter().all(|c| c.holds_exact(assignment))
+        self.all_constraints().all(|c| c.holds_exact(assignment))
+    }
+
+    pub fn all_constraints(&self) -> impl Iterator<Item = SymConstraint> + '_ {
+        self.var_bounds
+            .iter()
+            .enumerate()
+            .flat_map(move |(var, (lo, hi))| {
+                let first = SymExpr::var(var).must_ge(lo.clone().into());
+                if hi.is_finite() {
+                    let second = SymExpr::var(var).must_lt(hi.clone().into());
+                    vec![first, second]
+                } else {
+                    vec![first]
+                }
+            })
+            .chain(self.constraints.iter().cloned())
     }
 }
 
@@ -56,7 +73,7 @@ impl Solver for Z3Solver {
         cfg.set_timeout_msec(timeout.as_millis() as u64);
         let ctx = z3::Context::new(&cfg);
         let solver = z3::Solver::new(&ctx);
-        for constraint in &problem.constraints {
+        for constraint in problem.all_constraints() {
             solver.assert(&constraint.to_z3(&ctx, &rational_to_z3));
         }
         solver.push();

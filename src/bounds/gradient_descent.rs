@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use good_lp::{Expression, ProblemVariables, Solution, SolverModel, VariableDefinition};
 use ndarray::Array1;
-use num_traits::{One, Zero};
+use num_traits::One;
 
 use crate::{bounds::util::normalize, number::Rational};
 
@@ -52,44 +52,24 @@ impl Solver for GradientDescent {
         let init = vec![1.0 - 1e-9; problem.var_count];
         let mut point: Array1<f64> = Array1::from_vec(init);
         // initialize the polynomial coefficient values to their lower bounds (plus some slack)
-        for constraint in &problem.constraints {
-            if let Some(linear) = constraint.extract_linear() {
-                let linear = linear.expr;
-                let mut lower_bound = 1.0;
-                let mut maybe_var = None;
-                let mut num_vars = 0;
-                for (var, coeff) in linear.coeffs.iter().enumerate() {
-                    if !coeff.is_zero() {
-                        num_vars += 1;
-                        if coeff.float() > 0.0 {
-                            lower_bound = -linear.constant.float() / coeff.float();
-                            maybe_var = Some(var);
-                        }
-                    }
-                }
-                if num_vars == 1 {
-                    if let Some(var) = maybe_var {
-                        if problem.coefficient_vars.contains(&var) {
-                            point[var] = (lower_bound + 0.5) * 2.0; // TODO: is this robust enough?
-                        }
-                    }
-                }
+        for (v, (lo, _)) in problem.var_bounds.iter().enumerate() {
+            if problem.coefficient_vars.contains(&v) {
+                point[v] = (lo.round_to_f64() + 0.5) * 2.0; // TODO: is this robust enough?
             }
         }
         let mut trajectory = vec![point.clone()];
+        let constraints = problem.all_constraints().collect::<Vec<_>>();
         // Repeatedly update the point with the gradient of all the (almost) violated inequalities.
         // In most cases, one iteration should suffice.
         for _ in 0..self.max_iters {
-            let violated_constraints = problem
-                .constraints
+            let violated_constraints = constraints
                 .iter()
                 .filter(|c| !c.holds_exact(point.map(|f| Rational::from(*f)).as_slice().unwrap()))
                 .collect::<Vec<_>>();
             if violated_constraints.is_empty() {
                 break;
             }
-            let tight_constraints = problem
-                .constraints
+            let tight_constraints = constraints
                 .iter()
                 .filter(|c| c.is_close(point.as_slice().unwrap(), self.step_size * self.step_size))
                 .collect::<Vec<_>>();
@@ -108,7 +88,7 @@ impl Solver for GradientDescent {
                         .unwrap_or_else(|| largest_gradient(problem, &gradients))
                 }
             };
-            if let Some(update) = line_search(&point, &direction, &problem.constraints) {
+            if let Some(update) = line_search(&point, &direction, &constraints) {
                 point += &update;
             } else {
                 point += &(lr * direction);
@@ -264,9 +244,9 @@ impl Optimizer for GradientDescent {
         let mut best_point: Array1<f64> = point.clone();
         let mut best_objective = objective.eval_float(point.as_slice().unwrap());
         let mut trajectory = vec![point.clone()];
+        let constraints = problem.all_constraints().collect::<Vec<_>>();
         for _ in 0..500 {
-            let tight_constraints = problem
-                .constraints
+            let tight_constraints = constraints
                 .iter()
                 .filter(|c| c.is_close(point.as_slice().unwrap(), slack_epsilon))
                 .collect::<Vec<_>>();
@@ -285,7 +265,7 @@ impl Optimizer for GradientDescent {
                 }
             };
             if let Some(update) =
-                line_search_with_objective(&point, &direction, &problem.constraints, objective)
+                line_search_with_objective(&point, &direction, &constraints, objective)
             {
                 point += &update;
             } else {
@@ -357,9 +337,9 @@ impl Optimizer for Adam {
         let mut m = Array1::zeros(problem.var_count);
         let mut v = Array1::zeros(problem.var_count);
         let mut t = 1;
+        let constraints = problem.all_constraints().collect::<Vec<_>>();
         for _ in 0..500 {
-            let tight_constraints = problem
-                .constraints
+            let tight_constraints = constraints
                 .iter()
                 .filter(|c| c.is_close(point.as_slice().unwrap(), slack_epsilon))
                 .collect::<Vec<_>>();
@@ -383,7 +363,7 @@ impl Optimizer for Adam {
             let v_hat = &v / (1.0 - self.beta2.powi(t));
             let update_dir = self.lr * &m_hat / (&v_hat.map(|x| x.sqrt()) + self.epsilon);
             if let Some(update) =
-                line_search_with_objective(&point, &direction, &problem.constraints, objective)
+                line_search_with_objective(&point, &direction, &constraints, objective)
             {
                 point += &update;
             } else {
@@ -475,12 +455,13 @@ impl Optimizer for AdamBarrier {
         let mut m = Array1::zeros(problem.var_count);
         let mut v = Array1::zeros(problem.var_count);
         let mut t = 1;
+        let constraints = problem.all_constraints().collect::<Vec<_>>();
         for _ in 0..5000 {
             let obj = objective.eval_float(point.as_slice().unwrap());
             let mut objective_grad =
                 -Array1::from_vec(objective.gradient_at(point.as_slice().unwrap())) / obj;
             // let mut barrier_penalty = 0.0;
-            for c in &problem.constraints {
+            for c in &constraints {
                 let constraint_grad = Array1::from_vec(c.gradient_at(point.as_slice().unwrap()));
                 let dist = c.estimate_signed_dist(point.as_slice().unwrap());
                 let concentration = f64::from(t);

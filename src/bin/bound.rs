@@ -117,7 +117,11 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
         .with_evt(args.evt)
         .with_do_while_transform(!args.keep_while);
     let mut result = ctx.semantics(program);
-    println!("Generated {} constraints", ctx.constraints().len());
+    println!(
+        "Generated {} constraints with {} symbolic variables.",
+        ctx.constraints().len(),
+        ctx.sym_var_count()
+    );
     if args.verbose {
         match &result.var_supports {
             VarSupport::Empty(_) => println!("Support: empty"),
@@ -130,6 +134,9 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
         println!("Bound result:");
         println!("{result}");
         println!("Constraints:");
+        for (v, (lo, hi)) in ctx.sym_var_bounds().iter().enumerate() {
+            println!("  x{v} ∈ [{lo}, {hi})");
+        }
         for constraint in ctx.constraints() {
             println!("  {constraint}");
         }
@@ -138,8 +145,6 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
             println!("  {}", constraint.to_poly());
         }
     }
-    // println!("Python:");
-    // println!("{}", ctx.output_python_z3());
     if let Some(path) = &args.smt {
         println!("Writing SMT file to {path:?}...");
         let mut out = std::fs::File::create(path)?;
@@ -160,6 +165,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
         geom_vars: ctx.geom_vars().to_owned(),
         factor_vars: ctx.factor_vars().to_owned(),
         coefficient_vars: ctx.coefficient_vars().to_owned(),
+        var_bounds: ctx.sym_var_bounds().to_owned(),
         constraints: ctx.constraints().to_owned(),
     };
     let init_solution = match args.solver {
@@ -229,7 +235,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
                     lower_probs.get(i).unwrap_or(&Rational::zero()).clone(),
                     expansion.coefficient(&[i]),
                 );
-                println!("p({i}) {}", in_iv(prob));
+                println!("p({i}) {}", in_iv(&prob));
             }
             println!("\nMoments:");
             let lower_moments = result.lower.moments(program.result, 5);
@@ -242,7 +248,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
                     lower_moments[i].clone(),
                     expansion.coefficient(&[i]) * factorial.clone(),
                 );
-                println!("{i}-th (raw) moment {}", in_iv(moment));
+                println!("{i}-th (raw) moment {}", in_iv(&moment));
                 factorial *= Rational::from_int(i + 1);
             }
         }
@@ -259,7 +265,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
     Ok(())
 }
 
-fn in_iv(iv: Interval<Rational>) -> String {
+fn in_iv(iv: &Interval<Rational>) -> String {
     if iv.lo == iv.hi {
         format!("= {}", iv.lo.round_to_f64())
     } else {
