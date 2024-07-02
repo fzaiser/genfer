@@ -103,6 +103,8 @@ impl Optimizer for Z3Optimizer {
     }
 }
 
+const TOL: f64 = 1e-9;
+
 pub struct LinearProgrammingOptimizer;
 
 impl Optimizer for LinearProgrammingOptimizer {
@@ -131,7 +133,8 @@ pub fn optimize_linear_parts(
     }
     let objective = objective.substitute(&replacements);
     let constraints = problem
-        .all_constraints()
+        .constraints
+        .iter()
         .map(|c| c.substitute(&replacements))
         .collect::<Vec<_>>();
     let linear_constraints = constraints
@@ -143,8 +146,7 @@ pub fn optimize_linear_parts(
                 .unwrap_or_else(|| {
                     panic!("Constraint is not linear in the program variables: {constraint}")
                 })
-                .normalize()
-                .tighten(1e-6)
+                .tighten(TOL)
         })
         .collect::<Vec<_>>();
     let mut lp = ProblemVariables::new();
@@ -174,6 +176,10 @@ pub fn optimize_linear_parts(
     for constraint in &linear_constraints {
         lp.add_constraint(constraint.to_lp_constraint(&var_list, &FloatRat::float));
     }
+    // For a feasible solution no primal infeasibility, i.e., constraint violation, may exceed this value:
+    lp.set_parameter("primalT", &TOL.to_string());
+    // For an optimal solution no dual infeasibility may exceed this value:
+    lp.set_parameter("dualT", &TOL.to_string());
     let solution = match lp.solve() {
         Ok(solution) => solution,
         Err(good_lp::ResolutionError::Unbounded) => {

@@ -6,7 +6,8 @@ Loop Bounds
 - [x] Ignore 0 <= ... constraints
 - [x] Lower bounds
 - [x] IPOPT optimizer
-- [ ] Adjust tolerance for linear solver
+- [x] Adjust tolerance for linear solver
+- [ ] Add --objective tail-balance option
 - [ ] Turn upper bounds into bounds on the remainder besides the lower bound
 
 Features
