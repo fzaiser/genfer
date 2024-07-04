@@ -1,0 +1,35 @@
+
+x ~ Geometric(1/2);
+y := 0;
+c := 0;
+
+while x > 0 {
+    y := 1;
+    while y = 1 {
+        if 1 ~ Bernoulli(1/2) {
+            y := 0;
+        } else {
+            x += 1;
+        }
+    }
+    x -= 1;
+    c += 1;
+}
+
+#= https://github.com/LKlinke/Prodigy/blob/26645a819514ed689ef391a939bc21a3f32f67be/pgfexamples/nested_while.pgcl
+
+nat x;
+nat y;
+nat c;
+nat temp;
+
+while( x > 0){
+    y := 1;
+    while (y = 1){
+       {y := 0}[1/2]{x:= x+1}
+       temp := 0
+    }
+    x := x - 1;
+    c := c+1
+}
+=#

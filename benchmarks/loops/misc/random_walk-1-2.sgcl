@@ -1,0 +1,10 @@
+# Source: Fig 9., Chatterjee et al., ‘Algorithmic Analysis of Qualitative and Quantitative Termination Problems for Affine Probabilistic Programs’.
+
+n := 1;
+while n >= 1 {
+    if 1 ~ Bernoulli(1/2) {
+        n := n + 1;
+    } else {
+        n := n - 2;
+    }
+}

@@ -1,0 +1,16 @@
+x ~ Geometric(1/2);
+
+while x >= 2 {
+    if 1 ~ Bernoulli(1/3) {
+        x := x - 1;
+    } else {
+        x := x - 2;
+    }
+}
+return x;
+
+#= https://github.com/probing-lab/polar/blob/5fb1f34a8085d49ba91920ebaf8298e2d46fb387/benchmarks/k_induction/linear01.prob
+while 2 <= x:
+    x = x - 1 {1/3} x - 2
+end
+=#

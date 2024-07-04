@@ -1,0 +1,21 @@
+c1 ~ Bernoulli(1/2);
+c2 ~ Bernoulli(1/2);
+while not (c1 = 1 or c2 = 1) {
+    c1 ~ Bernoulli(1/2);
+    c2 ~ Bernoulli(1/2);
+}
+return c1;
+
+#= https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/binfsymex/ex4.psi
+// skipped
+// Example 4. Unsupported!
+
+def main(){
+    c1 := flip(1/2);
+    c2 := flip(1/2);
+    while !(c1||c2){ // unsupported
+        c1 = flip(1/2);
+        c2 = flip(1/2);
+    }
+}
+=#

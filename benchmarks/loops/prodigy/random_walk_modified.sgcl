@@ -1,0 +1,29 @@
+# Modified from original (see bottom of file) to ensure almost sure termination
+
+s ~ Geometric(1/2);
+c := 0;
+
+while s > 0 {
+    if 1 ~ Bernoulli(1/4) { # modified probability!
+        s += 1;
+    } else {
+        s -= 1;
+    }
+    c += 1;
+}
+
+return c;
+
+#= Original code:
+
+nat s;
+nat c;
+nat tmp;
+
+while(s > 0){
+    {s := s+1} [1/2] {s := s-1}
+    c := c+1
+    tmp := 0
+}
+
+=#

@@ -1,0 +1,21 @@
+bogosort: requires arrays; https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/bogosort.psi
+whileLoopSum: requires continuous variables; https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/whileLoopSum.psi
+cav-example-5: requires continuous variables: https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/colorado/cav-example-5.psi
+cav-example-4: boring (geometric) https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/colorado/cav-example-4.psi
+example-book-mod: requires continuous variables: https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/colorado/example-book-mod.psi
+test: boring (geometric) https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/test.psi#L1431
+randomwalk: already covered by Klinkenberg; https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/coupling/randomwalk.psi
+example-cart: requires continuous variables; https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/colorado/example-cart.psi
+cav-example-2: requires continuous variables; https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/colorado/cav-example-2.psi
+cav-example-3: requires continuous variables; https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/colorado/cav-example-3.psi
+notquitebogosort: requires arrays; https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/notquitebogosort.psi
+cav-example-6: requires continuous variables; https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/colorado/cav-example-6.psi
+cave-example-1: requires continuous variables; https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/colorado/cav-example-1.psi
+example-vol.imp: requires continuous variables; https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/colorado/probabilistic-program-benchmarks/example-vol.imp
+example-fig6.imp: requires continuous variables; https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/colorado/probabilistic-program-benchmarks/example-fig6.imp
+example-fig7.imp: requires continuous variables; https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/colorado/probabilistic-program-benchmarks/example-fig7.imp
+example-carton.imp: requires continuous variables; https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/colorado/probabilistic-program-benchmarks/example-carton.imp
+example-carton-5.imp: requires continuous variables; https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/colorado/probabilistic-program-benchmarks/example-carton-5.imp
+example-invPend.imp: requires continuous variables; https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/colorado/probabilistic-program-benchmarks/example-invPend.imp
+example-loop-perf-1.imp: requires continuous variables; https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/colorado/probabilistic-program-benchmarks/example-loop-perf-1.imp
+squid: bounded loop; https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/squid.psi

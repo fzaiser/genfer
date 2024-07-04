@@ -1,0 +1,8 @@
+X := 0;
+while 0 ~ Bernoulli(1/2) {
+    X += 1;
+    if X = 4 {
+        X -= 4;
+    }
+}
+return X;

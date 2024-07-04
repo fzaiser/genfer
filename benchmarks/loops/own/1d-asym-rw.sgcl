@@ -1,0 +1,11 @@
+x := 1;
+n := 0;
+while x != 0 {
+    if 1 ~ Bernoulli(1/4) {
+        x += 1;
+    } else {
+        x -= 1;
+    }
+    n += 1;
+}
+return n;

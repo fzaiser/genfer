@@ -1,0 +1,26 @@
+
+x := 1;
+c := 0;
+
+while x = 1 {
+    if 0 ~ Bernoulli(1/2) {
+        x := 0;
+    } else {
+        c += 1;
+    }
+}
+
+return c;
+
+#= https://github.com/LKlinke/Prodigy/blob/26645a819514ed689ef391a939bc21a3f32f67be/pgfexamples/equivalence/geometric.pgcl
+
+nat x;
+nat c;
+nat temp;
+
+while (x = 1){
+ {x := 0 } [1/2] {c := c+1}
+ temp :=0
+}
+
+=#

@@ -1,0 +1,25 @@
+# This example has a hypergeometric function as its invariant.
+
+n ~ Geometric(1/2);
+m ~ Geometric(1/2);
+
+while 0 < n and 0 < m {
+    if 0 ~ Bernoulli(1/2) {
+        n -= 1;
+    } else {
+        m -= 1;
+    }
+}
+return n;
+
+#= https://github.com/LKlinke/Prodigy/blob/26645a819514ed689ef391a939bc21a3f32f67be/pgfexamples/equivalence/condand.pgcl
+nat n;
+nat m;
+
+while ((0 < n & 0 < m)) {
+{n := n - 1;} [1/2] {m := m - 1;}
+}
+!Plot[n, \infty]
+!Plot[m, \infty]
+!Plot[n, m, \infty]
+=#

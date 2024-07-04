@@ -1,0 +1,13 @@
+start ~ UniformDisc(1, 4);
+pos := start;
+steps := 0;
+while pos > 0 {
+    if 1 ~ Bernoulli(1/4) {
+        pos += 1;
+    } else {
+        pos -= 1;
+    }
+    steps += 1;
+}
+observe steps >= 3;
+return start;

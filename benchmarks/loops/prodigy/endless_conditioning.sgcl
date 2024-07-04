@@ -1,0 +1,20 @@
+x := 1;
+while x = 1 {
+  if 1 ~ Bernoulli(1/2) {
+    x := 0;
+  } else {
+    x := 1;
+  }
+  observe x = 1;
+}
+
+return x
+
+#= https://github.com/LKlinke/Prodigy/blob/26645a819514ed689ef391a939bc21a3f32f67be/pgfexamples/equivalence/endless_conditioning.pgcl
+nat x;
+
+while(x=1){
+{x := 0}[1/2]{x:=1}
+observe(x=1)
+}
+=#

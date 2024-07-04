@@ -1,0 +1,14 @@
+https://github.com/search?q=repo%3Aprobing-lab%2Fpolar+path%3A%2F%5Ebenchmarks%5C%2F%2F+while+NOT+%22while+true%22&type=code&p=2
+
+many bounded loops (but bounded by a variable), e.g.: https://github.com/probing-lab/polar/blob/5fb1f34a8085d49ba91920ebaf8298e2d46fb387/benchmarks/k_induction/ber.prob
+
+prinsys/geometric.prob: duplicate; https://github.com/probing-lab/polar/blob/5fb1f34a8085d49ba91920ebaf8298e2d46fb387/benchmarks/prinsys/geometric.prob
+schreuder_ong_2019/martingale_bet.prob: support incudes negative numbers
+chakarov_sriram_2014/ex1.prob: support includes negative numbers
+polar_paper/gambling.prob: support includes negative numbers
+prinsys/fair_biased_coin.prob: symbolic parameter
+
+## Real problems
+polar_paper/geometric.prob: (should be geometric_power or something) infinite moments
+k_induction/unif_gen.prob: problems because variables are doubled and two variables are compared
+k_induction/rabin.prob: investigate!

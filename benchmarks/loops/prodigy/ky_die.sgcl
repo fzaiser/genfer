@@ -1,0 +1,88 @@
+s := 0;
+die := 0;
+
+while s < 7 {
+    if s = 0 {
+        if 0 ~ Bernoulli(1/2) {
+            s := 1;
+        } else {
+            s := 2;
+        }
+    } else if s = 1 {
+        if 0 ~ Bernoulli(1/2) {
+            s := 3;
+        } else {
+            s := 4;
+        }
+    } else if s = 2 {
+        if 0 ~ Bernoulli(1/2) {
+            s := 5;
+        } else {
+            s := 6;
+        }
+    } else if s = 3 {
+        if 0 ~ Bernoulli(1/2) {
+            s := 1;
+        } else {
+            s := 7; die := 1;
+        }
+    } else if s = 4 {
+        if 0 ~ Bernoulli(1/2) {
+            s := 7; die := 2;
+        } else {
+            s := 7; die := 3;
+        }
+    } else if s = 5 {
+        if 0 ~ Bernoulli(1/2) {
+            s := 7; die := 4;
+        } else {
+            s := 7; die := 5;
+        }
+    } else if s = 6 {
+        if 0 ~ Bernoulli(1/2) {
+            s := 2;
+        } else {
+            s := 7; die := 6;
+        }
+    } else {
+        skip;
+    }
+}
+return die
+
+#= https://github.com/LKlinke/Prodigy/blob/26645a819514ed689ef391a939bc21a3f32f67be/pgfexamples/equivalence/ky_die.pgcl
+nat s;
+nat die;
+
+while (s < 7) {
+    if (s = 0){
+        {s := 1}[1/2]{ s:= 2}
+    } else {
+        if(s = 1){
+            {s := 3}[1/2]{ s:= 4}
+        } else {
+            if(s = 2){
+                { s:=5 }[1/2]{ s:=6 }
+            }else {
+                if(s = 3){
+                    { s:=1 }[1/2]{ s:=7; die:=1 }
+                }else {
+                    if(s = 4){
+                        { s:=7; die:=2 }[1/2]{ s:=7; die:=3 }
+                    } else{
+                        if(s = 5){
+                            { s:=7; die:=4 }[1/2]{ s:=7; die:=5 }
+                        } else {
+                            if(s = 6){
+                                { s:=2 }[1/2]{ s:=7; die:=6 }
+                            } else{
+                                skip
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+=#

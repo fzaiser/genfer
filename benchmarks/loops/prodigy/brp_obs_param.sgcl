@@ -1,0 +1,28 @@
+s ~ Geometric(1/2);
+f := 0;
+
+while s > 0 and f < 5 {
+    if 1 ~ Bernoulli(1/100) {
+        observe s < 10;
+        f += 1;
+    } else {
+        f := 0;
+        s -= 1;
+    }
+}
+return f
+
+#= https://github.com/LKlinke/Prodigy/blob/26645a819514ed689ef391a939bc21a3f32f67be/pgfexamples/equivalence/brp_obs_parameter.pgcl
+nat s;
+nat f;
+nat h;
+nat t;
+
+while(s > 0 & f < 5){
+  {observe(s<10);f:= f+1}[1/100]{f:=0; s:= s-1}
+  h := 0;
+  t := 0;
+}
+
+?Pr[f >= 5]
+=#

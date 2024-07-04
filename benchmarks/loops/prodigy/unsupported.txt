@@ -1,0 +1,1 @@
+random_walk: https://github.com/LKlinke/Prodigy/blob/26645a819514ed689ef391a939bc21a3f32f67be/pgfexamples/equivalence/random_walk.pgcl

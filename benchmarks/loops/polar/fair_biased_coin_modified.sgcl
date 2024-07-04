@@ -1,0 +1,17 @@
+# Modified by setting the symbolic parameter p to 3/4
+x := 0;
+y := 0;
+while (x = 0 and y = 1) or (x = 1 and y = 0) {
+    x ~ Bernoulli(3/4);
+    y ~ Bernoulli(3/4);
+}
+return x;
+
+#= https://github.com/probing-lab/polar/blob/5fb1f34a8085d49ba91920ebaf8298e2d46fb387/benchmarks/prinsys/fair_biased_coin.prob
+x = 0
+y = 0
+while x-y == 0:
+    x = 0 {p} 1
+    y = 0 {p} 1
+end
+=#
