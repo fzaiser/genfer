@@ -6,6 +6,7 @@
 #![allow(clippy::cast_sign_loss)]
 
 use std::path::PathBuf;
+use std::process::ExitCode;
 use std::time::{Duration, Instant};
 
 use genfer::bounds::ctx::BoundCtx;
@@ -105,18 +106,17 @@ struct CliArgs {
     verbose: bool,
 }
 
-pub fn main() -> std::io::Result<()> {
+pub fn main() -> std::io::Result<ExitCode> {
     let args = CliArgs::parse();
     let contents = std::fs::read_to_string(&args.file_name)?;
     let program = parser::parse_program(&contents);
     if args.print_program {
         println!("Parsed program:\n{program}\n");
     }
-    run_program(&program, &args)?;
-    Ok(())
+    run_program(&program, &args)
 }
 
-fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
+fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<ExitCode> {
     let start = Instant::now();
     let mut ctx = BoundCtx::new()
         .with_verbose(args.verbose)
@@ -164,7 +164,10 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
         ctx.output_qepcad(&mut out)?;
     }
     let time_constraint_gen = start.elapsed();
-    println!("Constraint generation time: {time_constraint_gen:?}");
+    println!(
+        "Constraint generation time: {:.5}s",
+        time_constraint_gen.as_secs_f64()
+    );
     println!("Solving constraints...");
     let start_solver = Instant::now();
     let timeout = Duration::from_millis(args.timeout);
@@ -189,8 +192,8 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
             .solve(&problem, timeout),
     };
     let solver_time = start_solver.elapsed();
-    println!("Solver time: {solver_time:?}");
-    match init_solution {
+    println!("Solver time: {:.5}s", solver_time.as_secs_f64());
+    let exit_code = match init_solution {
         Ok(solution) => {
             let objective = match args.objective {
                 Objective::Total => result.upper.total_mass(),
@@ -221,7 +224,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
                         .optimize(&problem, &objective, solution, timeout),
                 };
                 let optimizer_time = start_optimizer.elapsed();
-                println!("Optimizer time: {optimizer_time:?}");
+                println!("Optimizer time: {:.6}", optimizer_time.as_secs_f64());
                 optimized_solution
             } else {
                 solution
@@ -237,8 +240,10 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
                 )
             };
             result.upper = result.upper.resolve(&optimized_solution);
-            println!("\nFinal bound:\n");
-            println!("{result}");
+            if args.verbose {
+                println!("\nFinal bound:\n");
+                println!("{result}");
+            }
 
             for v in 0..result.var_supports.num_vars() {
                 if Var(v) != program.result {
@@ -351,21 +356,25 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
                 println!("{i}-th (raw) moment {}", in_iv(&moment));
                 factorial *= Rational::from_int(i + 1);
             }
+            ExitCode::SUCCESS
         }
-        Err(e) => match e {
-            SolverError::Timeout => {
-                println!("Solver timeout");
+        Err(e) => {
+            match e {
+                SolverError::Timeout => {
+                    println!("Solver timeout");
+                }
+                SolverError::Infeasible => {
+                    println!("Solver proved that there is no bound of the required form");
+                }
+                SolverError::Other => {
+                    println!("Solver failed for some other reason");
+                }
             }
-            SolverError::Infeasible => {
-                println!("Solver proved that there is no bound of the required form");
-            }
-            SolverError::Other => {
-                println!("Solver failed for some other reason");
-            }
-        },
-    }
-    println!("Total time: {:?}", start.elapsed());
-    Ok(())
+            ExitCode::FAILURE
+        }
+    };
+    println!("Total time: {:.5}s", start.elapsed().as_secs_f64());
+    Ok(exit_code)
 }
 
 fn in_iv(iv: &Interval<Rational>) -> String {

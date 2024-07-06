@@ -4,7 +4,7 @@ continue := 1;
 runtime := 0;
 while continue = 1 {
     card ~ Bernoulli(1/2);
-    if card == 0 {
+    if card = 0 {
         c0 := 1;
     } else {
         c1 := 1;

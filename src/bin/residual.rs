@@ -68,11 +68,10 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
                 }
             }
         }
+        println!();
         println!("Bound result:");
         println!("{result}");
     }
-    println!("\nFinal bound:\n");
-    println!("{result}");
     let residual = result.residual();
     let support = result.var_supports[program.result].clone();
 
@@ -81,18 +80,20 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
             result = result.marginalize(Var(v));
         }
     }
-    println!("\nMarginalized bound:");
-    let ax = Axis(program.result.id());
-    for i in 0..result.lower.masses.len_of(ax) {
-        let lo = result
-            .lower
-            .masses
-            .index_axis(ax, i)
-            .first()
-            .unwrap()
-            .clone();
-        let hi = lo.clone() + residual.clone();
-        println!("{i}: [{}, {}]", lo.round_to_f64(), hi.round_to_f64());
+    if args.verbose {
+        println!("\nMarginalized bound:");
+        let ax = Axis(program.result.id());
+        for i in 0..result.lower.masses.len_of(ax) {
+            let lo = result
+                .lower
+                .masses
+                .index_axis(ax, i)
+                .first()
+                .unwrap()
+                .clone();
+            let hi = lo.clone() + residual.clone();
+            println!("{i}: [{}, {}]", lo.round_to_f64(), hi.round_to_f64());
+        }
     }
 
     println!("\nProbability masses:");
@@ -126,7 +127,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
         let moment = Interval::exact(lo.clone(), lo + added.clone());
         println!("{i}-th (raw) moment {}", in_iv(&moment));
     }
-    println!("Total time: {:?}", start.elapsed());
+    println!("Total time: {:.5}s", start.elapsed().as_secs_f64());
     Ok(())
 }
 

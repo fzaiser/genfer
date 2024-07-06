@@ -1,27 +1,27 @@
-process1d = 0;
-process1p = 0;
-process2d = 0;
-process2p = 0;
-process3d = 0;
-process3p = 0;
+process1d := 0;
+process1p := 0;
+process2d := 0;
+process2p := 0;
+process3d := 0;
+process3p := 0;
 
 if (1 ~ Bernoulli(1/2)) {
-    process1d = 1;
+    process1d := 1;
 }
 if (1 ~ Bernoulli(1/2)) {
-    process1p = 1;
+    process1p := 1;
 }
 if (1 ~ Bernoulli(1/2)) {
-    process2d = 1;
+    process2d := 1;
 }
 if (1 ~ Bernoulli(1/2)) {
-    process2p = 1;
+    process2p := 1;
 }
 if (1 ~ Bernoulli(1/2)) {
-    process3d = 1;
+    process3d := 1;
 }
 if (1 ~ Bernoulli(1/2)) {
-    process3p = 1;
+    process3p := 1;
 }
 
 sum := process1p;
@@ -36,7 +36,7 @@ if (sum > 1) {
 
 count := 0;
 
-while notStable == 1 {
+while notStable = 1 {
     oldprocess1d := process1d;
     oldprocess1p := process1p;
     oldprocess2d := process2d;
@@ -44,33 +44,33 @@ while notStable == 1 {
     oldprocess3d := process3d;
     oldprocess3p := process3p;
 
-    if oldprocess1d == 1 or oldprocess3d == 0 {
-        if oldprocess1d == 0 or oldprocess3d == 1 {
-            if oldprocess1p == 1 or oldprocess3p == 0 {
-                if oldprocess1p == 0 or oldprocess3p == 1 {
-                    if oldprocess1d == 0 {
+    if oldprocess1d = 1 or oldprocess3d = 0 {
+        if oldprocess1d = 0 or oldprocess3d = 1 {
+            if oldprocess1p = 1 or oldprocess3p = 0 {
+                if oldprocess1p = 0 or oldprocess3p = 1 {
+                    if oldprocess1d = 0 {
                         process1d := 1;
                     } else {
                         process1d := 0;
                     }
-                    if (1 ~ Bernoulli(1/2)) {
-                        process1p = oldprocess1p;
+                    if 1 ~ Bernoulli(1/2) {
+                        process1p := oldprocess1p;
                     } else {
-                        if oldprocess1p == 0 {
+                        if oldprocess1p = 0 {
                             process1p := 1;
                         } else {
                             process1p := 0;
                         }
                     }
                 } else {
-                    if oldprocess1d == 0 {
+                    if oldprocess1d = 0 {
                         process1d := 1;
                     } else {
                         process1d := 0;
                     }
                 }
             } else {
-                if oldprocess1d == 0 {
+                if oldprocess1d = 0 {
                     process1d := 1;
                 } else {
                     process1d := 0;
@@ -79,33 +79,33 @@ while notStable == 1 {
         }
     }
 
-    if oldprocess2d == 1 or oldprocess1d == 0 {
-        if oldprocess2d == 0 or oldprocess1d == 1 {
-            if oldprocess2p == 1 or oldprocess1p == 0 {
-                if oldprocess2p == 0 or oldprocess1p == 1 {
-                    if oldprocess2d == 0 {
+    if oldprocess2d = 1 or oldprocess1d = 0 {
+        if oldprocess2d = 0 or oldprocess1d = 1 {
+            if oldprocess2p = 1 or oldprocess1p = 0 {
+                if oldprocess2p = 0 or oldprocess1p = 1 {
+                    if oldprocess2d = 0 {
                         process2d := 1;
                     } else {
                         process2d := 0;
                     }
-                    if (1 ~ Bernoulli(1/2)) {
-                        process2p = oldprocess2p;
+                    if 1 ~ Bernoulli(1/2) {
+                        process2p := oldprocess2p;
                     } else {
-                        if oldprocess2p == 0 {
+                        if oldprocess2p = 0 {
                             process2p := 1;
                         } else {
                             process2p := 0;
                         }
                     }
                 } else {
-                    if oldprocess2d == 0 {
+                    if oldprocess2d = 0 {
                         process2d := 1;
                     } else {
                         process2d := 0;
                     }
                 }
             } else {
-                if oldprocess2d == 0 {
+                if oldprocess2d = 0 {
                     process2d := 1;
                 } else {
                     process2d := 0;
@@ -114,33 +114,33 @@ while notStable == 1 {
         }
     }
 
-    if oldprocess3d == 1 or oldprocess2d == 0 {
-        if oldprocess3d == 0 or oldprocess2d == 1 {
-            if oldprocess3p == 1 or oldprocess2p == 0 {
-                if oldprocess3p == 0 or oldprocess2p == 1 {
-                    if oldprocess3d == 0 {
+    if oldprocess3d = 1 or oldprocess2d = 0 {
+        if oldprocess3d = 0 or oldprocess2d = 1 {
+            if oldprocess3p = 1 or oldprocess2p = 0 {
+                if oldprocess3p = 0 or oldprocess2p = 1 {
+                    if oldprocess3d = 0 {
                         process3d := 1;
                     } else {
                         process3d := 0;
                     }
-                    if (1 ~ Bernoulli(1/2)) {
-                        process3p = oldprocess3p;
+                    if 1 ~ Bernoulli(1/2) {
+                        process3p := oldprocess3p;
                     } else {
-                        if oldprocess3p == 0 {
+                        if oldprocess3p = 0 {
                             process3p := 1;
                         } else {
                             process3p := 0;
                         }
                     }
                 } else {
-                    if oldprocess3d == 0 {
+                    if oldprocess3d = 0 {
                         process3d := 1;
                     } else {
                         process3d := 0;
                     }
                 }
             } else {
-                if oldprocess3d == 0 {
+                if oldprocess3d = 0 {
                     process3d := 1;
                 } else {
                     process3d := 0;

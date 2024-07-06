@@ -2,9 +2,9 @@ x ~ Geometric(1/2);
 
 while x >= 2 {
     if 1 ~ Bernoulli(1/3) {
-        x := x - 1;
+        x -= 1;
     } else {
-        x := x - 2;
+        x -= 2;
     }
 }
 return x;

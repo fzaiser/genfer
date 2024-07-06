@@ -33,14 +33,14 @@ if sum > 1 {
 }
 
 count := 0;
-while notStable == 1 {
+while notStable = 1 {
 	oldprocess1 := process1;
 	oldprocess2 := process2;
 	oldprocess3 := process3;
 	oldprocess4 := process4;
 	oldprocess5 := process5;
 
-	if oldprocess1 == 1 {
+	if oldprocess1 = 1 {
 		if 1 ~ Bernoulli(1/2) {
 			process1 := 0;
 			process5 := 1;
@@ -50,7 +50,7 @@ while notStable == 1 {
 		}
 	}
 
-	if oldprocess2 == 1 {
+	if oldprocess2 = 1 {
 		if 1 ~ Bernoulli(1/2) {
 			process2 := 0;
 			process1 := 1;
@@ -60,7 +60,7 @@ while notStable == 1 {
 		}
 	}
 
-	if oldprocess3 == 1 {
+	if oldprocess3 = 1 {
 		if 1 ~ Bernoulli(1/2) {
 			process3 := 0;
 			process2 := 1;
@@ -70,7 +70,7 @@ while notStable == 1 {
 		}
 	}
 
-	if oldprocess4 == 1 {
+	if oldprocess4 = 1 {
 		if 1 ~ Bernoulli(1/2) {
 			process4 := 0;
 			process3 := 1;
@@ -80,7 +80,7 @@ while notStable == 1 {
 		}
 	}
 
-	if oldprocess5 == 1 {
+	if oldprocess5 = 1 {
 		if 1 ~ Bernoulli(1/2) {
 			process5 := 0;
 			process4 := 1;

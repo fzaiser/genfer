@@ -44,8 +44,6 @@ while s < 7 {
         } else {
             s := 7; die := 6;
         }
-    } else {
-        skip;
     }
 }
 return die
