@@ -15,7 +15,7 @@ use genfer::bounds::optimizer::{LinearProgrammingOptimizer, Optimizer as _, Z3Op
 use genfer::bounds::solver::{ConstraintProblem, Solver as _, SolverError, Z3Solver};
 use genfer::interval::Interval;
 use genfer::multivariate_taylor::TaylorPoly;
-use genfer::number::Rational;
+use genfer::number::{Rational, F64};
 use genfer::parser;
 use genfer::ppl::{Program, Var};
 use genfer::semantics::support::VarSupport;
@@ -288,7 +288,11 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
                         .rat()
                         * decay.pow((i - upper_len).try_into().unwrap())
                 };
-                println!("{i}: [{}, {}]", lo.round_to_f64(), hi.round_to_f64());
+                println!(
+                    "{i}: [{}, {}]",
+                    F64::from(lo.round_to_f64()),
+                    F64::from(hi.round_to_f64())
+                );
             }
             let thresh_hi = result
                 .upper
@@ -302,8 +306,8 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
                 * decay.pow((thresh - upper_len + 1).try_into().unwrap());
             println!(
                 "n >= {thresh}: [0, {} * {}^(n - {thresh})]",
-                thresh_hi.round_to_f64(),
-                decay.round_to_f64()
+                F64::from(thresh_hi.round_to_f64()),
+                F64::from(decay.round_to_f64()),
             );
 
             println!("\nProbability masses:");
@@ -328,8 +332,8 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
             let factor = thresh_hi * decay.pow(-(i32::try_from(thresh).unwrap()));
             println!(
                 "\nAsymptotics: p(n) <= {} * {}^n for n >= {}",
-                factor.round_to_f64(),
-                decay.round_to_f64(),
+                F64::from(factor.round_to_f64()),
+                F64::from(decay.round_to_f64()),
                 thresh
             );
 
@@ -366,8 +370,12 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
 
 fn in_iv(iv: &Interval<Rational>) -> String {
     if iv.lo == iv.hi {
-        format!("= {}", iv.lo.round_to_f64())
+        format!("= {}", F64::from(iv.lo.round_to_f64()))
     } else {
-        format!("∈ [{}, {}]", iv.lo.round_to_f64(), iv.hi.round_to_f64())
+        format!(
+            "∈ [{}, {}]",
+            F64::from(iv.lo.round_down()),
+            F64::from(iv.hi.round_up())
+        )
     }
 }
