@@ -71,6 +71,9 @@ struct CliArgs {
     #[arg(short = 'u', long, default_value = "0")]
     /// The default number of loop unrollings
     unroll: usize,
+    /// The limit for the probability masses to be computed
+    #[arg(short, long)]
+    pub limit: Option<usize>,
     /// Timeout for the solver in ms
     #[arg(long, default_value = "10000")]
     timeout: u64,
@@ -308,7 +311,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
                 if let Some(range) = result.var_supports[program.result].finite_nonempty_range() {
                     *range.end() as usize + 1
                 } else {
-                    50
+                    args.limit.unwrap_or(50)
                 };
             let mut inputs = vec![TaylorPoly::one(); result.var_supports.num_vars()];
             inputs[program.result.id()] = TaylorPoly::var_at_zero(Var(0), limit);

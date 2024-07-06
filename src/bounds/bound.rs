@@ -76,6 +76,10 @@ impl FiniteDiscrete {
         FiniteDiscrete { masses }
     }
 
+    pub fn total_mass(&self) -> Rational {
+        self.masses.sum()
+    }
+
     pub fn extend_axis(&mut self, Var(v): Var, new_len: usize) {
         let axis = Axis(v);
         let old_len = self.masses.len_of(axis);
@@ -155,10 +159,35 @@ impl std::fmt::Display for FiniteDiscrete {
     }
 }
 
+impl std::ops::AddAssign<&Self> for FiniteDiscrete {
+    fn add_assign(&mut self, rhs: &Self) {
+        assert_eq!(self.masses.ndim(), rhs.masses.ndim());
+        if self.masses.shape() == rhs.masses.shape() {
+            self.masses += &rhs.masses;
+        } else {
+            let lhs_shape = self.masses.shape();
+            let rhs_shape = rhs.masses.shape();
+            let shape = lhs_shape
+                .iter()
+                .zip(rhs_shape)
+                .map(|(&l, &r)| l.max(r))
+                .collect::<Vec<_>>();
+            let mut masses = ArrayD::zeros(shape);
+            masses
+                .slice_each_axis_mut(|ax| (0..lhs_shape[ax.axis.index()]).into())
+                .add_assign(&self.masses);
+            masses
+                .slice_each_axis_mut(|ax| (0..rhs_shape[ax.axis.index()]).into())
+                .add_assign(&rhs.masses);
+            self.masses = masses;
+        }
+    }
+}
+
 impl std::ops::Add for &FiniteDiscrete {
     type Output = FiniteDiscrete;
 
-    fn add(self, rhs: &FiniteDiscrete) -> Self::Output {
+    fn add(self, rhs: Self) -> Self::Output {
         assert_eq!(self.masses.ndim(), rhs.masses.ndim());
         let lhs_shape = self.masses.shape();
         let rhs_shape = rhs.masses.shape();
@@ -183,6 +212,15 @@ impl std::ops::MulAssign<Rational> for FiniteDiscrete {
         for elem in &mut self.masses {
             *elem *= rhs.clone();
         }
+    }
+}
+
+impl std::ops::Mul<Rational> for FiniteDiscrete {
+    type Output = Self;
+
+    fn mul(mut self, rhs: Rational) -> Self::Output {
+        self *= rhs;
+        self
     }
 }
 

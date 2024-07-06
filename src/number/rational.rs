@@ -9,7 +9,10 @@ use std::{
 use num_traits::{One, Zero};
 use rug::ops::Pow;
 
-use super::number::{FloatNumber, IntervalNumber, Number};
+use super::{
+    number::{FloatNumber, IntervalNumber, Number},
+    F64,
+};
 
 #[derive(Copy, Clone, Debug)]
 pub enum Special {
@@ -63,6 +66,24 @@ impl Rational {
                 Special::PosInf => f64::INFINITY,
                 Special::NegInf => f64::NEG_INFINITY,
             },
+        }
+    }
+
+    pub fn round_down(&self) -> f64 {
+        let rounded = self.round_to_f64();
+        if &Rational::from(rounded) > self {
+            F64::from(rounded).next_down().to_f64()
+        } else {
+            rounded
+        }
+    }
+
+    pub fn round_up(&self) -> f64 {
+        let rounded = self.round_to_f64();
+        if &Rational::from(rounded) < self {
+            F64::from(rounded).next_up().to_f64()
+        } else {
+            rounded
         }
     }
 

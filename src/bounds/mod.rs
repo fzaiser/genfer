@@ -5,6 +5,7 @@ pub mod gradient_descent;
 pub mod ipopt;
 pub mod linear;
 pub mod optimizer;
+pub mod residual;
 pub mod solver;
 pub mod sym_expr;
 pub mod sym_poly;

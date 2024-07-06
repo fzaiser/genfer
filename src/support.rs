@@ -2,7 +2,10 @@ use std::ops::{Range, RangeFrom, RangeInclusive};
 
 use num_traits::Zero;
 
-use crate::number::{Number, Rational};
+use crate::{
+    interval::Interval,
+    number::{Number, Rational},
+};
 
 /// Support set of a random variable (overapproximated as a range)
 #[derive(Clone, Debug, PartialEq)]
@@ -249,6 +252,28 @@ impl SupportSet {
                 if *start > end.unwrap_or(u32::MAX) {
                     *self = Self::Empty;
                 }
+            }
+        }
+    }
+
+    pub fn to_interval(&self) -> Option<Interval<Rational>> {
+        match self {
+            Self::Empty => None,
+            Self::Range { start, end } => Some(Interval::exact(
+                Rational::from(*start),
+                end.map_or(Rational::infinity(), Rational::from),
+            )),
+            Self::Interval { start, end } => Some(Interval::exact(start.clone(), end.clone())),
+        }
+    }
+
+    pub fn contains(&self, i: u32) -> bool {
+        match self {
+            Self::Empty => false,
+            Self::Range { start, end } => i >= *start && end.map_or(true, |end| i <= end),
+            Self::Interval { start, end } => {
+                let i = Rational::from_int(i);
+                &i >= start && &i <= end
             }
         }
     }
