@@ -31,7 +31,7 @@ struct CliArgs {
     /// Disable timing of the execution
     #[arg(long)]
     no_timing: bool,
-    #[arg(short = 'u', long, default_value = "0")]
+    #[arg(short = 'u', long, default_value = "8")]
     /// The default number of loop unrollings
     unroll: usize,
     /// The limit for the probability masses to be computed

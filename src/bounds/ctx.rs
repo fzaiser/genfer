@@ -20,7 +20,7 @@ use crate::{
 
 pub struct BoundCtx {
     verbose: bool,
-    default_unroll: usize,
+    unroll: usize,
     min_degree: usize,
     evt: bool,
     do_while_transform: bool,
@@ -326,11 +326,11 @@ impl BoundCtx {
     pub fn new() -> Self {
         Self {
             verbose: false,
-            default_unroll: 8,
+            unroll: 0,
             min_degree: 1,
             evt: false,
             do_while_transform: false,
-            support: SupportTransformer,
+            support: SupportTransformer::default(),
             program_var_count: 0,
             nonlinear_vars: Vec::new(),
             geom_vars: Vec::new(),
@@ -345,9 +345,10 @@ impl BoundCtx {
         Self { min_degree, ..self }
     }
 
-    pub fn with_default_unroll(self, default_unroll: usize) -> Self {
+    pub fn with_unroll(self, unroll: usize) -> Self {
         Self {
-            default_unroll,
+            unroll,
+            support: self.support.with_unroll(unroll),
             ..self
         }
     }
@@ -530,7 +531,7 @@ impl BoundCtx {
     ) -> BoundResult {
         let mut pre_loop = init;
         let mut rest = BoundResult::zero(self.program_var_count);
-        let unroll_count = unroll.unwrap_or(self.default_unroll);
+        let unroll_count = unroll.unwrap_or(self.unroll);
         let unroll_result =
             self.support
                 .find_unroll_fixpoint(cond, body, pre_loop.var_supports.clone());

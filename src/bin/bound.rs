@@ -68,7 +68,7 @@ struct CliArgs {
     #[arg(short = 'd', long, default_value = "1")]
     /// The minimum degree of the loop invariant polynomial
     min_degree: usize,
-    #[arg(short = 'u', long, default_value = "0")]
+    #[arg(short = 'u', long, default_value = "8")]
     /// The default number of loop unrollings
     unroll: usize,
     /// The limit for the probability masses to be computed
@@ -121,7 +121,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
     let mut ctx = BoundCtx::new()
         .with_verbose(args.verbose)
         .with_min_degree(args.min_degree)
-        .with_default_unroll(args.unroll)
+        .with_unroll(args.unroll)
         .with_evt(args.evt)
         .with_do_while_transform(!args.keep_while);
     let mut result = ctx.semantics(program);

@@ -91,7 +91,7 @@ pub struct ResidualSemantics {
 impl Default for ResidualSemantics {
     fn default() -> Self {
         Self {
-            unroll: 8,
+            unroll: 0,
             verbose: false,
             support: SupportTransformer::default(),
         }
@@ -101,6 +101,7 @@ impl Default for ResidualSemantics {
 impl ResidualSemantics {
     pub fn with_unroll(mut self, unroll: usize) -> Self {
         self.unroll = unroll;
+        self.support = self.support.with_unroll(unroll);
         self
     }
 
