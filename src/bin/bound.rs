@@ -333,14 +333,22 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<ExitCode> {
                 );
                 println!("p({i}) {}", in_iv(&prob));
             }
-
-            let factor = thresh_hi * decay.pow(-(i32::try_from(thresh).unwrap()));
-            println!(
-                "\nAsymptotics: p(n) <= {} * {}^n for n >= {}",
-                F64::from(factor.round_to_f64()),
-                F64::from(decay.round_to_f64()),
-                thresh
-            );
+            if decay.is_zero() {
+                let from = if thresh_hi.is_zero() {
+                    thresh
+                } else {
+                    thresh + 1
+                };
+                println!("Asymptotics: p(n) = 0 for n >= {from}");
+            } else {
+                let factor = thresh_hi * decay.pow(-(i32::try_from(thresh).unwrap()));
+                println!(
+                    "\nAsymptotics: p(n) <= {} * {}^n for n >= {}",
+                    F64::from(factor.round_to_f64()),
+                    F64::from(decay.round_to_f64()),
+                    thresh
+                );
+            }
 
             println!("\nMoments:");
             let lower_moments = result.lower.moments(program.result, 5);

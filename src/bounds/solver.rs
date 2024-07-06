@@ -100,7 +100,6 @@ impl Solver for Z3Solver {
                     .unwrap();
                 let val = z3_real_to_rational(&val)
                     .unwrap_or_else(|| panic!("{val} cannot be converted to rational"));
-                println!("{var} -> {val}", var = SymExpr::var(var));
                 assignment.push(val);
             }
             assignment
