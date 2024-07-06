@@ -12,7 +12,7 @@ while c > 0 {
     c -= 1;
 }
 
-return c;
+return m;
 
 #= https://github.com/LKlinke/Prodigy/blob/26645a819514ed689ef391a939bc21a3f32f67be/pgfexamples/equivalence/dep_bern.pgcl
 

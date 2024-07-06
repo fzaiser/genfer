@@ -308,7 +308,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<ExitCode> {
                 .extract_constant()
                 .unwrap()
                 .rat()
-                * decay.pow((thresh - upper_len + 1).try_into().unwrap());
+                * decay.pow((thresh + 1 - upper_len).try_into().unwrap());
             println!(
                 "n >= {thresh}: [0, {} * {}^(n - {thresh})]",
                 F64::from(thresh_hi.round_to_f64()),
@@ -322,6 +322,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<ExitCode> {
                 } else {
                     args.limit.unwrap_or(50)
                 };
+            let limit = limit.max(2);
             let mut inputs = vec![TaylorPoly::one(); result.var_supports.num_vars()];
             inputs[program.result.id()] = TaylorPoly::var_at_zero(Var(0), limit);
             let lower_probs = result.lower.probs(program.result);
@@ -369,13 +370,13 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<ExitCode> {
         Err(e) => {
             match e {
                 SolverError::Timeout => {
-                    println!("Solver timeout");
+                    eprintln!("Solver failed: timeout");
                 }
                 SolverError::Infeasible => {
-                    println!("Solver proved that there is no bound of the required form");
+                    eprintln!("Solver failed: it claims the problem is infeasible");
                 }
                 SolverError::Other => {
-                    println!("Solver failed for some other reason");
+                    eprintln!("Solver failed: unknown reason");
                 }
             }
             ExitCode::FAILURE
