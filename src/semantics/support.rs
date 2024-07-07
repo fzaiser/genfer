@@ -38,6 +38,25 @@ impl Index<Var> for VarSupport {
     }
 }
 
+impl std::fmt::Display for VarSupport {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            VarSupport::Empty(_) => write!(f, "empty"),
+            VarSupport::Prod(supports) => {
+                let mut first = true;
+                for support in supports {
+                    if !first {
+                        write!(f, ", ")?;
+                    }
+                    first = false;
+                    write!(f, "{}", support)?;
+                }
+                Ok(())
+            }
+        }
+    }
+}
+
 impl VarSupport {
     pub fn empty(num_vars: usize) -> VarSupport {
         VarSupport::Empty(num_vars)

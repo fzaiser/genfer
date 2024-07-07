@@ -3,7 +3,7 @@ while x = 0 {
     a ~ Bernoulli(1/2);
     if a = 1 {
         x := 0;
-    } if 1 ~ Bernoulli(0.3) {
+    } else if 1 ~ Bernoulli(0.3) {
         x := 2;
     } else {
         x := 1;
