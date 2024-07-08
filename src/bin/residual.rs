@@ -17,7 +17,7 @@ use std::time::Instant;
 
 use clap::Parser;
 use ndarray::Axis;
-use num_traits::Zero;
+use num_traits::{One, Zero};
 
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Parser)]
@@ -31,6 +31,9 @@ struct CliArgs {
     /// Disable timing of the execution
     #[arg(long)]
     no_timing: bool,
+    /// Disable normalization of the distribution
+    #[arg(long)]
+    no_normalize: bool,
     #[arg(short = 'u', long, default_value = "8")]
     /// The default number of loop unrollings
     unroll: usize,
@@ -96,6 +99,21 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
         }
     }
 
+    let (total_lo, total_hi) = if !args.no_normalize && program.uses_observe() {
+        let total_lo = result.lower.total_mass().clone();
+        let total_hi = Rational::one() - result.reject.clone();
+        if args.verbose {
+            println!(
+                "\nNormalizing constant: Z {}",
+                in_iv(&Interval::exact(total_lo.clone(), total_hi.clone()))
+            );
+            println!("Everything from here on is normalized.");
+        }
+        (total_lo, total_hi)
+    } else {
+        (Rational::one(), Rational::one())
+    };
+
     println!("\nProbability masses:");
     let limit = if let Some(range) = result.var_supports[program.result].finite_nonempty_range() {
         *range.end() as usize + 1
@@ -108,9 +126,10 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
         let hi = if support.contains(i as u32) {
             lo.clone() + residual.clone()
         } else {
-            lo.clone()
+            assert!(lo.is_zero());
+            Rational::zero()
         };
-        let prob = Interval::exact(lo, hi);
+        let prob = Interval::exact(lo / total_hi.clone(), hi / total_lo.clone());
         println!("p({i}) {}", in_iv(&prob));
     }
     println!(
@@ -124,7 +143,8 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
     for i in 0..5 {
         let added = residual.clone() * range.hi.clone().pow(i as i32);
         let lo = lower_moments[i].clone();
-        let moment = Interval::exact(lo.clone(), lo + added.clone());
+        let hi = lo.clone() + added.clone();
+        let moment = Interval::exact(lo / total_hi.clone(), hi / total_lo.clone());
         println!("{i}-th (raw) moment {}", in_iv(&moment));
     }
     println!("Total time: {:.5}s", start.elapsed().as_secs_f64());

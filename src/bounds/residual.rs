@@ -362,7 +362,11 @@ impl Transformer for ResidualSemantics {
                 result.var_supports = result.var_supports.join(&loop_exit);
                 result
             }
-            Statement::Fail => ResidualBound::zero(init.var_count()),
+            Statement::Fail => {
+                let mut result = ResidualBound::zero(init.var_count());
+                result.reject = init.lower.total_mass();
+                result
+            }
             Statement::Normalize { .. } => todo!(),
         };
         if let Some(direct_var_info) = direct_var_supports {

@@ -66,6 +66,9 @@ struct CliArgs {
     /// Disable timing of the execution
     #[arg(long)]
     no_timing: bool,
+    /// Disable normalization of the distribution
+    #[arg(long)]
+    no_normalize: bool,
     #[arg(short = 'd', long, default_value = "1")]
     /// The minimum degree of the loop invariant polynomial
     min_degree: usize,
@@ -241,8 +244,31 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<ExitCode> {
             };
             result.upper = result.upper.resolve(&optimized_solution);
             if args.verbose {
-                println!("\nFinal bound:\n");
+                println!("\nFinal (unnormalized) bound:\n");
                 println!("{result}");
+            }
+
+            if !args.no_normalize && program.uses_observe() {
+                let total_lo = result.lower.total_mass();
+                let total_hi = result.upper.total_mass().extract_constant().unwrap().rat();
+                let total_hi = if total_hi > Rational::one() {
+                    Rational::one()
+                } else {
+                    total_hi
+                };
+                if args.verbose {
+                    println!(
+                        "\nNormalizing constant: Z {}",
+                        in_iv(&Interval::exact(total_lo.clone(), total_hi.clone()))
+                    );
+                    println!("Everything from here on is normalized.");
+                }
+                result.lower /= total_hi;
+                result.upper /= total_lo.into();
+                if args.verbose {
+                    println!("\nNormalized bound:\n");
+                    println!("{result}");
+                }
             }
 
             for v in 0..result.var_supports.num_vars() {

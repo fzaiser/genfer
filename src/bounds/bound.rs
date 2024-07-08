@@ -224,6 +224,14 @@ impl std::ops::Mul<Rational> for FiniteDiscrete {
     }
 }
 
+impl std::ops::DivAssign<Rational> for FiniteDiscrete {
+    fn div_assign(&mut self, rhs: Rational) {
+        for elem in &mut self.masses {
+            *elem /= rhs.clone();
+        }
+    }
+}
+
 /// The generating function of a geometric bound.
 ///
 /// It is represented as follows.
