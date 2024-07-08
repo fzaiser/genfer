@@ -635,6 +635,19 @@ impl Statement {
             } => VarRange::union_all(stmts.iter().map(Statement::used_vars)),
         }
     }
+
+    fn size(&self) -> usize {
+        match self {
+            Sample { .. } | Assign { .. } | Decrement { .. } => 1,
+            IfThenElse { then, els, .. } => {
+                1 + then.iter().fold(0, |acc, stmt| acc + stmt.size())
+                    + els.iter().fold(0, |acc, stmt| acc + stmt.size())
+            }
+            While { body, .. } => 1 + body.iter().fold(0, |acc, stmt| acc + stmt.size()),
+            Fail => 1,
+            Normalize { stmts, .. } => 1 + stmts.iter().fold(0, |acc, stmt| acc + stmt.size()),
+        }
+    }
 }
 
 impl Display for Statement {
@@ -660,6 +673,10 @@ impl Program {
 
     pub fn used_vars(&self) -> VarRange {
         VarRange::union_all(self.stmts.iter().map(Statement::used_vars))
+    }
+
+    pub fn size(&self) -> usize {
+        self.stmts.iter().fold(0, |acc, stmt| acc + stmt.size())
     }
 }
 
