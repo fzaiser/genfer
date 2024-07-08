@@ -1,6 +1,6 @@
 c1 ~ Bernoulli(1/2);
 c2 ~ Bernoulli(1/2);
-while not (c1 = 1 or c2 = 1) {
+while (not (c1 = 1 or c2 = 1)) {
     c1 ~ Bernoulli(1/2);
     c2 ~ Bernoulli(1/2);
 }

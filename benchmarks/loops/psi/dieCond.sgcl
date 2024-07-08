@@ -2,7 +2,7 @@ x := 0;
 throws := 0;
 while x != 6 {
 	x ~ UniformDisc(1, 7);
-	observe x == 2 or x == 4 or x == 6;
+	observe x = 2 or x = 4 or x = 6;
 	throws += 1;
 }
 return throws;

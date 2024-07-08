@@ -3,8 +3,9 @@
 n := 1;
 while n >= 1 {
     if 1 ~ Bernoulli(1/2) {
-        n := n + 1;
+        n += 1;
     } else {
-        n := n - 2;
+        n -= 2;
     }
 }
+return n;

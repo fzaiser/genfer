@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from collections import Counter
 import json
 import os
 from pathlib import Path
@@ -24,7 +25,33 @@ num_runs = 1  # TODO: increase
 
 total_time_re = re.compile("Total time: ([0-9.]*)s")
 flags_re = re.compile("flags: (.*)")
+tool_flags_re = re.compile("flags ?\((.*)\): (.*)")
 
+def env(name, default):
+    if name in os.environ:
+        return os.environ[name]
+    else:
+        print(
+            f"{red}Environment variable `{name}` is not set!{reset} Defaulting to `{default}`"
+        )
+        return default
+
+class Tool:
+    def __init__(self, name, path, flags=[]):
+        self.name = name
+        self.path = path
+        self.flags = flags
+
+residual_path = env(
+    "RESIDUAL", "../../target/debug/residual"
+)  # TODO: Change to release
+geo_bound_path = env(
+    "GEO_BOUND", "../../target/debug/bound"
+)  # TODO: Change to release
+tools = [
+    Tool("residual", residual_path),
+    Tool("geobound", geo_bound_path, ["-u", "0", "--solver", "ipopt", "--keep-while"]),
+]
 
 class BenchmarkResult:
     def __init__(
@@ -82,7 +109,7 @@ def run_tool(tool, tool_command, path, flags):
             if "panicked" in stderr:
                 result.error = "panic"
             print(
-                f"Tool {tool} {red}FAILED ({result.error}){reset} in {elapsed:.3f}s.\nStdout:\n{stdout}\nStderr:\n{stderr}"
+                f"Tool {tool} {red}FAILED ({result.error}){reset} with exit code {exitcode} in {elapsed:.3f}s."
             )
         else:
             m = total_time_re.search(stdout)
@@ -113,11 +140,18 @@ def run_tool(tool, tool_command, path, flags):
 
 
 def bench_tool(tool, command, path: Path, flags=[]):
+    flags = list(flags)
     if not path.is_file():
         return None
-    m = flags_re.search(path.read_text())
+    file_contents = path.read_text()
+    m = flags_re.search(file_contents)
     if m:
-        flags = m.group(1).split()
+        flags += m.group(1).split()
+    for m in tool_flags_re.finditer(file_contents):
+        if m.group(1).strip() == tool:
+            extra_flags = m.group(2).strip().split()
+            print(f"Adding extra flags for {tool}: {extra_flags}") # TODO: remove
+            flags += extra_flags
     for ext in [".out", ".err"]:
         if path.with_suffix(ext).is_file():
             path.with_suffix(ext).unlink()
@@ -126,10 +160,10 @@ def bench_tool(tool, command, path: Path, flags=[]):
         result = run_tool(tool, command, path, flags)
         if best_result is None or (result.time < best_result.time and not result.error):
             best_result = result
-    with open(path.with_suffix(".out"), "w") as f:
+    with open(path.with_suffix(f"_{tool}.out"), "w") as f:
         f.write(best_result.stdout)
     if best_result.stderr:
-        with open(path.with_suffix(".err"), "w") as f:
+        with open(path.with_suffix("_{tool}.err"), "w") as f:
             f.write(best_result.stderr)
     print(
         f"Best time of {num_runs} runs of {tool} on {path} with flags {flags} was: {best_result.time:.4f}"
@@ -144,27 +178,10 @@ def bench(name):
         print(f"{red}Skipping {name}...{reset}")
         return {}
 
-    residual = bench_tool("residual", residual_path, path)
-    geo_bound = bench_tool(
-        "geo_bound",
-        geo_bound_path,
-        path,
-        flags="-u 0 --solver ipopt --keep-while".split(),
-    )
-    return {
-        "residual": residual,
-        "geo_bound": geo_bound,
-    }
-
-
-def env(name, default):
-    if name in os.environ:
-        return os.environ[name]
-    else:
-        print(
-            f"{red}Environment variable `{name}` is not set!{reset} Defaulting to `{default}`"
-        )
-        return default
+    result = {}
+    for tool in tools:
+        result[tool.name] = bench_tool(tool.name, tool.path, path, tool.flags)
+    return result
 
 
 def jsonserialize(obj):
@@ -184,12 +201,6 @@ if __name__ == "__main__":
     ) as process:
         for line in process.stdout:
             print(line.decode("utf8"))
-    residual_path = env(
-        "RESIDUAL", "../../target/debug/residual"
-    )  # TODO: Change to release
-    geo_bound_path = env(
-        "GEO_BOUND", "../../target/debug/bound"
-    )  # TODO: Change to release
     own_path = Path(sys.argv[0]).parent
     os.chdir(own_path)
     all_results = {}
@@ -215,22 +226,22 @@ if __name__ == "__main__":
     elapsed = end - start
     print(f"{green}Benchmarking finished successfully in {elapsed:.1f}s.{reset}")
 
-    total = 0
-    successes = 0
+    successes = Counter()
+    total = len(all_results)
     print(f"Summary of {len(all_results)} benchmarks:")
     print("===================")
     for benchmark, result in all_results.items():
         print(f"{benchmark}.sgcl:")
         for tool, res in result.items():
-            total += 1
             if res.error:
                 print(f"  {tool}: {red}{res.error}{reset}")
             else:
                 print(f"  {tool}: {green}{res.time:.5f}s{reset}")
-                successes += 1
+                successes[tool] += 1
     print()
-    print(
-        f"{green}{successes} benchmark runs succeeded{reset} and {red}{total - successes} failed{reset}."
-    )
+    for tool, successes in successes.items():
+        print(f"{tool}: {green}{successes}{reset} / {total} = {round((successes / total) * 100)}% succeeded")
     with open("bench-results.json", "w") as f:
         json.dump(all_results, f, indent=2, default=jsonserialize)
+    print(f"Results written to {own_path}/bench-results.json")
+    print(f"Total time: {elapsed:.1f}s")

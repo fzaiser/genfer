@@ -55,7 +55,7 @@ impl std::fmt::Display for BoundResult {
             writeln!(f, "Support: empty")?;
         }
         writeln!(f, "Lower bound:\n{bound}", bound = self.lower)?;
-        writeln!(f, "Upper bound:\n{bound}", bound = self.upper)
+        write!(f, "Upper bound:\n{bound}", bound = self.upper)
     }
 }
 
@@ -465,7 +465,7 @@ impl std::fmt::Display for GeometricBound {
         for param in &self.geo_params {
             write!(f, "{param}, ")?;
         }
-        writeln!(f, "])")
+        write!(f, "])")
     }
 }
 

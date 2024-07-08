@@ -541,7 +541,7 @@ impl BoundCtx {
             unroll_count
         };
         if self.verbose {
-            println!("Unrolling {unroll_count} times");
+            println!("\nUnrolling {unroll_count} times");
         }
         for _ in 0..unroll_count {
             let (then_bound, else_bound) = self.transform_event(cond, pre_loop.clone());
@@ -577,13 +577,13 @@ impl BoundCtx {
                 var_supports: invariant_supports,
             };
             if self.verbose {
-                println!("EVT-invariant: {invariant}");
+                println!("\nEVT-invariant:\n{invariant}");
             }
             let (loop_entry, loop_exit) = self.transform_event(cond, invariant.clone());
             let one_iter = self.transform_statements(body, loop_entry);
             let rhs = self.add_bound_results(pre_loop, one_iter);
             if self.verbose {
-                println!("Post loop body: {rhs}");
+                println!("\nPost loop body:\n{rhs}");
             }
             self.assert_le(&rhs.upper, &invariant.upper);
             self.add_bound_results(loop_exit, rest)
@@ -594,7 +594,7 @@ impl BoundCtx {
                 var_supports: invariant_supports,
             };
             if self.verbose {
-                println!("Invariant: {invariant}");
+                println!("Invariant:\n{invariant}");
             }
             let (post_loop, mut exit) = if self.do_while_transform {
                 let (loop_entry, loop_exit) = self.transform_event(cond, pre_loop);
@@ -609,7 +609,7 @@ impl BoundCtx {
                 (post_loop, loop_exit)
             };
             if self.verbose {
-                println!("Post loop body: {post_loop}");
+                println!("\nPost loop body:\n{post_loop}");
             }
             let c = self.new_factor_var();
             if self.verbose {
@@ -619,7 +619,11 @@ impl BoundCtx {
             self.add_constraint(c.clone().must_lt(SymExpr::one()));
             self.assert_le(&post_loop.upper, &(invariant.upper.clone() * c.clone()));
             exit.upper /= SymExpr::one() - c.clone();
-            self.add_bound_results(exit, rest)
+            let result = self.add_bound_results(exit, rest);
+            if self.verbose {
+                println!("\nResulting loop bound:\n{result}");
+            }
+            result
         }
     }
 
