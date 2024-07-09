@@ -99,7 +99,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
         }
     }
 
-    let (total_lo, total_hi) = if !args.no_normalize && program.uses_observe() {
+    let (norm_lo, norm_hi) = if !args.no_normalize && program.uses_observe() {
         let total_lo = result.lower.total_mass().clone();
         let total_hi = Rational::one() - result.reject.clone();
         if args.verbose {
@@ -129,7 +129,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
             assert!(lo.is_zero());
             Rational::zero()
         };
-        let prob = Interval::exact(lo / total_hi.clone(), hi / total_lo.clone());
+        let prob = Interval::exact(lo / norm_hi.clone(), hi / norm_lo.clone());
         println!("p({i}) {}", in_iv(&prob));
     }
     println!(
@@ -144,7 +144,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
         let added = residual.clone() * range.hi.clone().pow(i as i32);
         let lo = lower_moments[i].clone();
         let hi = lo.clone() + added.clone();
-        let moment = Interval::exact(lo / total_hi.clone(), hi / total_lo.clone());
+        let moment = Interval::exact(lo / norm_hi.clone(), hi / norm_lo.clone());
         println!("{i}-th (raw) moment {}", in_iv(&moment));
     }
     println!("Total time: {:.5}s", start.elapsed().as_secs_f64());

@@ -19,3 +19,4 @@ example-carton-5.imp: requires continuous variables; https://github.com/eth-sri/
 example-invPend.imp: requires continuous variables; https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/colorado/probabilistic-program-benchmarks/example-invPend.imp
 example-loop-perf-1.imp: requires continuous variables; https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/colorado/probabilistic-program-benchmarks/example-loop-perf-1.imp
 squid: bounded loop; https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/squid.psi
+dynkin: bounded loop; https://github.com/eth-sri/psi/blob/9db68ba9581b7a1211f1514e44e7927af24bd398/test/coupling/dynkin.psi

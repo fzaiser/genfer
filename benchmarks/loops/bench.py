@@ -20,12 +20,13 @@ benchmark_dirs = [
     "own",
 ]
 
-timeout = 10
+timeout = 10  # TODO: increase
 num_runs = 1  # TODO: increase
 
 total_time_re = re.compile("Total time: ([0-9.]*)s")
 flags_re = re.compile("flags: (.*)")
 tool_flags_re = re.compile("flags ?\((.*)\): (.*)")
+
 
 def env(name, default):
     if name in os.environ:
@@ -36,22 +37,23 @@ def env(name, default):
         )
         return default
 
+
 class Tool:
     def __init__(self, name, path, flags=[]):
         self.name = name
         self.path = path
         self.flags = flags
 
+
 residual_path = env(
     "RESIDUAL", "../../target/debug/residual"
 )  # TODO: Change to release
-geo_bound_path = env(
-    "GEO_BOUND", "../../target/debug/bound"
-)  # TODO: Change to release
+geo_bound_path = env("GEO_BOUND", "../../target/debug/bound")  # TODO: Change to release
 tools = [
     Tool("residual", residual_path),
     Tool("geobound", geo_bound_path, ["-u", "0", "--solver", "ipopt", "--keep-while"]),
 ]
+
 
 class BenchmarkResult:
     def __init__(
@@ -64,6 +66,7 @@ class BenchmarkResult:
         stderr="",
         error=None,
         exitcode=None,
+        timeout=None,
     ):
         self.tool = tool
         self.path = path
@@ -73,16 +76,21 @@ class BenchmarkResult:
         self.time = time
         self.error = error
         self.exitcode = exitcode
+        self.timeout = timeout
 
 
-def run_tool(tool, tool_command, path, flags):
+def run_tool(tool, tool_command, path, flags, timeout):
     if not isinstance(tool_command, list):
         tool_command = [tool_command]
     try:
         command = tool_command + flags + [path]
         print(f"Running {command}...")
         start = time.perf_counter()
-        completed = subprocess.run(command, timeout=timeout, capture_output=True)
+        env = os.environ.copy()
+        env["RUST_BACKTRACE"] = "1"
+        completed = subprocess.run(
+            command, timeout=timeout, capture_output=True, env=env
+        )
         elapsed = time.perf_counter() - start
         stdout = (completed.stdout or b"").decode("utf-8")
         stderr = (completed.stderr or b"").decode("utf-8")
@@ -95,6 +103,7 @@ def run_tool(tool, tool_command, path, flags):
             stdout=stdout,
             stderr=stderr,
             exitcode=exitcode,
+            timeout=timeout,
         )
         if exitcode != 0:
             result.exitcode = exitcode
@@ -139,7 +148,7 @@ def run_tool(tool, tool_command, path, flags):
     return result
 
 
-def bench_tool(tool, command, path: Path, flags=[]):
+def bench_tool(tool, command, path: Path, timeout, flags=[]):
     flags = list(flags)
     if not path.is_file():
         return None
@@ -150,20 +159,21 @@ def bench_tool(tool, command, path: Path, flags=[]):
     for m in tool_flags_re.finditer(file_contents):
         if m.group(1).strip() == tool:
             extra_flags = m.group(2).strip().split()
-            print(f"Adding extra flags for {tool}: {extra_flags}") # TODO: remove
+            print(f"Adding extra flags for {tool}: {extra_flags}")  # TODO: remove
             flags += extra_flags
     for ext in [".out", ".err"]:
         if path.with_suffix(ext).is_file():
             path.with_suffix(ext).unlink()
     best_result = None
     for run in range(num_runs):
-        result = run_tool(tool, command, path, flags)
+        result = run_tool(tool, command, path, flags, timeout)
         if best_result is None or (result.time < best_result.time and not result.error):
             best_result = result
-    with open(path.with_suffix(f"_{tool}.out"), "w") as f:
+    path_noext = path.with_suffix("")
+    with open(f"{path_noext}_{tool}.out", "w") as f:
         f.write(best_result.stdout)
     if best_result.stderr:
-        with open(path.with_suffix("_{tool}.err"), "w") as f:
+        with open(f"{path_noext}_{tool}.err", "w") as f:
             f.write(best_result.stderr)
     print(
         f"Best time of {num_runs} runs of {tool} on {path} with flags {flags} was: {best_result.time:.4f}"
@@ -172,7 +182,7 @@ def bench_tool(tool, command, path: Path, flags=[]):
     return best_result
 
 
-def bench(name):
+def bench(name, timeout):
     path = Path(f"{name}.sgcl")
     if "# SKIP" in path.read_text():
         print(f"{red}Skipping {name}...{reset}")
@@ -180,7 +190,7 @@ def bench(name):
 
     result = {}
     for tool in tools:
-        result[tool.name] = bench_tool(tool.name, tool.path, path, tool.flags)
+        result[tool.name] = bench_tool(tool.name, tool.path, path, timeout, tool.flags)
     return result
 
 
@@ -213,7 +223,7 @@ if __name__ == "__main__":
             benchmark = benchmark.with_suffix("")
             print(f"Benchmarking {benchmark}")
             print("------------")
-            results = bench(benchmark)
+            results = bench(benchmark, timeout)
             all_results[str(benchmark)] = results
             for tool, res in results.items():
                 if res.error:
@@ -240,7 +250,9 @@ if __name__ == "__main__":
                 successes[tool] += 1
     print()
     for tool, successes in successes.items():
-        print(f"{tool}: {green}{successes}{reset} / {total} = {round((successes / total) * 100)}% succeeded")
+        print(
+            f"{tool}: {green}{successes}{reset} / {total} = {round((successes / total) * 100)}% succeeded"
+        )
     with open("bench-results.json", "w") as f:
         json.dump(all_results, f, indent=2, default=jsonserialize)
     print(f"Results written to {own_path}/bench-results.json")

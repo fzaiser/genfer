@@ -248,29 +248,6 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<ExitCode> {
                 println!("{result}");
             }
 
-            if !args.no_normalize && program.uses_observe() {
-                let total_lo = result.lower.total_mass();
-                let total_hi = result.upper.total_mass().extract_constant().unwrap().rat();
-                let total_hi = if total_hi > Rational::one() {
-                    Rational::one()
-                } else {
-                    total_hi
-                };
-                if args.verbose {
-                    println!(
-                        "\nNormalizing constant: Z {}",
-                        in_iv(&Interval::exact(total_lo.clone(), total_hi.clone()))
-                    );
-                    println!("Everything from here on is normalized.");
-                }
-                result.lower /= total_hi;
-                result.upper /= total_lo.into();
-                if args.verbose {
-                    println!("\nNormalized bound:\n");
-                    println!("{result}");
-                }
-            }
-
             for v in 0..result.var_supports.num_vars() {
                 if Var(v) != program.result {
                     result = result.marginalize(Var(v));
@@ -341,6 +318,27 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<ExitCode> {
                 F64::from(decay.round_to_f64()),
             );
 
+            // Compute bounds on the normalizing constant:
+            let (norm_lo, norm_hi) = if !args.no_normalize && program.uses_observe() {
+                let total_lo = result.lower.total_mass();
+                let total_hi = result.upper.total_mass().extract_constant().unwrap().rat();
+                let total_hi = if total_hi > Rational::one() {
+                    Rational::one()
+                } else {
+                    total_hi
+                };
+                if args.verbose {
+                    println!(
+                        "\nNormalizing constant: Z {}",
+                        in_iv(&Interval::exact(total_lo.clone(), total_hi.clone()))
+                    );
+                    println!("Everything from here on is normalized.");
+                }
+                (total_lo, total_hi)
+            } else {
+                (Rational::one(), Rational::one())
+            };
+
             println!("\nProbability masses:");
             let limit =
                 if let Some(range) = result.var_supports[program.result].finite_nonempty_range() {
@@ -354,10 +352,12 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<ExitCode> {
             let lower_probs = result.lower.probs(program.result);
             let expansion = result.upper.eval_taylor::<Rational>(&inputs);
             for i in 0..limit {
-                let prob = Interval::exact(
-                    lower_probs.get(i).unwrap_or(&Rational::zero()).clone(),
-                    expansion.coefficient(&[i]),
-                );
+                let lo = lower_probs.get(i).unwrap_or(&Rational::zero()).clone() / norm_hi.clone();
+                let mut hi = expansion.coefficient(&[i]) / norm_lo.clone();
+                if hi > Rational::one() {
+                    hi = Rational::one();
+                }
+                let prob = Interval::exact(lo, hi);
                 println!("p({i}) {}", in_iv(&prob));
             }
             if decay.is_zero() {
@@ -368,7 +368,8 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<ExitCode> {
                 };
                 println!("Asymptotics: p(n) = 0 for n >= {from}");
             } else {
-                let factor = thresh_hi * decay.pow(-(i32::try_from(thresh).unwrap()));
+                let factor =
+                    thresh_hi / norm_lo.clone() * decay.pow(-(i32::try_from(thresh).unwrap()));
                 println!(
                     "\nAsymptotics: p(n) <= {} * {}^n for n >= {}",
                     F64::from(factor.round_to_f64()),
@@ -384,10 +385,9 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<ExitCode> {
             let expansion = result.upper.eval_taylor::<Rational>(&inputs);
             let mut factorial = Rational::one();
             for i in 0..5 {
-                let moment = Interval::exact(
-                    lower_moments[i].clone(),
-                    expansion.coefficient(&[i]) * factorial.clone(),
-                );
+                let lo = lower_moments[i].clone() / norm_hi.clone();
+                let hi = expansion.coefficient(&[i]) / norm_lo.clone();
+                let moment = Interval::exact(lo, hi);
                 println!("{i}-th (raw) moment {}", in_iv(&moment));
                 factorial *= Rational::from_int(i + 1);
             }
