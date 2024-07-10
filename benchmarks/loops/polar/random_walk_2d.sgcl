@@ -1,4 +1,4 @@
-# flags(geobound): -d 2
+# flags(geobound): -u 0 -d 1 --solver ipopt
 
 x := 1;
 y := 1;

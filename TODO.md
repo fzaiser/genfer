@@ -1,5 +1,11 @@
 # Implementation TODO
 
+Benchmarks
+==========
+- [ ] more nested loops
+- [ ] more conditioning
+- [ ] smaller versions of stabilization algorithms
+
 Loop Bounds
 ===========
 
@@ -10,6 +16,10 @@ Loop Bounds
 - [x] Add --objective balance option
 - [x] Output marginalized bound and asymptotics
 - [ ] Turn upper bounds into bounds on the remainder besides the lower bound
+- [ ] Recognize cyclic `<=` constraints (nested loops)
+- [ ] Solve problem for `-u 0` first and then re-use the decay rates and contraction factor for higher unrolling
+- [ ] Find a way to deal with rounding errors
+- [ ] scale constraints by setting the sum of coefficients to 1 (after substituting 1 for all nonlinear variables)
 
 Features
 ========

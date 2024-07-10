@@ -1,4 +1,4 @@
-
+# flags(geobound): -u 0 --solver z3 -d 2
 x ~ Geometric(1/2);
 y := 0;
 c := 0;

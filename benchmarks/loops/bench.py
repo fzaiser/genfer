@@ -159,8 +159,8 @@ def bench_tool(tool, command, path: Path, timeout, flags=[]):
     for m in tool_flags_re.finditer(file_contents):
         if m.group(1).strip() == tool:
             extra_flags = m.group(2).strip().split()
-            print(f"Adding extra flags for {tool}: {extra_flags}")  # TODO: remove
-            flags += extra_flags
+            print(f"Setting flags for {tool}: {extra_flags}")  # TODO: remove
+            flags = extra_flags
     for ext in [".out", ".err"]:
         if path.with_suffix(ext).is_file():
             path.with_suffix(ext).unlink()
