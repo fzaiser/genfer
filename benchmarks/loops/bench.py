@@ -161,19 +161,20 @@ def bench_tool(tool, command, path: Path, timeout, flags=[]):
             extra_flags = m.group(2).strip().split()
             print(f"Setting flags for {tool}: {extra_flags}")  # TODO: remove
             flags = extra_flags
+    path_noext = path.with_suffix("")
+    path_with_tool = Path(f"{path_noext}_{tool}.sgcl")
     for ext in [".out", ".err"]:
-        if path.with_suffix(ext).is_file():
-            path.with_suffix(ext).unlink()
+        if path_with_tool.with_suffix(ext).is_file():
+            path_with_tool.with_suffix(ext).unlink()
     best_result = None
     for run in range(num_runs):
         result = run_tool(tool, command, path, flags, timeout)
         if best_result is None or (result.time < best_result.time and not result.error):
             best_result = result
-    path_noext = path.with_suffix("")
-    with open(f"{path_noext}_{tool}.out", "w") as f:
+    with open(path_with_tool.with_suffix(".out"), "w") as f:
         f.write(best_result.stdout)
     if best_result.stderr:
-        with open(f"{path_noext}_{tool}.err", "w") as f:
+        with open(path_with_tool.with_suffix(".err"), "w") as f:
             f.write(best_result.stderr)
     print(
         f"Best time of {num_runs} runs of {tool} on {path} with flags {flags} was: {best_result.time:.4f}"

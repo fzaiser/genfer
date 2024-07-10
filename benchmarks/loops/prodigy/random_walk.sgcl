@@ -1,10 +1,9 @@
-# Modified from original (see bottom of file) to ensure almost sure termination
 
 s ~ Geometric(1/2);
 c := 0;
 
 while s > 0 {
-    if 1 ~ Bernoulli(1/4) { # modified probability!
+    if 1 ~ Bernoulli(1/2) {
         s += 1;
     } else {
         s -= 1;

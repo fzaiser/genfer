@@ -1,0 +1,30 @@
+# This program is not positively almost surely terminating.
+
+stop := 0;
+steps := 0;
+x := 1;
+tmp := 0;
+while stop = 0 {
+    stop ~ Bernoulli(1/2);
+    while x > 0 {
+        x -= 1;
+        tmp += 1;
+    }
+    while tmp > 0 {
+        x += 2;
+        tmp -= 1;
+    }
+    steps += 1;
+}
+return steps;
+
+#= https://github.com/probing-lab/polar/blob/5fb1f34a8085d49ba91920ebaf8298e2d46fb387/documentation/loops/geometric.prob
+stop = 0
+steps = 0
+x = 1
+while stop == 0:
+    stop = Bernoulli(1/2)
+    x = 2*x
+    steps = steps + 1
+end
+=#

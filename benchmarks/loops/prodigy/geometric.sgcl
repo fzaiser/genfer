@@ -1,6 +1,6 @@
 
 x := 1;
-c := 0;
+c ~ Geometric(1/2);
 
 while x = 1 {
     if 0 ~ Bernoulli(1/2) {

@@ -1,0 +1,5 @@
+X := 0;
+while 1 ~ Bernoulli(1/2) {
+    X += 1;
+}
+return X
