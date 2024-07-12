@@ -1,11 +1,11 @@
 Generated 6 constraints with 4 symbolic variables.
-Constraint generation time: 0.00115s
+Constraint generation time: 0.00114s
 Solving constraints...
 Best objective: 1 at [0.856945814417484, 0.9805140413014828, 1.1095278962465742, 0.9805765081848856]
-Solver time: 0.10874s
+Solver time: 0.11090s
 Optimizing solution...
 Best objective: 7.623133266406561 at [0.578448325260233, 0.8688203439382628, 2.1277745229433185, 0.9986751114488972]
-Optimizer time: 0.051955
+Optimizer time: 0.052425
 Best objective: 7.623133266406561 at [0.578448325260233, 0.8688203439382628, 0.18357280560843053, 0.9986751114488972]
 Presolve 0 (-6) rows, 0 (-4) columns and 0 (-6) elements
 Optimal - objective value 0
@@ -234,4 +234,4 @@ Moments:
 2-th (raw) moment ∈ [4.54522705078125, 67900.54499408511]
 3-th (raw) moment ∈ [19.61737060546875, 482857.37233131874]
 4-th (raw) moment ∈ [104.45050048828125, 3433780.2849978227]
-Total time: 0.16492s
+Total time: 0.16765s

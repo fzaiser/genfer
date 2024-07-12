@@ -1,5 +1,5 @@
 Generated 4 constraints with 6 symbolic variables.
-Constraint generation time: 0.01568s
+Constraint generation time: 0.02784s
 Solving constraints...
 
 ******************************************************************************
@@ -94,12 +94,12 @@ Number of inequality constraint evaluations          = 68
 Number of equality constraint Jacobian evaluations   = 0
 Number of inequality constraint Jacobian evaluations = 46
 Number of Lagrangian Hessian evaluations             = 45
-Total CPU secs in IPOPT (w/o function evaluations)   =      0.073
-Total CPU secs in NLP function evaluations           =      0.001
+Total CPU secs in IPOPT (w/o function evaluations)   =      0.059
+Total CPU secs in NLP function evaluations           =      0.002
 
 EXIT: Optimal Solution Found.
 Solution satisfies all constraints.
-Solver time: 0.01982s
+Solver time: 0.02086s
 Optimizing solution...
 This is Ipopt version 3.11.9, running with linear solver mumps.
 NOTE: Other linear solvers might be more efficient (see Ipopt documentation).
@@ -190,14 +190,14 @@ Number of inequality constraint evaluations          = 84
 Number of equality constraint Jacobian evaluations   = 0
 Number of inequality constraint Jacobian evaluations = 49
 Number of Lagrangian Hessian evaluations             = 48
-Total CPU secs in IPOPT (w/o function evaluations)   =      0.070
-Total CPU secs in NLP function evaluations           =      0.024
+Total CPU secs in IPOPT (w/o function evaluations)   =      0.071
+Total CPU secs in NLP function evaluations           =      0.028
 
 EXIT: Optimal Solution Found.
 IPOPT found the following solution:
 Objective: 0.3754565179322084 at [0.9355543564316174, 2.955003882284175e-6, 8.934523440579326e-8, 2.9546708546175173e-6, 8.934523440579326e-8, 0.4648143335348609]
 The solution satisfies all constraints.
-Optimizer time: 0.029710
+Optimizer time: 0.030122
 Solution by LP solver does not satisfy the constraints.
 Presolve 2 (-2) rows, 2 (-4) columns and 4 (-6) elements
 Optimal - objective value 0
@@ -459,4 +459,4 @@ Moments:
 2-th (raw) moment ∈ [2.99964699443923, 1.5274220326945047]
 3-th (raw) moment ∈ [8.249029234707876, 1.7866431940027305]
 4-th (raw) moment ∈ [29.996469944392054, 7.429341185243721]
-Total time: 0.09852s
+Total time: 0.10079s

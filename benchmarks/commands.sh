@@ -17,4 +17,4 @@ cd benchmarks/
 ../target/debug/residual die_paradox.sgcl --limit 200 -u 40 > outputs/die_paradox_residual.txt
 ../target/debug/bound die_paradox.sgcl --limit 200 --solver adam-barrier --optimizer adam-barrier --objective tail > outputs/die_paradox_bound_tail.txt
 ../target/debug/bound die_paradox.sgcl --limit 200 -u 40 --solver ipopt --optimizer ipopt --objective ev > outputs/die_paradox_bound_moments.txt
-../target/debug/bound die_paradox.sgcl --limit 200 -u 40 --solver adam-barrier --optimizer adam-barrier > outputs/die_paradox_bound_probs.txt
+../target/debug/bound die_paradox.sgcl --limit 200 -u 40 --solver adam-barrier --optimizer adam-barrier --keep-while > outputs/die_paradox_bound_probs.txt

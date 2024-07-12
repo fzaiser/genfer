@@ -1,11 +1,11 @@
 Generated 2 constraints with 3 symbolic variables.
-Constraint generation time: 0.00146s
+Constraint generation time: 0.00142s
 Solving constraints...
 Best objective: 1 at [0.9803946103987301, 1.1682930086114662, 0.9343903185704194]
-Solver time: 0.05645s
+Solver time: 0.05594s
 Optimizing solution...
 Best objective: 1.0561845382925006 at [0.6914123026530697, 0.004089141341156599, 0.7357802985263511]
-Optimizer time: 0.203504
+Optimizer time: 0.205539
 Solution by LP solver does not satisfy the constraints.
 Presolve 0 (-2) rows, 0 (-3) columns and 0 (-2) elements
 Optimal - objective value 0
@@ -276,4 +276,4 @@ Moments:
 2-th (raw) moment ∈ [2.999999999997688, 1.6539776538480193]
 3-th (raw) moment ∈ [12.999999999881904, 2.583971143478398]
 4-th (raw) moment ∈ [74.99999999396245, 4.255820612654088]
-Total time: 0.27468s
+Total time: 0.27700s

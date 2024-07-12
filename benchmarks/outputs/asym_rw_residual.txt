@@ -208,4 +208,4 @@ Moments:
 2-th (raw) moment ∈ [9.897808079284232, inf]
 3-th (raw) moment ∈ [105.14617495597001, inf]
 4-th (raw) moment ∈ [1717.9064492166108, inf]
-Total time: 0.03168s
+Total time: 0.02909s

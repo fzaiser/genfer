@@ -1,5 +1,5 @@
 Generated 2 constraints with 3 symbolic variables.
-Constraint generation time: 0.00054s
+Constraint generation time: 0.00081s
 Solving constraints...
 
 ******************************************************************************
@@ -91,15 +91,15 @@ Number of inequality constraint evaluations          = 56
 Number of equality constraint Jacobian evaluations   = 0
 Number of inequality constraint Jacobian evaluations = 43
 Number of Lagrangian Hessian evaluations             = 42
-Total CPU secs in IPOPT (w/o function evaluations)   =      0.094
-Total CPU secs in NLP function evaluations           =      0.002
+Total CPU secs in IPOPT (w/o function evaluations)   =      0.165
+Total CPU secs in NLP function evaluations           =      0.003
 
 EXIT: Optimal Solution Found.
 Solution satisfies all constraints.
-Solver time: 0.03916s
+Solver time: 0.05596s
 Optimizing solution...
 Best objective: 2.0096597540231604 at [0.5024033307140232, 11.954277893580574, 0.9979234106121287]
-Optimizer time: 0.048962
+Optimizer time: 0.045018
 Best objective: 2.00965975402316 at [0.5024033307140232, 0.4811828964327444, 0.9979234106121287]
 Presolve 0 (-2) rows, 0 (-3) columns and 0 (-2) elements
 Optimal - objective value 0
@@ -328,4 +328,4 @@ Moments:
 2-th (raw) moment ∈ [2.80078125, 707.9060830054137]
 3-th (raw) moment ∈ [10.91796875, 1029.6087651380383]
 4-th (raw) moment ∈ [52.58203125, 1495.353239261232]
-Total time: 0.09923s
+Total time: 0.10568s
