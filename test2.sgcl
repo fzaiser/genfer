@@ -1,0 +1,5 @@
+X ~ Geometric(0.5);
+while X > 0 unroll 10 {
+    X -= 1;
+}
+return X

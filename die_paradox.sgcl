@@ -1,0 +1,8 @@
+die := 0;
+throws := 0;
+while die != 6 {
+	die ~ UniformDisc(1, 7);
+	observe die in [2, 4, 6];
+	throws += 1;
+}
+return throws;
