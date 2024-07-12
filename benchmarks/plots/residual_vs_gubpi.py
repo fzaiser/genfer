@@ -276,5 +276,3 @@ plt.grid(True, which='both', linestyle='--', linewidth=0.5)
 
 # save as pdf
 plt.savefig('residual_vs_gubpi.pdf', bbox_inches='tight')
-
-plt.show()
