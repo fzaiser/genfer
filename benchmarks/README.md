@@ -9,6 +9,7 @@
 
 ## Comparison between our two semantics (Section 6.3)
 
+* The three benchmark programs are available in the files `geometric.sgcl`, `asym_rw.sgcl`, and `die_paradox.sgcl`.
 * The script `comparison.sh` runs our tool with various settings on the three examples.
   We pick different optimization objectives depending on the purpose: for the moment bounds, the objective is the expected value bound; for tails, it is the tail decay rate; for probability masses, it is the total probability mass bound.
 * The output is written to `outputs/`.
