@@ -64,5 +64,3 @@ plt.grid(True, which='both', linestyle='--', linewidth=0.5)
 
 # save as pdf
 plt.savefig('plot_die_paradox.pdf', bbox_inches='tight')
-
-plt.show()
