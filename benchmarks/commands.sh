@@ -1,14 +1,20 @@
-cargo run --bin residual -- geo.sgcl -u 50
-cargo run --bin bound -- geo.sgcl --solver ipopt --optimizer adam-barrier --objective tail --limit 200
-cargo run --bin bound -- geo.sgcl -u 50 --solver ipopt --optimizer ipopt --objective ev
-cargo run --bin bound -- geo.sgcl -u 50 --solver adam-barrier --optimizer adam-barrier --limit 200 --keep-while
+#!/bin/bash
 
-cargo run --bin residual -- asym_rw.sgcl -u 40
-cargo run --bin bound -- asym_rw.sgcl --limit 200 --solver adam-barrier --optimizer adam-barrier --objective tail
-cargo run --bin bound -- asym_rw.sgcl --limit 200 --solver adam-barrier --optimizer adam-barrier -u 50 --objective ev -d 3
-cargo run --bin bound -- asym_rw.sgcl --limit 200 --solver adam-barrier --optimizer adam-barrier -u 40 -d 3
+cd ..
+cargo build
+cd benchmarks/
 
-cargo run --bin residual -- die_paradox.sgcl -u 40
-cargo run --bin bound -- die_paradox.sgcl --limit 200 --solver adam-barrier --optimizer adam-barrier --objective tail
-cargo run --bin bound -- die_paradox.sgcl --limit 200 --solver ipopt --optimizer ipopt -u 40 --objective ev
-cargo run --bin bound -- die_paradox.sgcl --limit 200 --solver adam-barrier --optimizer adam-barrier -u 40
+../target/debug/residual geo.sgcl --limit 200 -u 50 > outputs/geo_residual.txt
+../target/debug/bound geo.sgcl --limit 200 --solver ipopt --optimizer adam-barrier --objective tail > outputs/geo_bound_tail.txt
+../target/debug/bound geo.sgcl  --limit 200 -u 50 --solver ipopt --optimizer ipopt --objective ev > outputs/geo_bound_moments.txt
+../target/debug/bound geo.sgcl  --limit 200 -u 50 --solver adam-barrier --optimizer adam-barrier --keep-while > outputs/geo_bound_probs.txt
+
+../target/debug/residual asym_rw.sgcl --limit 200 -u 40 > outputs/asym_rw_residual.txt
+../target/debug/bound asym_rw.sgcl --limit 200 --solver adam-barrier --optimizer adam-barrier --objective tail > outputs/asym_rw_bound_tail.txt
+../target/debug/bound asym_rw.sgcl --limit 200 -u 50 -d 3 --solver adam-barrier --optimizer adam-barrier --objective ev > outputs/asym_rw_bound_moments.txt
+../target/debug/bound asym_rw.sgcl --limit 200 -u 40 -d 3 --solver adam-barrier --optimizer adam-barrier > outputs/asym_rw_bound_probs.txt
+
+../target/debug/residual die_paradox.sgcl --limit 200 -u 40 > outputs/die_paradox_residual.txt
+../target/debug/bound die_paradox.sgcl --limit 200 --solver adam-barrier --optimizer adam-barrier --objective tail > outputs/die_paradox_bound_tail.txt
+../target/debug/bound die_paradox.sgcl --limit 200 -u 40 --solver ipopt --optimizer ipopt --objective ev > outputs/die_paradox_bound_moments.txt
+../target/debug/bound die_paradox.sgcl --limit 200 -u 40 --solver adam-barrier --optimizer adam-barrier > outputs/die_paradox_bound_probs.txt
