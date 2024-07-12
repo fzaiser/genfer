@@ -1,4 +1,0 @@
-# flags: --rational
-X := 2;
-X -= 3;
-return X

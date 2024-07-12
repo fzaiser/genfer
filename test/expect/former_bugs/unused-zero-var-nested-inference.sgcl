@@ -1,8 +1,0 @@
-X ~ Bernoulli(0.5);
-Y := 0;
-normalize X {
-    if X = 0 {
-        fail;
-    }
-}
-return X

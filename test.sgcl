@@ -1,7 +1,0 @@
-X ~ Geometric(0.5);
-Y := 1;
-
-while Y > 0 unroll 0 {
-    Y ~ Bernoulli(0.5);
-}
-return X;

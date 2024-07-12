@@ -1,8 +1,0 @@
-// flags: --dp
-def main(){ // bothHeads
-    firstCoin := flip(1/2);
-    secondCoin := flip(1/2);
-    bothHeads := firstCoin && secondCoin;
-    observe(bothHeads == 0);
-    return (firstCoin);
-}

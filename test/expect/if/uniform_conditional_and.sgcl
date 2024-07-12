@@ -1,5 +1,0 @@
-X ~ UniformDisc(0, 100);
-if X = 10 and X <= 10 {} else if X = 20 and X >= 20 {} else {
-    fail;
-}
-return X

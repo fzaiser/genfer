@@ -1,9 +1,0 @@
-aliceDunnit := bernoulli(0.3);
-if(aliceDunnit = 1) {
-    withGun := bernoulli(0.03);
-} else {
-    withGun := bernoulli(0.8);
-}
-observe(withGun = 1);
-
-?Pr[aliceDunnit];

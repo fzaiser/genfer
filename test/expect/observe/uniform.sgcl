@@ -1,3 +1,0 @@
-X := 1;
-observe 1 ~ UniformDisc(0, 10);
-return X

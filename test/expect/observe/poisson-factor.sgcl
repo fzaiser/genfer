@@ -1,3 +1,0 @@
-X := 1;
-observe 1 ~ Poisson(2 * X);
-return X

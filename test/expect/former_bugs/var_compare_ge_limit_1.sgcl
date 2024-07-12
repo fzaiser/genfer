@@ -1,6 +1,0 @@
-X ~ UniformDisc(0, 4);
-Y ~ UniformDisc(0, 8);
-if X >= Y {} else {
-    fail;
-}
-return Y;

@@ -1,4 +1,0 @@
-# flags: --rational
-X ~ UniformDisc(0, 4);
-X -= 2;
-return X

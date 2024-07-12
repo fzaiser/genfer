@@ -1,4 +1,0 @@
-X ~ Bernoulli(0.9);
-Y ~ Bernoulli(0.8);
-observe((X = 1 and Y = 1) or X = 0 or 1 ~ Bernoulli(0.5));
-return X;

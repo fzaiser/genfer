@@ -1,3 +1,0 @@
-X := 8;
-observe 1 ~ Binomial(X, 0.25);
-return X

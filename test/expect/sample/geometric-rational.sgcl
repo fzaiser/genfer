@@ -1,3 +1,0 @@
-# flags: --rational
-X ~ Geometric(0.5);
-return X

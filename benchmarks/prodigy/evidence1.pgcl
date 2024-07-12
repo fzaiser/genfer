@@ -1,9 +1,0 @@
-nat evidence;
-nat coin;
-
-evidence := bernoulli(1/2);
-if (evidence=1) {
-    coin := bernoulli(1/2);
-    observe(coin = 1);
-} else {skip}
-!Print // expected: 1/3·δ(1)[evidence]+2/3·δ(0)[evidence]

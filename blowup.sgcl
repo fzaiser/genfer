@@ -1,7 +1,0 @@
-X := 0;
-Y := 1;
-while X = 0 {
-    Y += Y;
-    X ~ Bernoulli(1/2);
-}
-return Y;

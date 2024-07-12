@@ -1,5 +1,0 @@
-# File name: example.sgcl
-calls ~ Poisson(10);
-scams ~ Binomial(calls, 0.2);
-observe(scams = 1);
-return calls;

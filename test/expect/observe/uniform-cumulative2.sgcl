@@ -1,3 +1,0 @@
-X ~ UniformDisc(0, 100);
-observe X < 99;
-return X

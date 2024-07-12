@@ -1,9 +1,0 @@
-aliceDunnit ~ Bernoulli(0.3);
-if aliceDunnit = 1 {
-    withGun ~ Bernoulli(0.03);
-} else {
-    withGun ~ Bernoulli(0.8);
-}
-observe withGun = 1;
-
-return aliceDunnit;

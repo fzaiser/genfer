@@ -1,6 +1,0 @@
-# flags: --no-probs
-
-P ~ Dirac(0.5);
-observe 0 ~ Bernoulli(P); # P ~ Dirac(0.5)
-observe 1 ~ Bernoulli(P); # P ~ Dirac(0.5)
-return P

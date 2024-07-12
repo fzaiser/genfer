@@ -1,2 +1,0 @@
-X ~ NegBinomial(4, 0.25);
-return X

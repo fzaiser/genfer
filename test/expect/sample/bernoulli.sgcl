@@ -1,2 +1,0 @@
-X ~ Bernoulli(0.25);
-return X

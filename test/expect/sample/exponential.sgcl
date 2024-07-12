@@ -1,3 +1,0 @@
-# flags: --no-probs
-X ~ Exponential(0.1);
-return X

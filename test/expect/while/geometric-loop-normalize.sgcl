@@ -1,8 +1,0 @@
-# flags: --limit 11
-normalize {
-    X := 0;
-    while 0 ~ Bernoulli(1/2) {
-        X += 1;
-    }
-}
-return X

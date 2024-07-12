@@ -1,4 +1,0 @@
-X := 1;
-observe X = 1;
-observe X = 2;
-return X

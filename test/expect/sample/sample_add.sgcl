@@ -1,3 +1,0 @@
-X := 10;
-X +~ Binomial(X, 0.5);
-return X

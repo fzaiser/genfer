@@ -1,9 +1,0 @@
-
-Expensive ~ Bernoulli(0.9);
-Failures ~ Poisson(4);
-if Expensive = 1 {
-    observe Failures <= 3;
-} else {
-    observe Failures <= 10;
-}
-return Expensive

@@ -2,7 +2,6 @@
 name = "genfer"
 version = "0.1.0"
 edition = "2021"
-default-run = "genfer"
 authors = ["Fabian Zaiser"]
 description = "Exact Bayesian Inference for Discrete Probabilistic Programs via Generating Functions"
 license = "MIT"

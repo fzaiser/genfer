@@ -11,4 +11,4 @@ prinsys/fair_biased_coin.prob: symbolic parameter
 ## Real problems
 polar_paper/geometric.prob: (should be geometric_power or something) infinite moments
 k_induction/unif_gen.prob: problems because variables are doubled and two variables are compared
-k_induction/rabin.prob: investigate!
+k_induction/rabin.prob: unknown issue
