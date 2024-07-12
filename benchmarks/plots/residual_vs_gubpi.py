@@ -109,8 +109,8 @@ gubpi_output = """
 outside: [0, 0.00734215975]
 """
 
-rest_time = 0.09 # seconds
-rest_output = """
+residual_time = 0.09 # seconds
+residual_output = """
 p(0) ∈ [0.0, 2.449276583058457e-9]
 p(1) ∈ [0.7499999999999999, 0.7500000024492767]
 p(2) ∈ [0.0, 2.449276583058457e-9]
@@ -222,7 +222,7 @@ def parse_gubpi_output(output_str):
         bounds.append((float(lower_val), float(upper_val)))
     return bounds
 
-def parse_rest_output(output_str):
+def parse_residual_output(output_str):
     bounds = []
     pattern = re.compile(r'p\((.*)\) ∈ \[(.*), (.*)\]')
     for match in pattern.finditer(output_str):
@@ -238,10 +238,10 @@ gubpi_bounds = parse_gubpi_output(gubpi_output)[1::2]
 gubpi_lowers = [lower for lower, _ in gubpi_bounds]
 gubpi_uppers = [upper for _, upper in gubpi_bounds]
 
-# Extracted bounds for rest_output
-rest_bounds = parse_rest_output(rest_output)[1::2]
-rest_lowers = [lower for lower, _ in rest_bounds]
-rest_uppers = [upper for _, upper in rest_bounds]
+# Extracted bounds for residual_output
+residual_bounds = parse_residual_output(residual_output)[1::2]
+residual_lowers = [lower for lower, _ in residual_bounds]
+residual_uppers = [upper for _, upper in residual_bounds]
 
 # Exact solution
 exact = [hitting_time_prob(i, 3/4) for i in indices]
@@ -253,10 +253,10 @@ ax.plot(indices, gubpi_lowers, 'b--', marker='|', alpha=0.5, linewidth=1)
 ax.plot(indices, gubpi_uppers, 'b-', marker='|', alpha=0.5, linewidth=1)
 ax.fill_between(indices, gubpi_lowers, gubpi_uppers, color='blue', alpha=0.2, label='GuBPI Bounds (103 s)')
 
-# Plot rest bounds:
-ax.plot(indices, rest_lowers, 'r--', marker='|', alpha=0.5, linewidth=1)
-ax.plot(indices, rest_uppers, 'r-', marker='|', alpha=0.5, linewidth=1)
-ax.fill_between(indices, rest_lowers, rest_uppers, color='red', alpha=0.2, label='Residual Mass Bounds (0.019 s)')
+# Plot residual bounds:
+ax.plot(indices, residual_lowers, 'r--', marker='|', alpha=0.5, linewidth=1)
+ax.plot(indices, residual_uppers, 'r-', marker='|', alpha=0.5, linewidth=1)
+ax.fill_between(indices, residual_lowers, residual_uppers, color='red', alpha=0.2, label='Residual Mass Bounds (0.019 s)')
 
 # Plot exact masses:
 ax.scatter(indices, exact, marker='x', color='green', zorder=5, s=20, label='Exact probability')
@@ -275,6 +275,6 @@ plt.legend()
 plt.grid(True, which='both', linestyle='--', linewidth=0.5)
 
 # save as pdf
-plt.savefig('rest_vs_gubpi.pdf', bbox_inches='tight')
+plt.savefig('residual_vs_gubpi.pdf', bbox_inches='tight')
 
 plt.show()
