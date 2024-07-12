@@ -1,5 +1,9 @@
 # Tool for: "Guaranteed Bounds on Posterior Distributions of Discrete Probabilistic Programs with Loops"
 
+## Running the benchmarks
+
+How the benchmarks are run is explained in `benchmarks/README.md`.
+
 ## Setup
 
 To build this tool, you need a Rust installation.
@@ -39,10 +43,6 @@ You can see a list of command line options as follows:
 target/release/tool --help
 ```
 
-## Running the benchmarks
-
-How the benchmarks are run is explained in the `benchmarks/` folder.
-
 ## Probabilistic programming language
 
 The syntax of a probabilistic program is as follows:
@@ -69,6 +69,7 @@ The following distributions are supported (where `m`, `n` are natural numbers, `
 
 * `Bernoulli(p)`
 * `Categorical(p_0, p_1, ..., p_n)`: categorical distribution on `{0, ..., n}` where `i` has probability `p_i`
+* `UniformDisc(a, b)`: uniform distribution on `{a, ..., b - 1}`
 * `Geometric(p)`
 
 Rational numbers can be written as decimals (e.g. `0.4`) or fractions (e.g. `355/113`).

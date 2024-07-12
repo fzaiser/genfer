@@ -8,7 +8,6 @@ chakarov_sriram_2014/ex1.prob: support includes negative numbers
 polar_paper/gambling.prob: support includes negative numbers
 prinsys/fair_biased_coin.prob: symbolic parameter
 
-## Real problems
-polar_paper/geometric.prob: (should be geometric_power or something) infinite moments
-k_induction/unif_gen.prob: problems because variables are doubled and two variables are compared
-k_induction/rabin.prob: unknown issue
+## Benchmarks that could not be translated
+
+k_induction/unif_gen.prob: uses a lot of subtraction and multiplication, which is tedious and inefficient to encode as while loops. Hence we did not attempt this.

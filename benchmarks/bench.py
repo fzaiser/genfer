@@ -45,13 +45,10 @@ class Tool:
         self.flags = flags
 
 
-residual_path = env(
-    "RESIDUAL", "../../target/debug/residual"
-)  # TODO: Change to release
-geo_bound_path = env("GEO_BOUND", "../../target/debug/bound")  # TODO: Change to release
+residual_path = "../target/debug/residual" # TODO: Change to release
+geo_bound_path = "../target/debug/bound"  # TODO: Change to release
 tools = [
-    Tool("residual", residual_path),
-    Tool("geobound", geo_bound_path, ["-u", "0", "--solver", "ipopt", "--keep-while"]),
+    Tool("geobound", geo_bound_path, ["-u", "0", "--solver", "ipopt", "--keep-while", "--no-linear-optimize"]),
 ]
 
 
