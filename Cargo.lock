@@ -272,28 +272,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
-name = "genfer"
-version = "0.1.0"
-dependencies = [
- "clap",
- "descent",
- "descent_ipopt",
- "expect-test",
- "good_lp",
- "ndarray",
- "nom",
- "num-traits",
- "rand",
- "rand_distr",
- "rug",
- "rustc-hash",
- "ryu",
- "typed-arena",
- "walkdir",
- "z3",
-]
-
-[[package]]
 name = "getrandom"
 version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -699,6 +677,28 @@ checksum = "8e6bf6f19e9f8ed8d4048dc22981458ebcf406d67e94cd422e5ecd73d63b3237"
 dependencies = [
  "rustix",
  "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "tool"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "descent",
+ "descent_ipopt",
+ "expect-test",
+ "good_lp",
+ "ndarray",
+ "nom",
+ "num-traits",
+ "rand",
+ "rand_distr",
+ "rug",
+ "rustc-hash",
+ "ryu",
+ "typed-arena",
+ "walkdir",
+ "z3",
 ]
 
 [[package]]

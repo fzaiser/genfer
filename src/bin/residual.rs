@@ -5,15 +5,15 @@
 #![allow(clippy::cast_possible_truncation)]
 #![allow(clippy::cast_sign_loss)]
 
-use genfer::bounds::residual::ResidualSemantics;
-use genfer::interval::Interval;
-use genfer::number::{Rational, F64};
-use genfer::parser;
-use genfer::ppl::{Program, Var};
-use genfer::semantics::support::VarSupport;
-use genfer::semantics::Transformer;
 use std::path::PathBuf;
 use std::time::Instant;
+use tool::bounds::residual::ResidualSemantics;
+use tool::interval::Interval;
+use tool::number::{Rational, F64};
+use tool::parser;
+use tool::ppl::{Program, Var};
+use tool::semantics::support::VarSupport;
+use tool::semantics::Transformer;
 
 use clap::Parser;
 use ndarray::Axis;

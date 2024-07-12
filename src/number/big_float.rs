@@ -12,7 +12,7 @@ use super::number::{FloatNumber, IntervalNumber, Number};
 /// Extracts the exponent and sets it to zero
 ///
 /// ```
-/// use genfer::number::extract_exponent;
+/// use tool::number::extract_exponent;
 /// assert_eq!(extract_exponent(0.0), (0.0, 0));
 /// assert_eq!(extract_exponent(1.0), (1.0, 0));
 /// assert_eq!(extract_exponent(2.0), (1.0, 1));
@@ -146,7 +146,7 @@ impl Number for BigFloat {
     /// Exponentiates a `BigFloat`
     ///
     /// ```
-    /// use genfer::number::*;
+    /// use tool::number::*;
     /// use num_traits::{One, Zero};
     /// assert_eq!(BigFloat::zero().exp(), BigFloat::one());
     /// assert_eq!(BigFloat::one().exp(), BigFloat::from(1.0_f64.exp()));
@@ -165,7 +165,7 @@ impl Number for BigFloat {
 
     /// Takes the natural logarithm of a `BigFloat`
     /// ```
-    /// use genfer::number::*;
+    /// use tool::number::*;
     /// use num_traits::{One, Zero};
     /// assert_eq!(BigFloat::one().log(), BigFloat::zero());
     /// assert_eq!(BigFloat::from(1.0_f64.exp()).log(), BigFloat::from(1.0_f64.exp().ln()));

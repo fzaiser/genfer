@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use genfer::parser::parse_program;
-use genfer::semantics::support::{SupportTransformer, VarSupport};
-use genfer::semantics::Transformer;
-use genfer::support::SupportSet;
+use tool::parser::parse_program;
+use tool::semantics::support::{SupportTransformer, VarSupport};
+use tool::semantics::Transformer;
+use tool::support::SupportSet;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
