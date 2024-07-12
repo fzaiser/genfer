@@ -99,11 +99,11 @@ if __name__ == "__main__":
             error = result["error"]
             if error:
                 if error == "timeout" and "rounding error" in stdout:
-                    runtime = f"\\xmark (rounding errors)"
+                    runtime = f"\\xmark{{}} (rounding errors)"
                 elif error == "timeout":
-                    runtime = f"\\xmark (> {runtime})"
+                    runtime = f"\\xmark{{}} (> {runtime})"
                 else:
-                    runtime = f"\\xmark"
+                    runtime = f"\\xmark{{}}"
             print(
                 f"\\verb|{benchmark}| & {stats.var_count} & {stats.stmt_count} & {obs} & {constr_count} & {constr_var_count} & {runtime} \\\\"
             )
