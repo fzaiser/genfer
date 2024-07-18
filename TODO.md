@@ -1,5 +1,9 @@
 # Implementation TODO
 
+Bugs
+====
+- [ ] Fix wrong second moment for die paradox example
+
 Benchmarks
 ==========
 - [ ] more nested loops
