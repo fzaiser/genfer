@@ -638,13 +638,12 @@ impl Statement {
 
     fn size(&self) -> usize {
         match self {
-            Sample { .. } | Assign { .. } | Decrement { .. } => 1,
+            Sample { .. } | Assign { .. } | Decrement { .. } | Fail => 1,
             IfThenElse { then, els, .. } => {
                 1 + then.iter().fold(0, |acc, stmt| acc + stmt.size())
                     + els.iter().fold(0, |acc, stmt| acc + stmt.size())
             }
             While { body, .. } => 1 + body.iter().fold(0, |acc, stmt| acc + stmt.size()),
-            Fail => 1,
             Normalize { stmts, .. } => 1 + stmts.iter().fold(0, |acc, stmt| acc + stmt.size()),
         }
     }

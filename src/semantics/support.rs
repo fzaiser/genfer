@@ -49,7 +49,7 @@ impl std::fmt::Display for VarSupport {
                         write!(f, ", ")?;
                     }
                     first = false;
-                    write!(f, "{}", support)?;
+                    write!(f, "{support}")?;
                 }
                 Ok(())
             }
