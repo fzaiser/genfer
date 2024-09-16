@@ -621,7 +621,6 @@ impl Statement {
                 .used_vars()
                 .union(&VarRange::union_all(then.iter().map(Statement::used_vars)))
                 .union(&VarRange::union_all(els.iter().map(Statement::used_vars))),
-            Fail => VarRange::empty(),
             While {
                 cond,
                 body,
@@ -629,10 +628,24 @@ impl Statement {
             } => cond
                 .used_vars()
                 .union(&VarRange::union_all(body.iter().map(Statement::used_vars))),
+            Fail => VarRange::empty(),
             Normalize {
                 given_vars: _,
                 stmts,
             } => VarRange::union_all(stmts.iter().map(Statement::used_vars)),
+        }
+    }
+
+    fn size(&self) -> usize {
+        match self {
+            Sample { .. } | Assign { .. } | Decrement { .. } => 1,
+            IfThenElse { then, els, .. } => {
+                1 + then.iter().fold(0, |acc, stmt| acc + stmt.size())
+                    + els.iter().fold(0, |acc, stmt| acc + stmt.size())
+            }
+            While { body, .. } => 1 + body.iter().fold(0, |acc, stmt| acc + stmt.size()),
+            Fail => 1,
+            Normalize { stmts, .. } => 1 + stmts.iter().fold(0, |acc, stmt| acc + stmt.size()),
         }
     }
 }
@@ -660,6 +673,10 @@ impl Program {
 
     pub fn used_vars(&self) -> VarRange {
         VarRange::union_all(self.stmts.iter().map(Statement::used_vars))
+    }
+
+    pub fn size(&self) -> usize {
+        self.stmts.iter().fold(0, |acc, stmt| acc + stmt.size())
     }
 }
 
