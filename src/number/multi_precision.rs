@@ -189,9 +189,7 @@ impl Div for MultiPrecFloat {
 impl DivAssign for MultiPrecFloat {
     fn div_assign(&mut self, rhs: Self) {
         assert_eq!(self.0.prec(), rhs.0.prec());
-        if rhs.is_zero() {
-            panic!("Division by zero")
-        } else if self.is_zero() || rhs.is_one() {
+        if self.is_zero() || rhs.is_one() {
             return;
         }
         *self = self.clone() / rhs;
