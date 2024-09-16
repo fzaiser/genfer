@@ -8,8 +8,6 @@ use super::{
     Transformer,
 };
 
-const DEFAULT_UNROLL: usize = 8;
-
 #[derive(Clone, Debug)]
 pub struct GfTranslation<T> {
     pub var_info: VarSupport,
@@ -66,7 +64,7 @@ impl<T: Number> std::ops::MulAssign<T> for GfTranslation<T> {
 }
 
 pub struct GfTransformer<T> {
-    default_unroll: usize,
+    unroll: usize,
     support: SupportTransformer,
     _phantom: PhantomData<T>,
 }
@@ -74,8 +72,8 @@ pub struct GfTransformer<T> {
 impl<T> Default for GfTransformer<T> {
     fn default() -> Self {
         Self {
-            default_unroll: DEFAULT_UNROLL,
-            support: SupportTransformer,
+            unroll: 0,
+            support: SupportTransformer::default(),
             _phantom: PhantomData,
         }
     }
@@ -322,8 +320,7 @@ impl<T: Number> Transformer for GfTransformer<T> {
                 println!("WARNING: results are APPROXIMATE due to presence of loops: exact inference is only possible for loop-free programs");
                 let mut result = GfTranslation::zero(init.var_info.num_vars());
                 let mut rest = init;
-                let unroll = unroll.unwrap_or(self.default_unroll);
-                for _ in 0..unroll {
+                for _ in 0..unroll.unwrap_or(self.unroll) {
                     let (loop_enter, loop_exit) = self.transform_event(cond, rest);
                     result = result.join(loop_exit);
                     rest = self.transform_statements(body, loop_enter);
@@ -352,8 +349,9 @@ impl<T: Number> Transformer for GfTransformer<T> {
 }
 
 impl<T: Number> GfTransformer<T> {
-    pub fn with_default_unroll(mut self, default_unroll: Option<usize>) -> Self {
-        self.default_unroll = default_unroll.unwrap_or(DEFAULT_UNROLL);
+    pub fn with_unroll(mut self, unroll: usize) -> Self {
+        self.unroll = unroll;
+        self.support = self.support.with_unroll(self.unroll);
         self
     }
 
@@ -601,6 +599,7 @@ impl<T: Number> GfTransformer<T> {
             let total_after = marginalize_all(translation.gf.clone(), &translation.var_info);
             let rest_after = translation.rest.clone();
             let min_factor = total_before.clone() / (total_after.clone() + rest_after);
+            // TODO: can this be optimized? For a global normalize this seems to be too pessimistic:
             let max_factor = (total_before + rest_before) / total_after;
             GfTranslation {
                 var_info: translation.var_info,

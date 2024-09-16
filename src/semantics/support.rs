@@ -38,6 +38,25 @@ impl Index<Var> for VarSupport {
     }
 }
 
+impl std::fmt::Display for VarSupport {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            VarSupport::Empty(_) => write!(f, "empty"),
+            VarSupport::Prod(supports) => {
+                let mut first = true;
+                for support in supports {
+                    if !first {
+                        write!(f, ", ")?;
+                    }
+                    first = false;
+                    write!(f, "{}", support)?;
+                }
+                Ok(())
+            }
+        }
+    }
+}
+
 impl VarSupport {
     pub fn empty(num_vars: usize) -> VarSupport {
         VarSupport::Empty(num_vars)
@@ -127,7 +146,16 @@ impl VarSupport {
 }
 
 #[derive(Default)]
-pub struct SupportTransformer;
+pub struct SupportTransformer {
+    unroll: usize,
+}
+
+impl SupportTransformer {
+    pub fn with_unroll(mut self, unroll: usize) -> Self {
+        self.unroll = unroll;
+        self
+    }
+}
 
 impl Transformer for SupportTransformer {
     type Domain = VarSupport;
@@ -200,16 +228,17 @@ impl Transformer for SupportTransformer {
                 let else_res = self.transform_statements(els, else_res);
                 then_res.join(&else_res)
             }
-            Statement::While { cond, body, .. } => {
-                let u = if let Some((u, _, _)) = self.find_unroll_fixpoint(cond, body, init.clone())
-                {
-                    u
+            Statement::While { cond, body, unroll } => {
+                let unroll_count = unroll.unwrap_or(self.unroll);
+                let unroll_result = self.find_unroll_fixpoint(cond, body, init.clone());
+                let unroll_count = if let Some((iters, _, _)) = unroll_result {
+                    unroll_count.max(iters)
                 } else {
-                    100 // TODO: this should correspond to the unrolling limit
+                    unroll_count
                 };
                 let mut pre_loop = init;
                 let mut rest = VarSupport::empty(pre_loop.num_vars());
-                for _ in 0..u {
+                for _ in 0..unroll_count {
                     let (new_pre_loop, loop_exit) =
                         self.one_iteration(pre_loop.clone(), body, cond);
                     rest = rest.join(&loop_exit);
