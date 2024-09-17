@@ -76,9 +76,9 @@ impl<T: IntervalNumber> Interval<T> {
     }
 }
 
-impl<T: IntervalNumber> From<u32> for Interval<T> {
+impl<T: IntervalNumber> From<u64> for Interval<T> {
     #[inline]
-    fn from(value: u32) -> Self {
+    fn from(value: u64) -> Self {
         Self::exact(T::from(value), T::from(value))
     }
 }

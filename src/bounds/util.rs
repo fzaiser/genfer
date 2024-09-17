@@ -1,7 +1,7 @@
 use std::ops::{Div, MulAssign};
 
 use ndarray::{Array1, ArrayView1};
-use num_traits::One;
+use num_traits::{One, Zero};
 
 use crate::number::Rational;
 
@@ -78,4 +78,64 @@ pub fn normalize(vec: &ArrayView1<f64>) -> Array1<f64> {
         return vec.to_owned();
     }
     vec.map(|x| x / norm)
+}
+
+/// Compute the binomial coefficients up to `limit`.
+pub fn binomial(limit: u64) -> Vec<Vec<u64>> {
+    let mut result = vec![Vec::new(); limit as usize + 1];
+    result[0] = vec![1];
+    for n in 1..=limit as usize {
+        result[n] = vec![1; n + 1];
+        for k in 1..n {
+            result[n][k] = result[n - 1][k - 1] + result[n - 1][k];
+        }
+    }
+    result
+}
+
+/// Compute the Stirling numbers of the second kind up to `limit`.
+pub fn stirling_second(limit: u64) -> Vec<Vec<u64>> {
+    let mut result = vec![Vec::new(); limit as usize + 1];
+    result[0] = vec![1];
+    for n in 1..=limit as usize {
+        result[n] = vec![0; n + 1];
+        for k in 1..n {
+            result[n][k] = k as u64 * result[n - 1][k] + result[n - 1][k - 1];
+        }
+        result[n][n] = 1;
+    }
+    result
+}
+
+/// Computes the values of the polylogarithm function Li_{-n}(x) for `n in 0..=limit`.
+/// This is useful for computing the moments of the geometric distribution.
+pub fn polylog_neg<T>(limit: u64, x: T) -> Vec<T>
+where
+    T: Zero
+        + One
+        + Clone
+        + From<u64>
+        + std::ops::AddAssign
+        + std::ops::Sub<Output = T>
+        + std::ops::MulAssign
+        + std::ops::Mul<Output = T>
+        + std::ops::Div<Output = T>,
+{
+    let mut result = Vec::new();
+    let stirling_second = stirling_second(limit + 1);
+    let frac = x.clone() / (T::one() - x);
+    for n in 0..=limit {
+        let mut sum = T::zero();
+        let mut k_factorial = T::one();
+        let mut frac_power = T::one();
+        for k in 0..=n {
+            frac_power *= frac.clone();
+            k_factorial *= T::from(k.max(1));
+            sum += k_factorial.clone()
+                * T::from(stirling_second[(n + 1) as usize][(k + 1) as usize])
+                * frac_power.clone();
+        }
+        result.push(sum);
+    }
+    result
 }

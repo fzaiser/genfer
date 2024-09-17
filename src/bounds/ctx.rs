@@ -79,7 +79,7 @@ impl Transformer for BoundCtx {
                 let mut else_upper_bound = init.upper;
                 then_upper_bound.geo_params[v.id()] = SymExpr::zero();
                 for i in 0..len_upper {
-                    if set.contains(&Natural(i as u32)) {
+                    if set.contains(&Natural(i as u64)) {
                         if i < len_lower {
                             else_lower_bound
                                 .masses
@@ -179,7 +179,7 @@ impl Transformer for BoundCtx {
                 let mut res = if *add_previous_value {
                     init
                 } else {
-                    init.marginalize(*var)
+                    init.marginalize_out(*var)
                 };
                 match distribution {
                     Distribution::Bernoulli(p) => {
@@ -232,7 +232,7 @@ impl Transformer for BoundCtx {
                 let mut new_bound = if *add_previous_value {
                     init
                 } else {
-                    init.marginalize(*var)
+                    init.marginalize_out(*var)
                 };
                 match (addend, offset) {
                     (Some((Natural(1), w)), Natural(0)) => {

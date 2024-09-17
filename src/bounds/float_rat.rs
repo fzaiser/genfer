@@ -35,8 +35,8 @@ impl FloatRat {
     }
 }
 
-impl From<u32> for FloatRat {
-    fn from(int: u32) -> Self {
+impl From<u64> for FloatRat {
+    fn from(int: u64) -> Self {
         FloatRat::new(Rational::from(int))
     }
 }

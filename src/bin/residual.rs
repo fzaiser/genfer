@@ -52,16 +52,16 @@ pub fn main() -> std::io::Result<()> {
     if args.print_program {
         println!("Parsed program:\n{program}\n");
     }
-    run_program(&program, &args)?;
+    run_program(&program, &args);
     Ok(())
 }
 
-fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
+fn run_program(program: &Program, args: &CliArgs) {
     let start = Instant::now();
     let mut sem = ResidualSemantics::default()
         .with_verbose(args.verbose)
         .with_unroll(args.unroll);
-    let mut result = sem.semantics(program);
+    let result = sem.semantics(program);
     if args.verbose {
         match &result.var_supports {
             VarSupport::Empty(_) => println!("Support: empty"),
@@ -78,11 +78,8 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
     let residual = result.residual();
     let support = result.var_supports[program.result].clone();
 
-    for v in 0..result.var_supports.num_vars() {
-        if Var(v) != program.result {
-            result = result.marginalize(Var(v));
-        }
-    }
+    let result = result.marginal(program.result);
+
     if args.verbose {
         println!("\nMarginalized bound:");
         let ax = Axis(program.result.id());
@@ -123,7 +120,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
     let lower_probs = result.lower.probs(program.result);
     for i in 0..limit {
         let lo = lower_probs.get(i).unwrap_or(&Rational::zero()).clone();
-        let hi = if support.contains(i as u32) {
+        let hi = if support.contains(i as u64) {
             lo.clone() + residual.clone()
         } else {
             assert!(lo.is_zero());
@@ -148,7 +145,6 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<()> {
         println!("{i}-th (raw) moment {}", in_iv(&moment));
     }
     println!("Total time: {:.5}s", start.elapsed().as_secs_f64());
-    Ok(())
 }
 
 fn in_iv(iv: &Interval<Rational>) -> String {

@@ -15,7 +15,6 @@ use tool::bounds::ipopt::Ipopt;
 use tool::bounds::optimizer::{LinearProgrammingOptimizer, Optimizer as _, Z3Optimizer};
 use tool::bounds::solver::{ConstraintProblem, Solver as _, SolverError, Z3Solver};
 use tool::interval::Interval;
-use tool::multivariate_taylor::TaylorPoly;
 use tool::number::{Rational, F64};
 use tool::parser;
 use tool::ppl::{Program, Var};
@@ -248,11 +247,8 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<ExitCode> {
                 println!("{result}");
             }
 
-            for v in 0..result.var_supports.num_vars() {
-                if Var(v) != program.result {
-                    result = result.marginalize(Var(v));
-                }
-            }
+            let result = result.marginal(program.result);
+
             println!("\nMarginalized bound:");
             let ax = Axis(program.result.id());
             let upper_len = result.upper.masses.len_of(ax);
@@ -347,13 +343,11 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<ExitCode> {
                     args.limit.unwrap_or(50)
                 };
             let limit = limit.max(2);
-            let mut inputs = vec![TaylorPoly::one(); result.var_supports.num_vars()];
-            inputs[program.result.id()] = TaylorPoly::var_at_zero(Var(0), limit);
             let lower_probs = result.lower.probs(program.result);
-            let expansion = result.upper.eval_taylor::<Rational>(&inputs);
+            let upper_probs = result.upper.probs_exact(program.result, limit);
             for i in 0..limit {
                 let lo = lower_probs.get(i).unwrap_or(&Rational::zero()).clone() / norm_hi.clone();
-                let mut hi = expansion.coefficient(&[i]) / norm_lo.clone();
+                let mut hi = upper_probs[i].clone() / norm_lo.clone();
                 if hi > Rational::one() {
                     hi = Rational::one();
                 }
@@ -380,13 +374,11 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<ExitCode> {
 
             println!("\nMoments:");
             let lower_moments = result.lower.moments(program.result, 5);
-            let mut inputs = vec![TaylorPoly::one(); result.var_supports.num_vars()];
-            inputs[program.result.id()] = TaylorPoly::var_at_zero(Var(0), 5).exp();
-            let expansion = result.upper.eval_taylor::<Rational>(&inputs);
+            let upper_moments = result.upper.moments_exact(program.result, 5);
             let mut factorial = Rational::one();
             for i in 0..5 {
                 let lo = lower_moments[i].clone() / norm_hi.clone();
-                let hi = expansion.coefficient(&[i]) / norm_lo.clone();
+                let hi = upper_moments[i].clone() / norm_lo.clone();
                 let moment = Interval::exact(lo, hi);
                 println!("{i}-th (raw) moment {}", in_iv(&moment));
                 factorial *= Rational::from_int(i + 1);

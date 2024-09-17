@@ -10,7 +10,7 @@ pub trait Number:
     + Display
     + Zero
     + One
-    + From<u32>
+    + From<u64>
     + PartialEq
     + Debug
     + Neg<Output = Self>
@@ -24,12 +24,7 @@ pub trait Number:
     + DivAssign
 {
     fn from_ratio(numerator: u64, denominator: u64) -> Self {
-        let two_to_32 = Self::from(u32::MAX) + Self::one();
-        let numer =
-            Self::from(numerator as u32) + Self::from((numerator >> 32) as u32) * two_to_32.clone();
-        let denom =
-            Self::from(denominator as u32) + Self::from((denominator >> 32) as u32) * two_to_32;
-        numer / denom
+        Self::from(numerator) / Self::from(denominator)
     }
     fn exp(&self) -> Self;
     fn log(&self) -> Self;

@@ -17,10 +17,10 @@ impl F64 {
     }
 }
 
-impl From<u32> for F64 {
+impl From<u64> for F64 {
     #[inline]
-    fn from(u: u32) -> Self {
-        Self(f64::from(u))
+    fn from(u: u64) -> Self {
+        Self(u as f64)
     }
 }
 

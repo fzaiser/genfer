@@ -11,7 +11,7 @@ use crate::{
 #[derive(Clone, Debug, PartialEq)]
 pub enum SupportSet {
     Empty,
-    Range { start: u32, end: Option<u32> }, // TODO: should be ExtendedNat
+    Range { start: u64, end: Option<u64> }, // TODO: should be ExtendedNat
     Interval { start: Rational, end: Rational },
 }
 impl SupportSet {
@@ -40,7 +40,7 @@ impl SupportSet {
         }
     }
 
-    pub fn point(x: u32) -> Self {
+    pub fn point(x: u64) -> Self {
         Self::Range {
             start: x,
             end: Some(x),
@@ -111,7 +111,7 @@ impl SupportSet {
         }
     }
 
-    pub fn saturating_sub(&self, other: u32) -> Self {
+    pub fn saturating_sub(&self, other: u64) -> Self {
         match self {
             Self::Empty => Self::Empty,
             Self::Range { start, end } => Self::Range {
@@ -125,7 +125,7 @@ impl SupportSet {
         }
     }
 
-    pub fn finite_nonempty_range(&self) -> Option<std::ops::RangeInclusive<u32>> {
+    pub fn finite_nonempty_range(&self) -> Option<std::ops::RangeInclusive<u64>> {
         match self {
             Self::Empty | Self::Interval { .. } => None,
             Self::Range { start, end } => Some(*start..=(*end)?),
@@ -188,20 +188,20 @@ impl SupportSet {
     }
 
     #[inline]
-    pub fn retain_only(&mut self, set: impl Iterator<Item = u32>) {
+    pub fn retain_only(&mut self, set: impl Iterator<Item = u64>) {
         let mut set = set.collect::<Vec<_>>();
         set.sort_unstable();
         *self = self.retain_only_impl(&set);
     }
 
-    fn retain_only_impl(&self, set: &[u32]) -> Self {
+    fn retain_only_impl(&self, set: &[u64]) -> Self {
         match self {
             Self::Empty => Self::Empty,
             Self::Range { start, end } => {
                 let mut new_start = None;
                 let mut new_end = None;
                 for v in set {
-                    if start <= v && v <= &end.unwrap_or(u32::MAX) {
+                    if start <= v && v <= &end.unwrap_or(u64::MAX) {
                         if new_start.is_none() {
                             new_start = Some(*v);
                         }
@@ -219,13 +219,13 @@ impl SupportSet {
     }
 
     #[inline]
-    pub fn remove_all(&mut self, set: impl Iterator<Item = u32>) {
+    pub fn remove_all(&mut self, set: impl Iterator<Item = u64>) {
         let mut set = set.collect::<Vec<_>>();
         set.sort_unstable();
         self.remove_all_impl(&set);
     }
 
-    fn remove_all_impl(&mut self, set: &[u32]) {
+    fn remove_all_impl(&mut self, set: &[u64]) {
         match self {
             Self::Empty | Self::Interval { .. } => {}
             Self::Range { start, end } => {
@@ -249,7 +249,7 @@ impl SupportSet {
                         }
                     }
                 }
-                if *start > end.unwrap_or(u32::MAX) {
+                if *start > end.unwrap_or(u64::MAX) {
                     *self = Self::Empty;
                 }
             }
@@ -267,7 +267,7 @@ impl SupportSet {
         }
     }
 
-    pub fn contains(&self, i: u32) -> bool {
+    pub fn contains(&self, i: u64) -> bool {
         match self {
             Self::Empty => false,
             Self::Range { start, end } => i >= *start && end.map_or(true, |end| i <= end),
@@ -279,8 +279,8 @@ impl SupportSet {
     }
 }
 
-impl From<u32> for SupportSet {
-    fn from(x: u32) -> Self {
+impl From<u64> for SupportSet {
+    fn from(x: u64) -> Self {
         Self::Range {
             start: x,
             end: Some(x),
@@ -288,8 +288,8 @@ impl From<u32> for SupportSet {
     }
 }
 
-impl From<Range<u32>> for SupportSet {
-    fn from(range: Range<u32>) -> Self {
+impl From<Range<u64>> for SupportSet {
+    fn from(range: Range<u64>) -> Self {
         if range.end <= range.start {
             return Self::empty();
         }
@@ -312,8 +312,8 @@ impl From<Range<Rational>> for SupportSet {
     }
 }
 
-impl From<RangeInclusive<u32>> for SupportSet {
-    fn from(range: RangeInclusive<u32>) -> Self {
+impl From<RangeInclusive<u64>> for SupportSet {
+    fn from(range: RangeInclusive<u64>) -> Self {
         let (start, end) = range.into_inner();
         if start > end {
             return Self::empty();
@@ -325,8 +325,8 @@ impl From<RangeInclusive<u32>> for SupportSet {
     }
 }
 
-impl From<RangeFrom<u32>> for SupportSet {
-    fn from(range: RangeFrom<u32>) -> Self {
+impl From<RangeFrom<u64>> for SupportSet {
+    fn from(range: RangeFrom<u64>) -> Self {
         Self::Range {
             start: range.start,
             end: None,
@@ -426,10 +426,10 @@ impl std::ops::AddAssign for SupportSet {
     }
 }
 
-impl std::ops::Mul<u32> for SupportSet {
+impl std::ops::Mul<u64> for SupportSet {
     type Output = Self;
 
-    fn mul(self, rhs: u32) -> Self::Output {
+    fn mul(self, rhs: u64) -> Self::Output {
         match self {
             Self::Empty => Self::Empty,
             Self::Range { start, end } => Self::Range {

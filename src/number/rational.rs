@@ -178,9 +178,9 @@ impl One for Rational {
     }
 }
 
-impl From<u32> for Rational {
+impl From<u64> for Rational {
     #[inline]
-    fn from(n: u32) -> Self {
+    fn from(n: u64) -> Self {
         Self::from_int(n)
     }
 }

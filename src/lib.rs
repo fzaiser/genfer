@@ -18,13 +18,9 @@
 // TODO: get rid of as many of those `#![allow]`s as possible
 
 pub mod bounds;
-pub mod generating_function;
 pub mod interval;
-pub mod multivariate_taylor;
 pub mod number;
 pub mod parser;
 pub mod ppl;
 pub mod semantics;
 pub mod support;
-pub mod symbolic;
-pub mod univariate_taylor;

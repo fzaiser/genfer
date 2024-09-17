@@ -33,16 +33,26 @@ impl ResidualBound {
         }
     }
 
-    pub fn marginalize(self, var: Var) -> ResidualBound {
-        let mut var_supports = self.var_supports;
+    pub fn marginalize_out(&self, var: Var) -> ResidualBound {
+        let mut var_supports = self.var_supports.clone();
         if !var_supports[var].is_empty() {
             var_supports.set(var, SupportSet::zero());
         }
         ResidualBound {
-            lower: self.lower.marginalize(var),
-            reject: self.reject,
+            lower: self.lower.marginalize_out(var),
+            reject: self.reject.clone(),
             var_supports,
         }
+    }
+
+    pub fn marginal(&self, var: Var) -> Self {
+        let mut result = self.clone();
+        for v in 0..result.var_supports.num_vars() {
+            if Var(v) != var {
+                result = result.marginalize_out(Var(v));
+            }
+        }
+        result
     }
 
     pub fn var_count(&self) -> usize {
@@ -82,20 +92,11 @@ impl std::fmt::Display for ResidualBound {
     }
 }
 
+#[derive(Default)]
 pub struct ResidualSemantics {
     unroll: usize,
     verbose: bool,
     support: SupportTransformer,
-}
-
-impl Default for ResidualSemantics {
-    fn default() -> Self {
-        Self {
-            unroll: 0,
-            verbose: false,
-            support: SupportTransformer::default(),
-        }
-    }
 }
 
 impl ResidualSemantics {
@@ -139,7 +140,7 @@ impl Transformer for ResidualSemantics {
                 let mut then_lower = init.lower.clone();
                 let mut else_lower = init.lower;
                 for i in 0..len {
-                    if set.contains(&Natural(i as u32)) {
+                    if set.contains(&Natural(i as u64)) {
                         else_lower
                             .masses
                             .index_axis_mut(axis, i)
@@ -227,7 +228,7 @@ impl Transformer for ResidualSemantics {
                 let mut res = if *add_previous_value {
                     init
                 } else {
-                    init.marginalize(*var)
+                    init.marginalize_out(*var)
                 };
                 match distribution {
                     Distribution::Bernoulli(p) => {
@@ -281,7 +282,7 @@ impl Transformer for ResidualSemantics {
                 let mut res = if *add_previous_value {
                     init
                 } else {
-                    init.marginalize(*var)
+                    init.marginalize_out(*var)
                 };
                 match (addend, offset) {
                     (Some((Natural(1), w)), Natural(0)) => {

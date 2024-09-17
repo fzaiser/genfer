@@ -9,7 +9,7 @@ use Distribution::*;
 use Statement::*;
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
-pub struct Natural(pub u32);
+pub struct Natural(pub u64);
 
 impl Display for Natural {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -59,9 +59,9 @@ impl PosRatio {
         Self::new(self.denom - self.numer, self.denom)
     }
 
-    pub fn as_integer(&self) -> Option<u32> {
+    pub fn as_integer(&self) -> Option<u64> {
         if self.denom != 0 && self.numer % self.denom == 0 {
-            u32::try_from(self.numer / self.denom).ok()
+            Some(self.numer / self.denom)
         } else {
             None
         }
@@ -221,7 +221,7 @@ impl Distribution {
             }
             Bernoulli(_) | BernoulliVarProb(_) => (0..=1).into(),
             Binomial(n, _) => (0..=n.0).into(),
-            Categorical(rs) => (0..rs.len() as u32).into(),
+            Categorical(rs) => (0..rs.len() as u64).into(),
             BinomialVarTrials(..)
             | NegBinomialVarSuccesses(..)
             | NegBinomial(..)
@@ -638,13 +638,12 @@ impl Statement {
 
     fn size(&self) -> usize {
         match self {
-            Sample { .. } | Assign { .. } | Decrement { .. } => 1,
+            Sample { .. } | Assign { .. } | Decrement { .. } | Fail => 1,
             IfThenElse { then, els, .. } => {
                 1 + then.iter().fold(0, |acc, stmt| acc + stmt.size())
                     + els.iter().fold(0, |acc, stmt| acc + stmt.size())
             }
             While { body, .. } => 1 + body.iter().fold(0, |acc, stmt| acc + stmt.size()),
-            Fail => 1,
             Normalize { stmts, .. } => 1 + stmts.iter().fold(0, |acc, stmt| acc + stmt.size()),
         }
     }

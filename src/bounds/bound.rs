@@ -1,16 +1,16 @@
 use crate::{
-    bounds::sym_expr::SymExpr,
-    multivariate_taylor::TaylorPoly,
-    number::{Number, Rational},
+    bounds::{
+        sym_expr::SymExpr,
+        util::{binomial, polylog_neg},
+    },
+    number::Rational,
     ppl::Var,
     semantics::support::VarSupport,
     support::SupportSet,
 };
-use ndarray::{ArrayD, ArrayViewD, Axis, Slice};
+use ndarray::{ArrayD, Axis, Slice};
 use num_traits::{One, Zero};
 use std::ops::AddAssign;
-
-use super::float_rat::FloatRat;
 
 #[derive(Debug, Clone)]
 pub struct BoundResult {
@@ -27,16 +27,27 @@ impl BoundResult {
             var_supports: VarSupport::empty(n),
         }
     }
-    pub fn marginalize(self, var: Var) -> BoundResult {
-        let mut var_supports = self.var_supports;
+
+    pub fn marginalize_out(&self, var: Var) -> BoundResult {
+        let mut var_supports = self.var_supports.clone();
         if !var_supports[var].is_empty() {
             var_supports.set(var, SupportSet::zero());
         }
         BoundResult {
-            lower: self.lower.marginalize(var),
-            upper: self.upper.marginalize(var),
+            lower: self.lower.marginalize_out(var),
+            upper: self.upper.marginalize_out(var),
             var_supports,
         }
+    }
+
+    pub fn marginal(&self, var: Var) -> Self {
+        let mut result = self.clone();
+        for v in 0..result.var_supports.num_vars() {
+            if Var(v) != var {
+                result = result.marginalize_out(Var(v));
+            }
+        }
+        result
     }
 }
 
@@ -71,7 +82,7 @@ impl FiniteDiscrete {
         }
     }
 
-    pub fn marginalize(&self, Var(v): Var) -> FiniteDiscrete {
+    pub fn marginalize_out(&self, Var(v): Var) -> FiniteDiscrete {
         let masses = self.masses.sum_axis(Axis(v)).insert_axis(Axis(v));
         FiniteDiscrete { masses }
     }
@@ -336,7 +347,7 @@ impl GeometricBound {
         }
     }
 
-    pub fn marginalize(&self, var: Var) -> Self {
+    pub fn marginalize_out(&self, var: Var) -> Self {
         let len = self.masses.len_of(Axis(var.id()));
         let axis = Axis(var.id());
         let mut geo_params = self.geo_params.clone();
@@ -350,6 +361,16 @@ impl GeometricBound {
         }
         geo_params[var.id()] = SymExpr::zero();
         Self { masses, geo_params }
+    }
+
+    pub fn marginal(&self, var: Var) -> Self {
+        let mut result = self.clone();
+        for v in 0..self.masses.ndim() {
+            if Var(v) != var {
+                result = result.marginalize_out(Var(v));
+            }
+        }
+        result
     }
 
     pub fn resolve(&self, assignments: &[Rational]) -> GeometricBound {
@@ -375,90 +396,113 @@ impl GeometricBound {
         }
     }
 
-    pub fn eval_taylor<T: From<FloatRat> + Number>(
-        &self,
-        inputs: &[TaylorPoly<T>],
-    ) -> TaylorPoly<T> {
-        Self::eval_taylor_impl(&self.masses.view(), &self.geo_params, inputs)
-    }
-
-    pub fn eval_taylor_impl<T: From<FloatRat> + Number>(
-        coeffs: &ArrayViewD<SymExpr>,
-        geo_params: &[SymExpr],
-        inputs: &[TaylorPoly<T>],
-    ) -> TaylorPoly<T> {
-        if coeffs.ndim() == 0 {
-            return TaylorPoly::from(T::from(coeffs[[]].extract_constant().unwrap().clone()));
-        }
-        let len = coeffs.len_of(Axis(0));
-        let denominator = TaylorPoly::one()
-            - TaylorPoly::from(T::from(geo_params[0].extract_constant().unwrap().clone()))
-                * inputs[0].clone();
-        let mut res = Self::eval_taylor_impl(
-            &coeffs.index_axis(Axis(0), len - 1),
-            &geo_params[1..],
-            &inputs[1..],
+    pub fn moments(&self, Var(v): Var, limit: usize) -> Vec<SymExpr> {
+        assert!(self.masses.ndim() > v);
+        assert!(
+            self.masses
+                .shape()
+                .iter()
+                .enumerate()
+                .all(|(i, &len)| { i == v || len == 1 }),
+            "Bound should be marginalized before computing moments"
         );
-        res /= denominator;
-        for subview in coeffs.axis_iter(Axis(0)).rev().skip(1) {
-            res *= inputs[0].clone();
-            res += Self::eval_taylor_impl(&subview, &geo_params[1..], &inputs[1..]);
-        }
-        res
+        let q = self.geo_params[v].clone();
+        let initial = self.masses.iter().cloned().collect::<Vec<_>>();
+        Self::moments_of(&initial, q, limit)
     }
 
-    pub fn eval_expr(&self, inputs: &[Rational]) -> SymExpr {
-        Self::eval_expr_impl(&self.masses.view(), &self.geo_params, inputs)
-    }
-
-    fn eval_expr_impl(
-        coeffs: &ArrayViewD<SymExpr>,
-        geo_params: &[SymExpr],
-        inputs: &[Rational],
-    ) -> SymExpr {
-        let nvars = coeffs.ndim();
-        if nvars == 0 {
-            return coeffs.first().unwrap().clone();
-        }
-        let len = coeffs.len_of(Axis(0));
-        let denominator = SymExpr::one() - geo_params[0].clone() * SymExpr::from(inputs[0].clone());
-        let mut res = Self::eval_expr_impl(
-            &coeffs.index_axis(Axis(0), len - 1),
-            &geo_params[1..],
-            &inputs[1..],
+    pub fn moments_exact(&self, Var(v): Var, limit: usize) -> Vec<Rational> {
+        assert!(self.masses.ndim() > v);
+        assert!(
+            self.masses
+                .shape()
+                .iter()
+                .enumerate()
+                .all(|(i, &len)| { i == v || len == 1 }),
+            "Bound should be marginalized before computing moments"
         );
-        res /= denominator;
-        for subview in coeffs.axis_iter(Axis(0)).rev().skip(1) {
-            res *= SymExpr::from(inputs[0].clone());
-            res += Self::eval_expr_impl(&subview, &geo_params[1..], &inputs[1..]);
+        let q = self.geo_params[v].extract_constant().unwrap().rat();
+        let initial = self
+            .masses
+            .iter()
+            .map(|e| e.extract_constant().unwrap().rat())
+            .collect::<Vec<_>>();
+        Self::moments_of(&initial, q, limit)
+    }
+
+    fn moments_of<T>(initial: &[T], q: T, limit: usize) -> Vec<T>
+    where
+        T: Zero
+            + One
+            + Clone
+            + From<u64>
+            + std::ops::AddAssign
+            + std::ops::Sub<Output = T>
+            + std::ops::MulAssign
+            + std::ops::Mul<Output = T>
+            + std::ops::Div<Output = T>,
+    {
+        let len = initial.len();
+        let mut moments = vec![T::zero(); limit];
+        for (j, initial_prob) in initial.iter().enumerate().take(len - 1) {
+            let mut power = initial_prob.clone();
+            for moment in &mut moments {
+                *moment += power.clone();
+                power *= T::from(j as u64);
+            }
         }
-        res
+        let d = len - 1;
+        // The moments of `Geometric(1 - q) / q`:
+        let mut geo_moments = polylog_neg(limit as u64, q.clone());
+
+        // We have to adjust the 0-th moment because the polylog function Li_{-n}(x) is defined
+        // as an infinite sum starting at 1 instead of 0.
+        // This does not make a difference because the 0-th summand is 0, except for k = 0.
+        geo_moments[0] += T::one();
+
+        let binom = binomial(limit as u64);
+        let d_powers =
+            std::iter::successors(Some(T::one()), |p| Some(p.clone() * T::from(d as u64)))
+                .take(limit)
+                .collect::<Vec<_>>();
+
+        for k in 0..limit {
+            for i in 0..=k {
+                moments[k] += T::from(binom[k][i])
+                    * d_powers[k - i].clone()
+                    * initial[d].clone()
+                    * geo_moments[i].clone();
+            }
+        }
+
+        moments
+    }
+
+    pub fn probs_exact(&self, Var(v): Var, limit: usize) -> Vec<Rational> {
+        let alpha = self.geo_params[v].extract_constant().unwrap().rat();
+        let mut probs = self
+            .masses
+            .iter()
+            .map(|e| e.extract_constant().unwrap().rat())
+            .collect::<Vec<_>>();
+        let mut last = probs[probs.len() - 1].clone();
+        for _ in probs.len()..limit {
+            last *= alpha.clone();
+            probs.push(last.clone());
+        }
+        probs
     }
 
     pub fn total_mass(&self) -> SymExpr {
-        self.eval_expr(&vec![Rational::one(); self.masses.ndim()])
+        let mut res = self.clone();
+        for v in 0..res.masses.ndim() {
+            res = res.marginalize_out(Var(v));
+        }
+        res.masses.first().unwrap().clone()
     }
 
-    pub fn expected_value(&self, Var(v): Var) -> SymExpr {
-        let len = self.masses.len_of(Axis(v));
-        let mut rest_params = self.geo_params.clone();
-        let alpha = rest_params.remove(v);
-        let mut res = Self::eval_expr_impl(
-            &self.masses.index_axis(Axis(v), len - 1),
-            &rest_params,
-            &vec![Rational::one(); rest_params.len()],
-        );
-        let alpha_comp = SymExpr::one() - alpha.clone();
-        res *= (alpha / alpha_comp.clone() + SymExpr::from(Rational::from_int(len as u32 - 1)))
-            / alpha_comp;
-        for (n, subview) in self.masses.axis_iter(Axis(v)).enumerate().rev().skip(1) {
-            res += Self::eval_expr_impl(
-                &subview,
-                &rest_params,
-                &vec![Rational::one(); rest_params.len()],
-            ) * SymExpr::from(Rational::from_int(n as u32));
-        }
-        res
+    pub fn expected_value(&self, v: Var) -> SymExpr {
+        self.marginal(v).moments(v, 2)[1].clone()
     }
 
     pub fn tail_objective(&self, v: Var) -> SymExpr {

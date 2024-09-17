@@ -300,6 +300,12 @@ impl SymExpr {
     }
 }
 
+impl From<u64> for SymExpr {
+    fn from(value: u64) -> Self {
+        SymExprKind::Constant(FloatRat::from(value)).into_expr()
+    }
+}
+
 impl From<Rational> for SymExpr {
     fn from(value: Rational) -> Self {
         SymExprKind::Constant(value.into()).into_expr()

@@ -1,4 +1,3 @@
-pub mod gf;
 pub mod support;
 
 use crate::ppl::{Event, Program, Statement};

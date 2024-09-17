@@ -16,7 +16,7 @@ struct CliArgs {
 pub fn main() {
     let args = CliArgs::parse();
     let path = args.file_name;
-    let contents = std::fs::read_to_string(&path).unwrap();
+    let contents = std::fs::read_to_string(path).unwrap();
     let program = parse_program(&contents);
     let support = SupportTransformer::default().semantics(&program);
     println!(
@@ -30,9 +30,9 @@ pub fn main() {
         VarSupport::Prod(supports) => {
             supports
                 .iter()
-                .fold(Some(1), |acc, support| match (acc, support) {
+                .try_fold(1, |acc, support| match (acc, support) {
                     (
-                        Some(acc),
+                        acc,
                         SupportSet::Range {
                             start,
                             end: Some(end),
