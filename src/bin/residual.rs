@@ -138,7 +138,7 @@ fn run_program(program: &Program, args: &CliArgs) {
     let lower_moments = result.lower.moments(program.result, 5);
     let range = support.to_interval().unwrap_or(Interval::zero());
     for i in 0..5 {
-        let added = residual.clone() * range.hi.clone().pow(i as i32);
+        let added = residual.clone() * range.hi.clone().pow(i32::try_from(i).unwrap());
         let lo = lower_moments[i].clone();
         let hi = lo.clone() + added.clone();
         let moment = Interval::exact(lo / norm_hi.clone(), hi / norm_lo.clone());
