@@ -1,12 +1,10 @@
 use crate::{
-    bounds::{
-        sym_expr::SymExpr,
-        util::{binomial, polylog_neg},
-    },
-    number::Rational,
+    numbers::Rational,
     ppl::Var,
     semantics::support::VarSupport,
     support::SupportSet,
+    sym_expr::SymExpr,
+    util::{binomial, polylog_neg},
 };
 use ndarray::{ArrayD, Axis, Slice};
 use num_traits::{One, Zero};

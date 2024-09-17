@@ -5,7 +5,7 @@ use std::{
 
 use num_traits::{One, Zero};
 
-use super::number::{FloatNumber, IntervalNumber, Number};
+use crate::numbers::{FloatNumber, IntervalNumber, Number};
 
 #[derive(Copy, Clone, Debug, PartialEq, PartialOrd)]
 pub struct F64(f64);

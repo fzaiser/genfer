@@ -3,7 +3,7 @@ use num_traits::{One, Zero};
 use std::ops::AddAssign;
 
 use crate::{
-    number::{Number, Rational},
+    numbers::{Number, Rational},
     ppl::{Distribution, Event, Natural, Program, Statement, Var},
     semantics::{
         support::{SupportTransformer, VarSupport},

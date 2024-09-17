@@ -2,9 +2,7 @@ use std::ops::{Add, Div, Mul, Neg, Sub};
 
 use num_traits::{One, Zero};
 
-use crate::bounds::sym_expr::SymExpr;
-
-use super::float_rat::FloatRat;
+use crate::{numbers::FloatRat, sym_expr::SymExpr};
 
 #[derive(Clone, Debug)]
 pub struct LinearExpr {

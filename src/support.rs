@@ -4,7 +4,7 @@ use num_traits::Zero;
 
 use crate::{
     interval::Interval,
-    number::{Number, Rational},
+    numbers::{Number, Rational},
 };
 
 /// Support set of a random variable (overapproximated as a range)

@@ -9,10 +9,7 @@ use std::{
 use num_traits::{One, Zero};
 use rug::ops::Pow;
 
-use super::{
-    number::{FloatNumber, IntervalNumber, Number},
-    F64,
-};
+use super::{FloatNumber, IntervalNumber, Number, F64};
 
 #[derive(Copy, Clone, Debug)]
 pub enum Special {

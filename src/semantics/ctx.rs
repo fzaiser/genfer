@@ -4,19 +4,18 @@ use num_traits::{One, Zero};
 use std::ops::AddAssign;
 
 use crate::{
-    bounds::{
-        bound::{BoundResult, FiniteDiscrete, GeometricBound},
-        sym_expr::{SymConstraint, SymExpr, SymExprKind},
-        util::rational_to_qepcad,
-    },
-    number::{FloatNumber, Number, Rational},
+    numbers::{FloatNumber, Number, Rational},
     ppl::{Distribution, Event, Natural, Program, Statement, Var},
     semantics::{
         support::{SupportTransformer, VarSupport},
         Transformer,
     },
     support::SupportSet,
+    sym_expr::{SymConstraint, SymExpr, SymExprKind},
+    util::rational_to_qepcad,
 };
+
+use super::bound::{BoundResult, FiniteDiscrete, GeometricBound};
 
 pub struct BoundCtx {
     verbose: bool,

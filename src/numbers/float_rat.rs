@@ -2,7 +2,7 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssi
 
 use num_traits::{One, Zero};
 
-use crate::number::{Number, Rational, F64};
+use crate::numbers::{Number, Rational, F64};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct FloatRat {

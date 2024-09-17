@@ -1,3 +1,6 @@
+pub mod bound;
+pub mod ctx;
+pub mod residual;
 pub mod support;
 
 use crate::ppl::{Event, Program, Statement};

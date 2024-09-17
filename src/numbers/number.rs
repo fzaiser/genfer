@@ -161,7 +161,7 @@ macro_rules! assert_close {
 #[macro_export]
 macro_rules! assert_all_close {
     ($a:expr, $b:expr $(,)?) => {
-        let (a, b) = $crate::number::find_distant($a, $b);
+        let (a, b) = $crate::numbers::find_distant($a, $b);
         if let (None, None) = (a, b) {} else {
             panic!(
                 "assertion failed: `all_close(left, right)`\nleft:  {}\nright: {}\nThese values differ:\nleft:  {}\nright: {}",
@@ -173,7 +173,7 @@ macro_rules! assert_all_close {
         }
     };
     ($a:expr, $b:expr, $(rel_tol =)? $relative_tolerance:expr, $(abs_tol =)? $absolute_tolerance:expr $(,)?) => {
-        let (a, b) = $crate::number::find_distant_with($a, $b, $relative_tolerance, $absolute_tolerance);
+        let (a, b) = $crate::numbers::find_distant_with($a, $b, $relative_tolerance, $absolute_tolerance);
         if let (None, None) = (a, b) {} else {
             panic!(
             "assertion failed: `all_close(left, right, relative_tol = {}, absolute_tol = {})`\nleft:  {}\nright: {}",

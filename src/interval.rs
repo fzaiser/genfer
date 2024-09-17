@@ -6,7 +6,7 @@ use std::{
 
 use num_traits::{One, Zero};
 
-use crate::number::{FloatNumber, IntervalNumber, Number};
+use crate::numbers::{FloatNumber, IntervalNumber, Number};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Interval<T> {

@@ -1,11 +1,10 @@
 use std::time::Duration;
 
 use crate::{
-    bounds::util::{rational_to_z3, z3_real_to_rational},
-    number::{FloatNumber, Rational},
+    numbers::{FloatNumber, Rational},
+    sym_expr::{SymConstraint, SymExpr},
+    util::{rational_to_z3, z3_real_to_rational},
 };
-
-use super::sym_expr::{SymConstraint, SymExpr};
 
 #[derive(Clone, Debug)]
 pub enum SolverError {

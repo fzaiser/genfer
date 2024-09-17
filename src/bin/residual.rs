@@ -7,11 +7,11 @@
 
 use std::path::PathBuf;
 use std::time::Instant;
-use tool::bounds::residual::ResidualSemantics;
 use tool::interval::Interval;
-use tool::number::{Rational, F64};
+use tool::numbers::{Rational, F64};
 use tool::parser;
 use tool::ppl::{Program, Var};
+use tool::semantics::residual::ResidualSemantics;
 use tool::semantics::support::VarSupport;
 use tool::semantics::Transformer;
 

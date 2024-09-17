@@ -9,17 +9,17 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
 
-use tool::bounds::ctx::BoundCtx;
-use tool::bounds::gradient_descent::{Adam, AdamBarrier, GradientDescent};
-use tool::bounds::ipopt::Ipopt;
-use tool::bounds::optimizer::{LinearProgrammingOptimizer, Optimizer as _, Z3Optimizer};
-use tool::bounds::solver::{ConstraintProblem, Solver as _, SolverError, Z3Solver};
 use tool::interval::Interval;
-use tool::number::{Rational, F64};
+use tool::numbers::{Rational, F64};
 use tool::parser;
 use tool::ppl::{Program, Var};
+use tool::semantics::ctx::BoundCtx;
 use tool::semantics::support::VarSupport;
 use tool::semantics::Transformer;
+use tool::solvers::gradient_descent::{Adam, AdamBarrier, GradientDescent};
+use tool::solvers::ipopt::Ipopt;
+use tool::solvers::optimizer::{LinearProgrammingOptimizer, Optimizer as _, Z3Optimizer};
+use tool::solvers::solver::{ConstraintProblem, Solver as _, SolverError, Z3Solver};
 
 use clap::{Parser, ValueEnum};
 use ndarray::Axis;
@@ -149,10 +149,6 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<ExitCode> {
         }
         for constraint in ctx.constraints() {
             println!("  {constraint}");
-        }
-        println!("Polynomial constraints:");
-        for constraint in ctx.constraints() {
-            println!("  {}", constraint.to_poly());
         }
     }
     if let Some(path) = &args.smt {

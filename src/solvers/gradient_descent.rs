@@ -4,12 +4,15 @@ use good_lp::{Expression, ProblemVariables, Solution, SolverModel, VariableDefin
 use ndarray::Array1;
 use num_traits::One;
 
-use crate::{bounds::util::normalize, number::Rational};
+use crate::{
+    numbers::Rational,
+    sym_expr::{SymConstraint, SymExpr},
+    util::normalize,
+};
 
 use super::{
     optimizer::Optimizer,
     solver::{ConstraintProblem, Solver, SolverError},
-    sym_expr::{SymConstraint, SymExpr},
 };
 
 pub enum DirSelectionStrategy {

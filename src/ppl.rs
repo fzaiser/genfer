@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 use std::fmt::Display;
 
 use crate::{
-    number::{Number, Rational},
+    numbers::{Number, Rational},
     support::SupportSet,
 };
 use Distribution::*;

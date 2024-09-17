@@ -3,7 +3,7 @@ use std::ops::{Div, MulAssign};
 use ndarray::{Array1, ArrayView1};
 use num_traits::{One, Zero};
 
-use crate::number::Rational;
+use crate::numbers::Rational;
 
 pub fn rational_to_z3<'a>(ctx: &'a z3::Context, r: &Rational) -> z3::ast::Real<'a> {
     let (numer, denom) = r.to_integer_ratio();

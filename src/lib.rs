@@ -17,10 +17,12 @@
 #![allow(clippy::bool_to_int_with_if)]
 // TODO: get rid of as many of those `#![allow]`s as possible
 
-pub mod bounds;
 pub mod interval;
-pub mod number;
+pub mod numbers;
 pub mod parser;
 pub mod ppl;
 pub mod semantics;
+pub mod solvers;
 pub mod support;
+pub mod sym_expr;
+pub mod util;

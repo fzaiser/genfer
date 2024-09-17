@@ -7,14 +7,8 @@ use ndarray::ArrayView1;
 use num_traits::{One, Zero};
 
 use crate::{
-    bounds::linear::{LinearConstraint, LinearExpr},
-    number::Rational,
-};
-
-use super::{
-    float_rat::FloatRat,
-    sym_poly::PolyConstraint,
-    sym_rational::RationalFunction,
+    numbers::{FloatRat, Rational},
+    solvers::linear::{LinearConstraint, LinearExpr},
     util::{norm, pow},
 };
 
@@ -139,16 +133,6 @@ impl SymExpr {
                     None
                 }
             }
-        }
-    }
-
-    pub fn to_rational_function(&self) -> RationalFunction<FloatRat> {
-        match self.kind() {
-            SymExprKind::Constant(c) => RationalFunction::constant(c.clone()),
-            SymExprKind::Variable(i) => RationalFunction::var(*i),
-            SymExprKind::Add(lhs, rhs) => lhs.to_rational_function() + rhs.to_rational_function(),
-            SymExprKind::Mul(lhs, rhs) => lhs.to_rational_function() * rhs.to_rational_function(),
-            SymExprKind::Pow(base, n) => base.to_rational_function().pow(*n),
         }
     }
 
@@ -480,29 +464,6 @@ impl SymConstraint {
             SymConstraint::Eq(lhs, rhs) | SymConstraint::Le(lhs, rhs) => lhs == rhs,
             SymConstraint::Lt(..) => false,
             SymConstraint::Or(constraints) => constraints.iter().any(SymConstraint::is_trivial),
-        }
-    }
-
-    pub fn to_poly(&self) -> PolyConstraint<FloatRat> {
-        match self {
-            SymConstraint::Eq(lhs, rhs) => {
-                let lhs = lhs.to_rational_function();
-                let rhs = rhs.to_rational_function();
-                PolyConstraint::Eq(lhs.numer * rhs.denom, rhs.numer * lhs.denom)
-            }
-            SymConstraint::Lt(lhs, rhs) => {
-                let lhs = lhs.to_rational_function();
-                let rhs = rhs.to_rational_function();
-                PolyConstraint::Lt(lhs.numer * rhs.denom, rhs.numer * lhs.denom)
-            }
-            SymConstraint::Le(lhs, rhs) => {
-                let lhs = lhs.to_rational_function();
-                let rhs = rhs.to_rational_function();
-                PolyConstraint::Le(lhs.numer * rhs.denom, rhs.numer * lhs.denom)
-            }
-            SymConstraint::Or(constraints) => {
-                PolyConstraint::or(constraints.iter().map(SymConstraint::to_poly).collect())
-            }
         }
     }
 

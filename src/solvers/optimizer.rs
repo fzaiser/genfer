@@ -6,15 +6,12 @@ use good_lp::{
 use num_traits::Zero;
 
 use crate::{
-    bounds::{
-        float_rat::FloatRat,
-        sym_expr::{SymConstraint, SymExprKind},
-        util::{rational_to_z3, z3_real_to_rational},
-    },
-    number::{FloatNumber, Rational},
+    numbers::{FloatNumber, FloatRat, Rational},
+    sym_expr::{SymConstraint, SymExpr, SymExprKind},
+    util::{rational_to_z3, z3_real_to_rational},
 };
 
-use super::{solver::ConstraintProblem, sym_expr::SymExpr};
+use super::solver::ConstraintProblem;
 
 pub trait Optimizer {
     fn optimize(

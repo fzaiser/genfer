@@ -1,11 +1,13 @@
 use std::time::Duration;
 
-use crate::number::Rational;
+use crate::{
+    numbers::Rational,
+    sym_expr::{SymConstraint, SymExpr, SymExprKind},
+};
 
 use super::{
     optimizer::Optimizer,
     solver::{ConstraintProblem, Solver, SolverError},
-    sym_expr::{SymConstraint, SymExpr, SymExprKind},
 };
 
 use descent::{
