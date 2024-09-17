@@ -4,6 +4,7 @@ use num_traits::{One, Zero};
 use std::ops::AddAssign;
 
 use crate::{
+    bound::{Egd, FiniteDiscrete, GeometricBound},
     numbers::{FloatNumber, Number, Rational},
     ppl::{Distribution, Event, Natural, Program, Statement, Var},
     semantics::{
@@ -15,9 +16,7 @@ use crate::{
     util::rational_to_qepcad,
 };
 
-use super::bound::{BoundResult, FiniteDiscrete, GeometricBound};
-
-pub struct BoundCtx {
+pub struct GeometricBoundSemantics {
     verbose: bool,
     unroll: usize,
     min_degree: usize,
@@ -27,33 +26,33 @@ pub struct BoundCtx {
     program_var_count: usize,
     // Variables used nonlinearly, in [0,1)
     nonlinear_vars: Vec<usize>,
-    geom_vars: Vec<usize>,
+    decay_vars: Vec<usize>,
     factor_vars: Vec<usize>,
-    coeff_vars: Vec<usize>,
+    block_vars: Vec<usize>,
     sym_var_bounds: Vec<(Rational, Rational)>,
     constraints: Vec<SymConstraint>,
 }
 
-impl Default for BoundCtx {
+impl Default for GeometricBoundSemantics {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Transformer for BoundCtx {
-    type Domain = BoundResult;
+impl Transformer for GeometricBoundSemantics {
+    type Domain = GeometricBound;
 
     fn init(&mut self, program: &Program) -> Self::Domain {
         self.program_var_count = program.used_vars().num_vars();
         let lower = FiniteDiscrete {
             masses: ArrayD::ones(vec![1; self.program_var_count]),
         };
-        let upper = GeometricBound {
-            masses: ArrayD::ones(vec![1; self.program_var_count]),
-            geo_params: vec![SymExpr::zero(); self.program_var_count],
+        let upper = Egd {
+            block: ArrayD::ones(vec![1; self.program_var_count]),
+            decays: vec![SymExpr::zero(); self.program_var_count],
         };
         let var_supports = self.support.init(program);
-        BoundResult {
+        GeometricBound {
             lower,
             upper,
             var_supports,
@@ -71,12 +70,12 @@ impl Transformer for BoundCtx {
                 init.upper.extend_axis(*v, max + 2);
                 let axis = Axis(v.id());
                 let len_lower = init.lower.masses.len_of(axis);
-                let len_upper = init.upper.masses.len_of(axis);
+                let len_upper = init.upper.block.len_of(axis);
                 let mut then_lower_bound = init.lower.clone();
                 let mut else_lower_bound = init.lower;
                 let mut then_upper_bound = init.upper.clone();
                 let mut else_upper_bound = init.upper;
-                then_upper_bound.geo_params[v.id()] = SymExpr::zero();
+                then_upper_bound.decays[v.id()] = SymExpr::zero();
                 for i in 0..len_upper {
                     if set.contains(&Natural(i as u64)) {
                         if i < len_lower {
@@ -86,7 +85,7 @@ impl Transformer for BoundCtx {
                                 .fill(Rational::zero());
                         }
                         else_upper_bound
-                            .masses
+                            .block
                             .index_axis_mut(axis, i)
                             .fill(SymExpr::zero());
                     } else {
@@ -97,19 +96,19 @@ impl Transformer for BoundCtx {
                                 .fill(Rational::zero());
                         }
                         then_upper_bound
-                            .masses
+                            .block
                             .index_axis_mut(axis, i)
                             .fill(SymExpr::zero());
                     }
                 }
                 let (then_support, else_support) =
                     self.support.transform_event(event, init.var_supports);
-                let then_res = BoundResult {
+                let then_res = GeometricBound {
                     lower: then_lower_bound,
                     upper: then_upper_bound,
                     var_supports: then_support,
                 };
-                let else_res = BoundResult {
+                let else_res = GeometricBound {
                     lower: else_lower_bound,
                     upper: else_upper_bound,
                     var_supports: else_support,
@@ -142,12 +141,12 @@ impl Transformer for BoundCtx {
                 (else_res, then_res)
             }
             Event::Intersection(events) => {
-                let mut else_res = BoundResult::zero(self.program_var_count);
+                let mut else_res = GeometricBound::zero(self.program_var_count);
                 let mut then_res = init;
                 for event in events {
                     let (new_then, new_else) = self.transform_event(event, then_res);
                     then_res = new_then;
-                    else_res = self.add_bound_results(else_res, new_else);
+                    else_res = self.add_bounds(else_res, new_else);
                 }
                 (then_res, else_res)
             }
@@ -193,7 +192,7 @@ impl Transformer for BoundCtx {
                         res.lower *= p.clone();
                         // TODO: should we extend lower in the `var` dimension? If so, how far?
                         res.upper *= SymExpr::from(p.clone());
-                        res.upper.geo_params[var.id()] = SymExpr::from(Rational::one() - p);
+                        res.upper.decays[var.id()] = SymExpr::from(Rational::one() - p);
                     }
                     Distribution::Uniform { start, end } => {
                         let p = Rational::one() / Rational::from_int(end.0 - start.0);
@@ -239,15 +238,15 @@ impl Transformer for BoundCtx {
                         if let Some(range) = new_bound.var_supports[w].finite_nonempty_range() {
                             let mut new_lower_shape = new_bound.lower.masses.shape().to_vec();
                             let lower_len = new_lower_shape[var.id()];
-                            let mut new_upper_shape = new_bound.upper.masses.shape().to_vec();
+                            let mut new_upper_shape = new_bound.upper.block.shape().to_vec();
                             new_lower_shape[var.id()] += *range.end() as usize;
                             new_upper_shape[var.id()] += *range.end() as usize;
                             let new_upper_len = new_upper_shape[var.id()];
                             new_bound.upper.extend_axis(*var, new_upper_len);
                             let lower_masses = &new_bound.lower.masses;
-                            let upper_masses = &new_bound.upper.masses;
+                            let upper_block = &new_bound.upper.block;
                             let mut res_lower_masses = ArrayD::zeros(new_lower_shape);
-                            let mut res_upper_masses = ArrayD::zeros(new_upper_shape);
+                            let mut res_upper_block = ArrayD::zeros(new_upper_shape);
                             for i in range {
                                 let i = i as usize;
                                 if i < res_lower_masses.len_of(Axis(w.id())) {
@@ -263,11 +262,11 @@ impl Transformer for BoundCtx {
                                                 .slice_axis(Axis(var.id()), Slice::from(0..)),
                                         );
                                 }
-                                res_upper_masses
+                                res_upper_block
                                     .slice_axis_mut(Axis(w.id()), Slice::from(i..=i))
                                     .slice_axis_mut(Axis(var.id()), Slice::from(i..new_upper_len))
                                     .add_assign(
-                                        &upper_masses
+                                        &upper_block
                                             .slice_axis(Axis(w.id()), Slice::from(i..=i))
                                             .slice_axis(
                                                 Axis(var.id()),
@@ -276,7 +275,7 @@ impl Transformer for BoundCtx {
                                     );
                             }
                             new_bound.lower.masses = res_lower_masses;
-                            new_bound.upper.masses = res_upper_masses;
+                            new_bound.upper.block = res_upper_block;
                         } else {
                             todo!("Addition of a variable is not implemented for infinite support: {}", stmt.to_string());
                         }
@@ -305,10 +304,10 @@ impl Transformer for BoundCtx {
                 let (then_res, else_res) = self.transform_event(cond, init);
                 let then_res = self.transform_statements(then, then_res);
                 let else_res = self.transform_statements(els, else_res);
-                self.add_bound_results(then_res, else_res)
+                self.add_bounds(then_res, else_res)
             }
             Statement::While { cond, unroll, body } => self.bound_while(cond, *unroll, body, init),
-            Statement::Fail => BoundResult::zero(self.program_var_count),
+            Statement::Fail => GeometricBound::zero(self.program_var_count),
             Statement::Normalize { .. } => todo!(),
         };
         if let Some(direct_var_info) = direct_var_supports {
@@ -321,7 +320,7 @@ impl Transformer for BoundCtx {
     }
 }
 
-impl BoundCtx {
+impl GeometricBoundSemantics {
     pub fn new() -> Self {
         Self {
             verbose: false,
@@ -332,9 +331,9 @@ impl BoundCtx {
             support: SupportTransformer::default(),
             program_var_count: 0,
             nonlinear_vars: Vec::new(),
-            geom_vars: Vec::new(),
+            decay_vars: Vec::new(),
             factor_vars: Vec::new(),
-            coeff_vars: Vec::new(),
+            block_vars: Vec::new(),
             sym_var_bounds: Vec::new(),
             constraints: Vec::new(),
         }
@@ -376,15 +375,15 @@ impl BoundCtx {
     }
 
     pub fn geom_vars(&self) -> &[usize] {
-        &self.geom_vars
+        &self.decay_vars
     }
 
     pub fn factor_vars(&self) -> &[usize] {
         &self.factor_vars
     }
 
-    pub fn coefficient_vars(&self) -> &[usize] {
-        &self.coeff_vars
+    pub fn block_vars(&self) -> &[usize] {
+        &self.block_vars
     }
 
     pub fn sym_var_bounds(&self) -> &[(Rational, Rational)] {
@@ -439,17 +438,17 @@ impl BoundCtx {
         self.constraints.push(constraint);
     }
 
-    pub fn new_geom_var(&mut self) -> SymExpr {
+    pub fn new_decay_var(&mut self) -> SymExpr {
         let idx = self.fresh_sym_var_idx();
         let var = SymExpr::var(idx);
         self.nonlinear_vars.push(idx);
-        self.geom_vars.push(idx);
+        self.decay_vars.push(idx);
         self.add_constraint(var.clone().must_ge(SymExpr::zero()));
         self.add_constraint(var.clone().must_lt(SymExpr::one()));
         var
     }
 
-    pub fn new_factor_var(&mut self) -> SymExpr {
+    pub fn new_contraction_factor_var(&mut self) -> SymExpr {
         let idx = self.fresh_sym_var_idx();
         let var = SymExpr::var(idx);
         self.nonlinear_vars.push(idx);
@@ -459,62 +458,58 @@ impl BoundCtx {
         var
     }
 
-    pub fn new_coeff_var(&mut self) -> SymExpr {
+    pub fn new_block_var(&mut self) -> SymExpr {
         let idx = self.fresh_sym_var_idx();
         let var = SymExpr::var(idx);
-        self.coeff_vars.push(idx);
+        self.block_vars.push(idx);
         var
     }
 
-    pub fn add_bounds(
-        &mut self,
-        mut lhs: GeometricBound,
-        mut rhs: GeometricBound,
-    ) -> GeometricBound {
+    pub fn add_egds(&mut self, mut lhs: Egd, mut rhs: Egd) -> Egd {
         let count = self.program_var_count;
-        let mut geo_params = Vec::with_capacity(count);
+        let mut decays = Vec::with_capacity(count);
         for i in 0..count {
-            let a = lhs.geo_params[i].clone();
-            let b = rhs.geo_params[i].clone();
+            let a = lhs.decays[i].clone();
+            let b = rhs.decays[i].clone();
             if a == b {
-                geo_params.push(a);
+                decays.push(a);
             } else if a.is_zero() {
-                geo_params.push(b);
+                decays.push(b);
             } else if b.is_zero() {
-                geo_params.push(a);
+                decays.push(a);
             } else {
-                let new_geo_param_var = self.new_geom_var();
-                geo_params.push(new_geo_param_var.clone());
-                self.add_constraint(a.clone().must_le(new_geo_param_var.clone()));
-                self.add_constraint(b.clone().must_le(new_geo_param_var.clone()));
+                let new_decay_var = self.new_decay_var();
+                decays.push(new_decay_var.clone());
+                self.add_constraint(a.clone().must_le(new_decay_var.clone()));
+                self.add_constraint(b.clone().must_le(new_decay_var.clone()));
                 // The following constraint is not necessary, but it helps the solver:
                 // We require the new variable to be the maximum of the other two.
                 self.add_constraint(SymConstraint::or(vec![
-                    new_geo_param_var.clone().must_eq(a),
-                    new_geo_param_var.must_eq(b),
+                    new_decay_var.clone().must_eq(a),
+                    new_decay_var.must_eq(b),
                 ]));
             }
         }
         for i in 0..count {
-            let lhs_len = lhs.masses.len_of(Axis(i));
-            let rhs_len = rhs.masses.len_of(Axis(i));
+            let lhs_len = lhs.block.len_of(Axis(i));
+            let rhs_len = rhs.block.len_of(Axis(i));
             if lhs_len < rhs_len {
                 lhs.extend_axis(Var(i), rhs_len);
             } else if rhs_len < lhs_len {
                 rhs.extend_axis(Var(i), lhs_len);
             }
         }
-        GeometricBound {
-            masses: lhs.masses + rhs.masses,
-            geo_params,
+        Egd {
+            block: lhs.block + rhs.block,
+            decays,
         }
     }
 
-    pub fn add_bound_results(&mut self, lhs: BoundResult, rhs: BoundResult) -> BoundResult {
+    pub fn add_bounds(&mut self, lhs: GeometricBound, rhs: GeometricBound) -> GeometricBound {
         let lower = &lhs.lower + &rhs.lower;
-        let upper = self.add_bounds(lhs.upper, rhs.upper);
+        let upper = self.add_egds(lhs.upper, rhs.upper);
         let var_supports = lhs.var_supports.join(&rhs.var_supports);
-        BoundResult {
+        GeometricBound {
             lower,
             upper,
             var_supports,
@@ -526,10 +521,10 @@ impl BoundCtx {
         cond: &Event,
         unroll: Option<usize>,
         body: &[Statement],
-        init: BoundResult,
-    ) -> BoundResult {
+        init: GeometricBound,
+    ) -> GeometricBound {
         let mut pre_loop = init;
-        let mut rest = BoundResult::zero(self.program_var_count);
+        let mut rest = GeometricBound::zero(self.program_var_count);
         let unroll_count = unroll.unwrap_or(self.unroll);
         let unroll_result =
             self.support
@@ -545,7 +540,7 @@ impl BoundCtx {
         for _ in 0..unroll_count {
             let (then_bound, else_bound) = self.transform_event(cond, pre_loop.clone());
             pre_loop = self.transform_statements(body, then_bound);
-            rest = self.add_bound_results(rest, else_bound);
+            rest = self.add_bounds(rest, else_bound);
         }
         let invariant_supports =
             self.support
@@ -570,7 +565,7 @@ impl BoundCtx {
                 .collect::<Vec<_>>(),
         };
         if self.evt {
-            let invariant = BoundResult {
+            let invariant = GeometricBound {
                 lower: FiniteDiscrete::zero(self.program_var_count),
                 upper: self.new_bound(shape, self.min_degree),
                 var_supports: invariant_supports,
@@ -580,14 +575,14 @@ impl BoundCtx {
             }
             let (loop_entry, loop_exit) = self.transform_event(cond, invariant.clone());
             let one_iter = self.transform_statements(body, loop_entry);
-            let rhs = self.add_bound_results(pre_loop, one_iter);
+            let rhs = self.add_bounds(pre_loop, one_iter);
             if self.verbose {
                 println!("\nPost loop body:\n{rhs}");
             }
             self.assert_le(&rhs.upper, &invariant.upper);
-            self.add_bound_results(loop_exit, rest)
+            self.add_bounds(loop_exit, rest)
         } else {
-            let invariant = BoundResult {
+            let invariant = GeometricBound {
                 lower: FiniteDiscrete::zero(self.program_var_count),
                 upper: self.new_bound(shape, self.min_degree),
                 var_supports: invariant_supports,
@@ -597,7 +592,7 @@ impl BoundCtx {
             }
             let (post_loop, mut exit) = if self.do_while_transform {
                 let (loop_entry, loop_exit) = self.transform_event(cond, pre_loop);
-                rest = self.add_bound_results(rest, loop_exit);
+                rest = self.add_bounds(rest, loop_exit);
                 self.assert_le(&loop_entry.upper, &invariant.upper);
                 let post_loop = self.transform_statements(body, invariant.clone());
                 self.transform_event(cond, post_loop)
@@ -610,7 +605,7 @@ impl BoundCtx {
             if self.verbose {
                 println!("\nPost loop body:\n{post_loop}");
             }
-            let c = self.new_factor_var();
+            let c = self.new_contraction_factor_var();
             if self.verbose {
                 println!("Invariant-c: {c}");
             }
@@ -618,7 +613,7 @@ impl BoundCtx {
             self.add_constraint(c.clone().must_lt(SymExpr::one()));
             self.assert_le(&post_loop.upper, &(invariant.upper.clone() * c.clone()));
             exit.upper /= SymExpr::one() - c.clone();
-            let result = self.add_bound_results(exit, rest);
+            let result = self.add_bounds(exit, rest);
             if self.verbose {
                 println!("\nResulting loop bound:\n{result}");
             }
@@ -728,7 +723,7 @@ impl BoundCtx {
         Ok(())
     }
 
-    fn new_masses(&mut self, shape: Vec<(usize, usize)>) -> ArrayD<SymExpr> {
+    fn new_block(&mut self, shape: Vec<(usize, usize)>) -> ArrayD<SymExpr> {
         let dims = shape.iter().map(|(_, e)| (*e).max(1)).collect::<Vec<_>>();
         let mut coeffs = ArrayD::zeros(dims);
         for (idx, c) in coeffs.indexed_iter_mut() {
@@ -738,30 +733,26 @@ impl BoundCtx {
                 .zip(&shape)
                 .all(|(i, (start, end))| i >= start || (start >= end && i + 1 == *end));
             if is_nonzero {
-                *c = self.new_coeff_var();
+                *c = self.new_block_var();
             }
         }
         coeffs
     }
 
-    fn new_bound(
-        &mut self,
-        shape: Vec<(usize, Option<usize>)>,
-        min_degree: usize,
-    ) -> GeometricBound {
-        let mut geo_params = vec![SymExpr::zero(); shape.len()];
-        for (v, p) in geo_params.iter_mut().enumerate() {
+    fn new_bound(&mut self, shape: Vec<(usize, Option<usize>)>, min_degree: usize) -> Egd {
+        let mut decays = vec![SymExpr::zero(); shape.len()];
+        for (v, p) in decays.iter_mut().enumerate() {
             if shape[v].1.is_none() {
-                *p = self.new_geom_var();
+                *p = self.new_decay_var();
             }
         }
         let shape = shape
             .into_iter()
             .map(|(start, end)| (start, end.unwrap_or(min_degree)))
             .collect::<Vec<_>>();
-        GeometricBound {
-            masses: self.new_masses(shape),
-            geo_params,
+        Egd {
+            block: self.new_block(shape),
+            decays,
         }
     }
 
@@ -769,12 +760,12 @@ impl BoundCtx {
         &mut self,
         lhs_coeffs: &ArrayViewD<SymExpr>,
         lhs_factor: SymExpr,
-        lhs_geo_params: &[SymExpr],
+        lhs_decays: &[SymExpr],
         rhs_coeffs: &ArrayViewD<SymExpr>,
         rhs_factor: SymExpr,
-        rhs_geo_params: &[SymExpr],
+        rhs_decays: &[SymExpr],
     ) {
-        if lhs_geo_params.is_empty() {
+        if lhs_decays.is_empty() {
             assert!(lhs_coeffs.len() == 1);
             assert!(rhs_coeffs.len() == 1);
             let lhs_coeff = lhs_coeffs.first().unwrap().clone() * lhs_factor;
@@ -799,7 +790,7 @@ impl BoundCtx {
             } else {
                 (
                     lhs_coeffs.index_axis(Axis(0), len_lhs - 1),
-                    lhs_factor.clone() * lhs_geo_params[0].clone().pow((i - len_lhs + 1) as i32),
+                    lhs_factor.clone() * lhs_decays[0].clone().pow((i - len_lhs + 1) as i32),
                 )
             };
             let (rhs, rhs_factor) = if i < len_rhs {
@@ -807,32 +798,32 @@ impl BoundCtx {
             } else {
                 (
                     rhs_coeffs.index_axis(Axis(0), len_rhs - 1),
-                    rhs_factor.clone() * rhs_geo_params[0].clone().pow((i - len_rhs + 1) as i32),
+                    rhs_factor.clone() * rhs_decays[0].clone().pow((i - len_rhs + 1) as i32),
                 )
             };
             self.assert_le_helper(
                 &lhs,
                 lhs_factor,
-                &lhs_geo_params[1..],
+                &lhs_decays[1..],
                 &rhs,
                 rhs_factor,
-                &rhs_geo_params[1..],
+                &rhs_decays[1..],
             );
         }
     }
 
-    fn assert_le(&mut self, lhs: &GeometricBound, rhs: &GeometricBound) {
+    fn assert_le(&mut self, lhs: &Egd, rhs: &Egd) {
         // println!("Asserting less than:\n{lhs}\n<=\n{rhs}");
         for i in 0..self.program_var_count {
-            self.add_constraint(lhs.geo_params[i].clone().must_le(rhs.geo_params[i].clone()));
+            self.add_constraint(lhs.decays[i].clone().must_le(rhs.decays[i].clone()));
         }
         self.assert_le_helper(
-            &lhs.masses.view(),
+            &lhs.block.view(),
             SymExpr::one(),
-            &lhs.geo_params,
-            &rhs.masses.view(),
+            &lhs.decays,
+            &rhs.block.view(),
             SymExpr::one(),
-            &rhs.geo_params,
+            &rhs.decays,
         );
     }
 }

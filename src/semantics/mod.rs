@@ -1,5 +1,4 @@
-pub mod bound;
-pub mod ctx;
+pub mod geometric;
 pub mod residual;
 pub mod support;
 

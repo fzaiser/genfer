@@ -13,7 +13,7 @@ use tool::interval::Interval;
 use tool::numbers::{Rational, F64};
 use tool::parser;
 use tool::ppl::{Program, Var};
-use tool::semantics::ctx::BoundCtx;
+use tool::semantics::geometric::GeometricBoundSemantics;
 use tool::semantics::support::VarSupport;
 use tool::semantics::Transformer;
 use tool::solvers::gradient_descent::{Adam, AdamBarrier, GradientDescent};
@@ -120,7 +120,7 @@ pub fn main() -> std::io::Result<ExitCode> {
 
 fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<ExitCode> {
     let start = Instant::now();
-    let mut ctx = BoundCtx::new()
+    let mut ctx = GeometricBoundSemantics::new()
         .with_verbose(args.verbose)
         .with_min_degree(args.min_degree)
         .with_unroll(args.unroll)
@@ -173,7 +173,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<ExitCode> {
         var_count: ctx.sym_var_count(),
         geom_vars: ctx.geom_vars().to_owned(),
         factor_vars: ctx.factor_vars().to_owned(),
-        coefficient_vars: ctx.coefficient_vars().to_owned(),
+        coefficient_vars: ctx.block_vars().to_owned(),
         var_bounds: ctx.sym_var_bounds().to_owned(),
         constraints: ctx.constraints().to_owned(),
     };
@@ -247,10 +247,10 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<ExitCode> {
 
             println!("\nMarginalized bound:");
             let ax = Axis(program.result.id());
-            let upper_len = result.upper.masses.len_of(ax);
+            let upper_len = result.upper.block.len_of(ax);
             let lower_len = result.lower.masses.len_of(ax);
             let thresh = lower_len.max(upper_len - 1);
-            let decay = result.upper.geo_params[program.result.id()]
+            let decays = result.upper.decays[program.result.id()]
                 .extract_constant()
                 .unwrap()
                 .rat();
@@ -269,7 +269,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<ExitCode> {
                 let hi = if i < upper_len {
                     result
                         .upper
-                        .masses
+                        .block
                         .index_axis(ax, i)
                         .first()
                         .unwrap()
@@ -279,14 +279,14 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<ExitCode> {
                 } else {
                     result
                         .upper
-                        .masses
+                        .block
                         .index_axis(ax, upper_len - 1)
                         .first()
                         .unwrap()
                         .extract_constant()
                         .unwrap()
                         .rat()
-                        * decay.pow((i - upper_len).try_into().unwrap())
+                        * decays.pow((i - upper_len).try_into().unwrap())
                 };
                 println!(
                     "{i}: [{}, {}]",
@@ -296,18 +296,18 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<ExitCode> {
             }
             let thresh_hi = result
                 .upper
-                .masses
+                .block
                 .index_axis(ax, upper_len - 1)
                 .first()
                 .unwrap()
                 .extract_constant()
                 .unwrap()
                 .rat()
-                * decay.pow((thresh + 1 - upper_len).try_into().unwrap());
+                * decays.pow((thresh + 1 - upper_len).try_into().unwrap());
             println!(
                 "n >= {thresh}: [0, {} * {}^(n - {thresh})]",
                 F64::from(thresh_hi.round_to_f64()),
-                F64::from(decay.round_to_f64()),
+                F64::from(decays.round_to_f64()),
             );
 
             // Compute bounds on the normalizing constant:
@@ -350,7 +350,7 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<ExitCode> {
                 let prob = Interval::exact(lo, hi);
                 println!("p({i}) {}", in_iv(&prob));
             }
-            if decay.is_zero() {
+            if decays.is_zero() {
                 let from = if thresh_hi.is_zero() {
                     thresh
                 } else {
@@ -359,11 +359,11 @@ fn run_program(program: &Program, args: &CliArgs) -> std::io::Result<ExitCode> {
                 println!("Asymptotics: p(n) = 0 for n >= {from}");
             } else {
                 let factor =
-                    thresh_hi / norm_lo.clone() * decay.pow(-(i32::try_from(thresh).unwrap()));
+                    thresh_hi / norm_lo.clone() * decays.pow(-(i32::try_from(thresh).unwrap()));
                 println!(
                     "\nAsymptotics: p(n) <= {} * {}^n for n >= {}",
                     F64::from(factor.round_to_f64()),
-                    F64::from(decay.round_to_f64()),
+                    F64::from(decays.round_to_f64()),
                     thresh
                 );
             }

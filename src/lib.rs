@@ -17,6 +17,7 @@
 #![allow(clippy::bool_to_int_with_if)]
 // TODO: get rid of as many of those `#![allow]`s as possible
 
+pub mod bound;
 pub mod interval;
 pub mod numbers;
 pub mod parser;
