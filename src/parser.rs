@@ -342,7 +342,6 @@ fn affine_transform<'a>(
     }))(input)
 }
 
-#[allow(clippy::too_many_lines)]
 fn distribution(input: &str) -> IResult<&str, Distribution> {
     let (input, distribution) = identifier(input)?;
     match distribution {

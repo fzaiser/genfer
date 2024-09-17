@@ -1,9 +1,6 @@
 #![warn(clippy::pedantic)]
-#![allow(clippy::wildcard_imports)]
-#![allow(clippy::needless_range_loop)]
-#![allow(clippy::missing_panics_doc)]
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::cast_sign_loss)]
+#![expect(clippy::needless_range_loop)]
+#![expect(clippy::cast_possible_truncation)]
 
 use std::path::PathBuf;
 use std::time::Instant;
@@ -19,7 +16,7 @@ use clap::Parser;
 use ndarray::Axis;
 use num_traits::{One, Zero};
 
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct CliArgs {
