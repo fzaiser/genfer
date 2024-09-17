@@ -46,7 +46,7 @@ class Tool:
 
 
 residual_path = "../target/debug/residual" # TODO: Change to release
-geo_bound_path = "../target/debug/bound"  # TODO: Change to release
+geo_bound_path = "../target/debug/geobound"  # TODO: Change to release
 tools = [
     Tool("geobound", geo_bound_path, ["-u", "0", "--solver", "ipopt", "--keep-while", "--no-linear-optimize"]),
 ]
