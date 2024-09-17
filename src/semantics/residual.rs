@@ -285,7 +285,6 @@ impl Transformer for ResidualSemantics {
                 result.reject = init.lower.total_mass();
                 result
             }
-            Statement::Normalize { .. } => todo!(),
         };
         if let Some(direct_var_info) = direct_var_supports {
             debug_assert_eq!(

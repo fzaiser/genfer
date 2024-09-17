@@ -308,7 +308,6 @@ impl Transformer for GeometricBoundSemantics {
             }
             Statement::While { cond, unroll, body } => self.bound_while(cond, *unroll, body, init),
             Statement::Fail => GeometricBound::zero(self.program_var_count),
-            Statement::Normalize { .. } => todo!(),
         };
         if let Some(direct_var_info) = direct_var_supports {
             debug_assert_eq!(

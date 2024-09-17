@@ -249,9 +249,6 @@ impl Transformer for SupportTransformer {
                 rest.join(&loop_exit)
             }
             Statement::Fail => VarSupport::empty(init.num_vars()),
-            Statement::Normalize { given_vars, stmts } => {
-                self.transform_normalize(given_vars, stmts, init)
-            }
         }
     }
 }
@@ -358,29 +355,5 @@ impl SupportTransformer {
         let (enter, exit) = self.transform_event(cond, init);
         let post = self.transform_statements(body, enter);
         (post, exit)
-    }
-
-    pub fn transform_normalize(
-        &mut self,
-        given_vars: &[Var],
-        block: &[Statement],
-        var_info: VarSupport,
-    ) -> VarSupport {
-        if given_vars.is_empty() {
-            self.transform_statements(block, var_info)
-        } else {
-            let v = given_vars[0];
-            let rest = &given_vars[1..];
-            let support = var_info[v].clone();
-            let range = support.finite_nonempty_range().unwrap_or_else(|| panic!("Cannot normalize with respect to variable `{v}`, because its value could not be proven to be bounded."));
-            let mut joined = VarSupport::empty(var_info.num_vars());
-            for i in range {
-                let mut new_var_info = var_info.clone();
-                new_var_info.set(v, SupportSet::from(i));
-                let result = self.transform_normalize(rest, block, new_var_info);
-                joined = joined.join(&result);
-            }
-            joined
-        }
     }
 }

@@ -116,22 +116,6 @@ fn fail(input: &str) -> IResult<&str, Statement> {
     value(Statement::Fail, terminated(keyword("fail"), cut(semicolon)))(input)
 }
 
-fn normalize<'a>(vars: &mut Vec<&'a str>, input: &'a str) -> IResult<&'a str, Statement> {
-    context(
-        "normalize statement",
-        preceded(
-            keyword("normalize"),
-            cut(|input| {
-                let (input, given_vars) = map(many0(identifier), |ids| {
-                    ids.into_iter().map(|id| expect_var(vars, id)).collect()
-                })(input)?;
-                let (input, stmts) = block(vars, input)?;
-                Ok((input, Statement::Normalize { given_vars, stmts }))
-            }),
-        ),
-    )(input)
-}
-
 enum Operand {
     Var(Var),
     Nat(Natural),
@@ -240,10 +224,10 @@ fn comparison<'a>(vars: &[&'a str], input: &'a str) -> IResult<&'a str, Event> {
     Ok((input, event))
 }
 
-fn data_from_dist<'a>(vars: &[&'a str], input: &'a str) -> IResult<&'a str, Event> {
+fn data_from_dist(input: &str) -> IResult<&str, Event> {
     let (input, data) = natural(input)?;
     let (input, _) = char('~')(input)?;
-    let (input, dist) = cut(|input| distribution(vars, input))(input)?;
+    let (input, dist) = cut(|input| distribution(input))(input)?;
     Ok((input, Event::DataFromDist(data, dist)))
 }
 
@@ -268,7 +252,7 @@ fn atomic_event<'a>(vars: &[&'a str], input: &'a str) -> IResult<&'a str, Event>
                 )(input)
             },
             |input| comparison(vars, input),
-            |input| data_from_dist(vars, input),
+            data_from_dist,
         )),
     )(input)
 }
@@ -359,35 +343,24 @@ fn affine_transform<'a>(
 }
 
 #[allow(clippy::too_many_lines)]
-fn distribution<'a>(vars: &[&'a str], input: &'a str) -> IResult<&'a str, Distribution> {
+fn distribution(input: &str) -> IResult<&str, Distribution> {
     let (input, distribution) = identifier(input)?;
     match distribution {
         "Dirac" => map(
-            delimited(char('('), cut(pos_ratio), char(')')),
+            delimited(char('('), cut(natural), char(')')),
             Distribution::Dirac,
         )(input),
         "Bernoulli" => delimited(
             char('('),
-            cut(alt((
-                map(pos_ratio, Distribution::Bernoulli),
-                map(identifier, |id| {
-                    Distribution::BernoulliVarProb(expect_var(vars, id))
-                }),
-            ))),
+            cut(map(pos_ratio, Distribution::Bernoulli)),
             char(')'),
         )(input),
         "Binomial" => delimited(
             char('('),
-            cut(alt((
-                map(
-                    separated_pair(natural, cut(tag(",")), pos_ratio),
-                    |(n, p)| Distribution::Binomial(n, p),
-                ),
-                map(
-                    separated_pair(identifier, cut(tag(",")), pos_ratio),
-                    |(id, p)| Distribution::BinomialVarTrials(expect_var(vars, id), p),
-                ),
-            ))),
+            cut(map(
+                separated_pair(natural, cut(tag(",")), pos_ratio),
+                |(n, p)| Distribution::Binomial(n, p),
+            )),
             char(')'),
         )(input),
         "Categorical" => delimited(
@@ -403,68 +376,21 @@ fn distribution<'a>(vars: &[&'a str], input: &'a str) -> IResult<&'a str, Distri
         )(input),
         "NegBinomial" => delimited(
             char('('),
-            cut(alt((
-                map(
-                    separated_pair(natural, cut(tag(",")), pos_ratio),
-                    |(n, p)| Distribution::NegBinomial(n, p),
-                ),
-                map(
-                    separated_pair(identifier, cut(tag(",")), pos_ratio),
-                    |(id, p)| Distribution::NegBinomialVarSuccesses(expect_var(vars, id), p),
-                ),
-            ))),
+            cut(map(
+                separated_pair(natural, cut(tag(",")), pos_ratio),
+                |(n, p)| Distribution::NegBinomial(n, p),
+            )),
             char(')'),
         )(input),
         "Geometric" => map(
             delimited(char('('), cut(pos_ratio), char(')')),
             Distribution::Geometric,
         )(input),
-        "Poisson" => map(
-            delimited(
-                char('('),
-                cut(alt((
-                    map(
-                        pair(pos_ratio, opt(preceded(char('*'), cut(identifier)))),
-                        |(lambda, id)| (lambda, id),
-                    ),
-                    map(identifier, |id| (PosRatio::new(1, 1), Some(id))),
-                ))),
-                char(')'),
-            ),
-            |(lambda, id)| {
-                if let Some(id) = id {
-                    Distribution::PoissonVarRate(lambda, expect_var(vars, id))
-                } else {
-                    Distribution::Poisson(lambda)
-                }
-            },
-        )(input),
-        "UniformDisc" => delimited(
+        "Uniform" | "UniformDisc" => delimited(
             char('('),
             cut(map(
                 separated_pair(natural, tag(","), natural),
                 |(start, end)| Distribution::Uniform { start, end },
-            )),
-            char(')'),
-        )(input),
-        "Exponential" => delimited(
-            char('('),
-            cut(map(pos_ratio, |rate| Distribution::Exponential { rate })),
-            char(')'),
-        )(input),
-        "Gamma" => delimited(
-            char('('),
-            cut(map(
-                separated_pair(pos_ratio, tag(","), pos_ratio),
-                |(shape, rate)| Distribution::Gamma { shape, rate },
-            )),
-            char(')'),
-        )(input),
-        "UniformCont" => delimited(
-            char('('),
-            cut(map(
-                separated_pair(pos_ratio, tag(","), pos_ratio),
-                |(start, end)| Distribution::UniformCont { start, end },
             )),
             char(')'),
         )(input),
@@ -481,7 +407,7 @@ fn sample<'a>(
         alt((value(false, char('~')), value(true, tag("+~"))))(input)?;
     cut(context("distribution", move |input| {
         let var = find_or_create_var(vars, lhs);
-        let (input, distribution) = distribution(vars, input)?;
+        let (input, distribution) = distribution(input)?;
         let stmt = Statement::Sample {
             var,
             distribution,
@@ -595,10 +521,7 @@ fn block<'a>(vars: &mut Vec<&'a str>, input: &'a str) -> IResult<&'a str, Vec<St
 fn statement<'a>(vars: &mut Vec<&'a str>, input: &'a str) -> IResult<&'a str, Vec<Statement>> {
     context("statement", |input| {
         let (input, ()) = ws(input)?;
-        let (input, stmts) = if keyword("normalize")(input).is_ok() {
-            let (input, stmt) = normalize(vars, input)?;
-            (input, vec![stmt])
-        } else if keyword("if")(input).is_ok() {
+        let (input, stmts) = if keyword("if")(input).is_ok() {
             let (input, stmt) = if_event(vars, input)?;
             (input, vec![stmt])
         } else if keyword("observe")(input).is_ok() {

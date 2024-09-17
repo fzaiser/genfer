@@ -1,10 +1,7 @@
 use std::borrow::Borrow;
 use std::fmt::Display;
 
-use crate::{
-    numbers::{Number, Rational},
-    support::SupportSet,
-};
+use crate::{numbers::Number, support::SupportSet};
 use Distribution::*;
 use Statement::*;
 
@@ -176,32 +173,16 @@ impl VarRange {
 
 #[derive(Clone, Debug)]
 pub enum Distribution {
-    Dirac(PosRatio),
+    Dirac(Natural),
     Bernoulli(PosRatio),
-    BernoulliVarProb(Var),
-    BinomialVarTrials(Var, PosRatio),
     Binomial(Natural, PosRatio),
     Categorical(Vec<PosRatio>),
-    NegBinomialVarSuccesses(Var, PosRatio),
     NegBinomial(Natural, PosRatio),
     Geometric(PosRatio),
-    Poisson(PosRatio),
-    PoissonVarRate(PosRatio, Var),
     /// Uniform distribution on the integers {start, ..., end - 1}
     Uniform {
         start: Natural,
         end: Natural,
-    },
-    Exponential {
-        rate: PosRatio,
-    },
-    Gamma {
-        shape: PosRatio,
-        rate: PosRatio,
-    },
-    UniformCont {
-        start: PosRatio,
-        end: PosRatio,
     },
 }
 
@@ -209,51 +190,12 @@ impl Distribution {
     pub fn support(&self) -> SupportSet {
         use Distribution::*;
         match self {
-            Dirac(a) => {
-                if let Some(a) = a.as_integer() {
-                    SupportSet::point(a)
-                } else {
-                    SupportSet::interval(
-                        Rational::from_ratio(a.numer, a.denom),
-                        Rational::from_ratio(a.numer, a.denom),
-                    )
-                }
-            }
-            Bernoulli(_) | BernoulliVarProb(_) => (0..=1).into(),
+            Dirac(a) => SupportSet::point(a.0),
+            Bernoulli(_) => (0..=1).into(),
             Binomial(n, _) => (0..=n.0).into(),
             Categorical(rs) => (0..rs.len() as u64).into(),
-            BinomialVarTrials(..)
-            | NegBinomialVarSuccesses(..)
-            | NegBinomial(..)
-            | Geometric(_)
-            | Poisson(_)
-            | PoissonVarRate(..) => SupportSet::naturals(),
+            NegBinomial(..) | Geometric(_) => SupportSet::naturals(),
             Uniform { start, end } => (start.0..end.0).into(),
-            Exponential { .. } | Gamma { .. } => SupportSet::nonneg_reals(),
-            UniformCont { start, end } => SupportSet::interval(
-                Rational::from_ratio(start.numer, start.denom),
-                Rational::from_ratio(end.numer, end.denom),
-            ),
-        }
-    }
-
-    fn used_vars(&self) -> VarRange {
-        match self {
-            Dirac(_)
-            | Bernoulli(_)
-            | Binomial(_, _)
-            | Categorical(_)
-            | NegBinomial(_, _)
-            | Geometric(_)
-            | Poisson(_)
-            | Uniform { .. }
-            | Exponential { .. }
-            | Gamma { .. }
-            | UniformCont { .. } => VarRange::empty(),
-            BernoulliVarProb(v)
-            | BinomialVarTrials(v, _)
-            | NegBinomialVarSuccesses(v, _)
-            | PoissonVarRate(_, v) => VarRange::new(*v),
         }
     }
 }
@@ -263,8 +205,6 @@ impl Display for Distribution {
         match self {
             Dirac(a) => write!(f, "Dirac({a})"),
             Bernoulli(p) => write!(f, "Bernoulli({p})"),
-            BernoulliVarProb(v) => write!(f, "Bernoulli({v})"),
-            BinomialVarTrials(n, p) => write!(f, "Binomial({n}, {p})"),
             Binomial(n, p) => write!(f, "Binomial({n}, {p})"),
             Categorical(rs) => {
                 write!(f, "Categorical(")?;
@@ -279,15 +219,9 @@ impl Display for Distribution {
                 }
                 write!(f, ")")
             }
-            NegBinomialVarSuccesses(r, p) => write!(f, "NegBinomial({r}, {p})"),
             NegBinomial(r, p) => write!(f, "NegBinomial({r}, {p})"),
             Geometric(p) => write!(f, "Geometric({p})"),
-            Poisson(lambda) => write!(f, "Poisson({lambda})"),
-            PoissonVarRate(lambda, n) => write!(f, "Poisson({lambda} * {n})"),
             Uniform { start, end } => write!(f, "Uniform({start}, {end})"),
-            Exponential { rate } => write!(f, "Exponential({rate})"),
-            Gamma { shape, rate } => write!(f, "Gamma({shape}, {rate})"),
-            UniformCont { start, end } => write!(f, "UniformCont({start}, {end})"),
         }
     }
 }
@@ -323,7 +257,7 @@ impl Event {
         match self {
             Event::InSet(v, _) => VarRange::new(*v),
             Event::VarComparison(v1, _, v2) => VarRange::new(*v1).add(*v2),
-            Event::DataFromDist(_, dist) => dist.used_vars(),
+            Event::DataFromDist(..) => VarRange::empty(),
             Event::Complement(e) => e.used_vars(),
             Event::Intersection(es) => es
                 .iter()
@@ -473,13 +407,6 @@ pub enum Statement {
         body: Vec<Statement>,
     },
     Fail,
-    Normalize {
-        /// Variables that are fixed (not marginalized) for the normalization
-        ///
-        /// This is necessary for nested inference.
-        given_vars: Vec<Var>,
-        stmts: Vec<Statement>,
-    },
 }
 
 impl Statement {
@@ -577,16 +504,6 @@ impl Statement {
                 writeln!(f, "{indent_str}}}")
             }
             Fail => writeln!(f, "fail;"),
-            Normalize { given_vars, stmts } => {
-                let indent_str = " ".repeat(indent);
-                write!(f, "normalize")?;
-                for v in given_vars {
-                    write!(f, " {v}")?;
-                }
-                writeln!(f, " {{")?;
-                Self::fmt_block(stmts, indent + 2, f)?;
-                writeln!(f, "{indent_str}}}")
-            }
         }
     }
 
@@ -598,17 +515,12 @@ impl Statement {
             }
             While { body, .. } => body.iter().any(Statement::uses_observe),
             Fail => true,
-            Normalize { stmts, .. } => stmts.iter().any(Statement::uses_observe),
         }
     }
 
     pub fn used_vars(&self) -> VarRange {
         match self {
-            Sample {
-                var: v,
-                distribution: d,
-                add_previous_value: _,
-            } => d.used_vars().add(*v),
+            Sample { var: v, .. } | Decrement { var: v, offset: _ } => VarRange::new(*v),
             Assign {
                 var: v, addend: a, ..
             } => VarRange::new(*v).union(&if let Some((_, w)) = a {
@@ -616,7 +528,6 @@ impl Statement {
             } else {
                 VarRange::empty()
             }),
-            Decrement { var: v, offset: _ } => VarRange::new(*v),
             IfThenElse { cond, then, els } => cond
                 .used_vars()
                 .union(&VarRange::union_all(then.iter().map(Statement::used_vars)))
@@ -629,10 +540,6 @@ impl Statement {
                 .used_vars()
                 .union(&VarRange::union_all(body.iter().map(Statement::used_vars))),
             Fail => VarRange::empty(),
-            Normalize {
-                given_vars: _,
-                stmts,
-            } => VarRange::union_all(stmts.iter().map(Statement::used_vars)),
         }
     }
 
@@ -644,7 +551,6 @@ impl Statement {
                     + els.iter().fold(0, |acc, stmt| acc + stmt.size())
             }
             While { body, .. } => 1 + body.iter().fold(0, |acc, stmt| acc + stmt.size()),
-            Normalize { stmts, .. } => 1 + stmts.iter().fold(0, |acc, stmt| acc + stmt.size()),
         }
     }
 }
