@@ -15,9 +15,9 @@ pub enum SolverError {
 
 pub struct ConstraintProblem {
     pub var_count: usize,
-    pub geom_vars: Vec<usize>,
+    pub decay_vars: Vec<usize>,
     pub factor_vars: Vec<usize>,
-    pub coefficient_vars: Vec<usize>,
+    pub block_vars: Vec<usize>,
     pub var_bounds: Vec<(Rational, Rational)>,
     pub constraints: Vec<SymConstraint>,
 }

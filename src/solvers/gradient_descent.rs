@@ -56,7 +56,7 @@ impl Solver for GradientDescent {
         let mut point: Array1<f64> = Array1::from_vec(init);
         // initialize the polynomial coefficient values to their lower bounds (plus some slack)
         for (v, (lo, _)) in problem.var_bounds.iter().enumerate() {
-            if problem.coefficient_vars.contains(&v) {
+            if problem.block_vars.contains(&v) {
                 point[v] = (lo.round_to_f64() + 0.5) * 2.0; // TODO: is this robust enough?
             }
         }

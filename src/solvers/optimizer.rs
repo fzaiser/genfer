@@ -114,10 +114,28 @@ impl Optimizer for LinearProgrammingOptimizer {
         init: Vec<Rational>,
         _timeout: Duration,
     ) -> Vec<Rational> {
-        optimize_linear_parts(problem, objective, init.clone()).unwrap_or_else(|| {
+        if let Some(solution) = optimize_linear_parts(problem, objective, init.clone()) {
+            let init_obj = objective.eval_exact(&init);
+            let objective_value = objective.eval_exact(&solution);
+            if init_obj < objective_value {
+                println!(
+            "LP solver found a solution with a worse objective value than the initial solution."
+        );
+                return init;
+            }
+            println!(
+                "Best objective: {} at {:?}",
+                objective_value.round_to_f64(),
+                solution
+                    .iter()
+                    .map(Rational::round_to_f64)
+                    .collect::<Vec<_>>()
+            );
+            solution
+        } else {
             println!("LP solver failed; returning previous solution.");
             init
-        })
+        }
     }
 }
 
@@ -127,7 +145,7 @@ fn construct_model(
     init: &[Rational],
 ) -> (Vec<Variable>, CoinCbcProblem) {
     let mut replacements = (0..problem.var_count).map(SymExpr::var).collect::<Vec<_>>();
-    for v in problem.geom_vars.iter().chain(problem.factor_vars.iter()) {
+    for v in problem.decay_vars.iter().chain(problem.factor_vars.iter()) {
         replacements[*v] = SymExpr::from(init[*v].clone());
     }
     let objective = objective.substitute(&replacements);
@@ -215,21 +233,5 @@ pub fn optimize_linear_parts(
         println!("Solution by LP solver does not satisfy the constraints.");
         return None;
     };
-    let init_obj = objective.eval_exact(&init);
-    let objective_value = objective.eval_exact(&solution);
-    if init_obj < objective_value {
-        println!(
-            "LP solver found a solution with a worse objective value than the initial solution."
-        );
-        return None;
-    }
-    println!(
-        "Best objective: {} at {:?}",
-        objective_value.round_to_f64(),
-        solution
-            .iter()
-            .map(Rational::round_to_f64)
-            .collect::<Vec<_>>()
-    );
     Some(solution)
 }

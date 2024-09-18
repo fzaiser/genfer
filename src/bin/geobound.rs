@@ -16,7 +16,9 @@ use tool::semantics::support::VarSupport;
 use tool::semantics::Transformer;
 use tool::solvers::gradient_descent::{Adam, AdamBarrier, GradientDescent};
 use tool::solvers::ipopt::Ipopt;
-use tool::solvers::optimizer::{LinearProgrammingOptimizer, Optimizer as _, Z3Optimizer};
+use tool::solvers::optimizer::{
+    optimize_linear_parts, LinearProgrammingOptimizer, Optimizer as _, Z3Optimizer,
+};
 use tool::solvers::solver::{ConstraintProblem, Solver as _, SolverError, Z3Solver};
 
 use clap::{Parser, ValueEnum};
@@ -53,7 +55,7 @@ enum Objective {
 }
 
 #[expect(clippy::struct_excessive_bools)]
-#[derive(Parser)]
+#[derive(Clone, Parser)]
 #[command(author, version, about, long_about = None)]
 struct CliArgs {
     /// The file containing the probabilistic program
@@ -119,11 +121,11 @@ pub fn main() -> std::io::Result<ExitCode> {
 
 fn run_program(program: &Program, args: &CliArgs) -> ExitCode {
     let start = Instant::now();
-    let (problem, result) = generate_constraints(args, program, start);
     let timeout = Duration::from_millis(args.timeout);
-    let init_solution = solve_constraints(args, &problem, timeout);
+    let (problem, bound, init_solution) =
+        compute_constraints_solution(args, program, start, timeout);
     let exit_code = match init_solution {
-        Ok(solution) => continue_with_solution(args, result, program, &problem, solution),
+        Ok(solution) => continue_with_solution(args, bound, program, &problem, solution),
         Err(e) => {
             match e {
                 SolverError::Timeout => {
@@ -143,6 +145,73 @@ fn run_program(program: &Program, args: &CliArgs) -> ExitCode {
     exit_code
 }
 
+fn compute_constraints_solution(
+    args: &CliArgs,
+    program: &Program,
+    start: Instant,
+    timeout: Duration,
+) -> (
+    ConstraintProblem,
+    GeometricBound,
+    Result<Vec<Rational>, SolverError>,
+) {
+    if args.unroll != 0 {
+        println!("Solving simplified problem with unroll limit set to 0 first...");
+        let modified_args = CliArgs {
+            unroll: 1,
+            ..args.clone()
+        };
+        let (simple_problem, simple_bound) = generate_constraints(&modified_args, program, start);
+        let simple_solution = solve_constraints(&modified_args, &simple_problem, timeout);
+        if let Ok(simple_solution) = simple_solution {
+            let simple_objective = match args.objective {
+                Objective::Total => simple_bound.upper.total_mass(),
+                Objective::ExpectedValue => simple_bound.upper.expected_value(program.result),
+                Objective::Tail => simple_bound.upper.tail_objective(program.result),
+                Objective::Balance => {
+                    simple_bound.upper.total_mass()
+                        * simple_bound.upper.tail_objective(program.result).pow(4)
+                }
+            };
+            println!("Optimizing solution to the simplified problem...");
+            let opt_simple_solution = optimize_solution(
+                &modified_args,
+                &simple_problem,
+                &simple_objective,
+                simple_solution.clone(),
+                timeout,
+            );
+            println!("Extending solution to the original problem...");
+            let (problem, bound) = generate_constraints(args, program, start);
+            // The nonlinear variables can be reused from the simplified problem:
+            let mut solution = vec![Rational::zero(); problem.var_count];
+            for (simple_var, var) in simple_problem.factor_vars.iter().zip(&problem.factor_vars) {
+                solution[*var] = opt_simple_solution[*simple_var].clone();
+            }
+            for (simple_var, var) in simple_problem.decay_vars.iter().zip(&problem.decay_vars) {
+                solution[*var] = opt_simple_solution[*simple_var].clone();
+            }
+            let objective = match args.objective {
+                Objective::Total => bound.upper.total_mass(),
+                Objective::ExpectedValue => bound.upper.expected_value(program.result),
+                Objective::Tail => bound.upper.tail_objective(program.result),
+                Objective::Balance => {
+                    bound.upper.total_mass() * bound.upper.tail_objective(program.result).pow(4)
+                }
+            };
+            // Solve the linear variables:
+            if let Some(solution) = optimize_linear_parts(&problem, &objective, solution) {
+                return (problem, bound, Ok(solution));
+            }
+        }
+        eprintln!("Solving simplified problem (unrolling limit set to 0) failed.");
+        eprintln!("Continuing with the original problem.");
+    }
+    let (problem, bound) = generate_constraints(args, program, start);
+    let init_solution = solve_constraints(args, &problem, timeout);
+    (problem, bound, init_solution)
+}
+
 fn generate_constraints(
     args: &CliArgs,
     program: &Program,
@@ -154,14 +223,14 @@ fn generate_constraints(
         .with_unroll(args.unroll)
         .with_evt(args.evt)
         .with_do_while_transform(!args.keep_while);
-    let result = ctx.semantics(program);
+    let bound = ctx.semantics(program);
     println!(
         "Generated {} constraints with {} symbolic variables.",
         ctx.constraints().len(),
         ctx.sym_var_count()
     );
     if args.verbose {
-        match &result.var_supports {
+        match &bound.var_supports {
             VarSupport::Empty(_) => println!("Support: empty"),
             VarSupport::Prod(supports) => {
                 for (v, support) in supports.iter().enumerate() {
@@ -170,7 +239,7 @@ fn generate_constraints(
             }
         }
         println!("Bound result:");
-        println!("{result}");
+        println!("{bound}");
         println!("Constraints:");
         for (v, (lo, hi)) in ctx.sym_var_bounds().iter().enumerate() {
             println!("  x{v} ∈ [{lo}, {hi})");
@@ -196,13 +265,13 @@ fn generate_constraints(
     );
     let problem = ConstraintProblem {
         var_count: ctx.sym_var_count(),
-        geom_vars: ctx.geom_vars().to_owned(),
+        decay_vars: ctx.geom_vars().to_owned(),
         factor_vars: ctx.factor_vars().to_owned(),
-        coefficient_vars: ctx.block_vars().to_owned(),
+        block_vars: ctx.block_vars().to_owned(),
         var_bounds: ctx.sym_var_bounds().to_owned(),
         constraints: ctx.constraints().to_owned(),
     };
-    (problem, result)
+    (problem, bound)
 }
 
 fn solve_constraints(
@@ -231,32 +300,33 @@ fn solve_constraints(
 
 fn continue_with_solution(
     args: &CliArgs,
-    mut result: GeometricBound,
+    mut bound: GeometricBound,
     program: &Program,
     problem: &ConstraintProblem,
     solution: Vec<Rational>,
 ) -> ExitCode {
     let timeout = Duration::from_millis(args.timeout);
     let objective = match args.objective {
-        Objective::Total => result.upper.total_mass(),
-        Objective::ExpectedValue => result.upper.expected_value(program.result),
-        Objective::Tail => result.upper.tail_objective(program.result),
+        Objective::Total => bound.upper.total_mass(),
+        Objective::ExpectedValue => bound.upper.expected_value(program.result),
+        Objective::Tail => bound.upper.tail_objective(program.result),
         Objective::Balance => {
-            result.upper.total_mass() * result.upper.tail_objective(program.result).pow(4)
+            bound.upper.total_mass() * bound.upper.tail_objective(program.result).pow(4)
         }
     };
     let optimized_solution = optimize_solution(args, problem, &objective, solution, timeout);
-    result.upper = result.upper.resolve(&optimized_solution);
+    bound.upper = bound.upper.resolve(&optimized_solution);
+    // TODO: bound the probability masses by 1 (or even by the residual mass bound)
     if args.verbose {
         println!("\nFinal (unnormalized) bound:\n");
-        println!("{result}");
+        println!("{bound}");
     }
-    let result = result.marginal(program.result);
-    let (thresh, decay, thresh_hi) = output_unnormalized(&result, program.result);
-    let (norm_lo, norm_hi) = bound_normalization_constant(args, program, &result);
-    output_probabilities(&result, program.result, args.limit, &norm_lo, &norm_hi);
+    let marginal = bound.marginal(program.result);
+    let (thresh, decay, thresh_hi) = output_unnormalized(&marginal, program.result);
+    let (norm_lo, norm_hi) = bound_normalization_constant(args, program, &marginal);
+    output_probabilities(&marginal, program.result, args.limit, &norm_lo, &norm_hi);
     output_tail_asymptotics(&decay, thresh_hi, thresh, &norm_lo);
-    output_moments(&result, program.result, &norm_lo, &norm_hi);
+    output_moments(&marginal, program.result, &norm_lo, &norm_hi);
     ExitCode::SUCCESS
 }
 
@@ -298,18 +368,18 @@ fn optimize_solution(
     }
 }
 
-fn output_unnormalized(result: &GeometricBound, var: Var) -> (usize, Rational, Rational) {
+fn output_unnormalized(bound: &GeometricBound, var: Var) -> (usize, Rational, Rational) {
     println!("\nUnnormalized bound:");
     let ax = Axis(var.id());
-    let upper_len = result.upper.block.len_of(ax);
-    let lower_len = result.lower.masses.len_of(ax);
+    let upper_len = bound.upper.block.len_of(ax);
+    let lower_len = bound.lower.masses.len_of(ax);
     let thresh = lower_len.max(upper_len - 1);
-    let decay = result.upper.decays[var.id()]
+    let decay = bound.upper.decays[var.id()]
         .extract_constant()
         .unwrap()
         .rat();
-    let lower_probs = result.lower.probs(var);
-    let upper_probs = result.upper.probs_exact(var, thresh + 1);
+    let lower_probs = bound.lower.probs(var);
+    let upper_probs = bound.upper.probs_exact(var, thresh + 1);
     for i in 0..thresh {
         let lo = if i < lower_len {
             lower_probs[i].clone()
@@ -335,13 +405,13 @@ fn output_unnormalized(result: &GeometricBound, var: Var) -> (usize, Rational, R
 fn bound_normalization_constant(
     args: &CliArgs,
     program: &Program,
-    result: &GeometricBound,
+    bound: &GeometricBound,
 ) -> (Rational, Rational) {
     if args.no_normalize || !program.uses_observe() {
         (Rational::one(), Rational::one())
     } else {
-        let total_lo = result.lower.total_mass();
-        let total_hi = result.upper.total_mass().extract_constant().unwrap().rat();
+        let total_lo = bound.lower.total_mass();
+        let total_hi = bound.upper.total_mass().extract_constant().unwrap().rat();
         let total_hi = if total_hi > Rational::one() {
             Rational::one()
         } else {
@@ -359,21 +429,21 @@ fn bound_normalization_constant(
 }
 
 fn output_probabilities(
-    result: &GeometricBound,
+    bound: &GeometricBound,
     var: Var,
     limit: Option<usize>,
     norm_lo: &Rational,
     norm_hi: &Rational,
 ) {
     println!("\nProbability masses:");
-    let limit = if let Some(range) = result.var_supports[var].finite_nonempty_range() {
+    let limit = if let Some(range) = bound.var_supports[var].finite_nonempty_range() {
         *range.end() as usize + 1
     } else {
         limit.unwrap_or(50)
     };
     let limit = limit.max(2);
-    let lower_probs = result.lower.probs(var);
-    let upper_probs = result.upper.probs_exact(var, limit);
+    let lower_probs = bound.lower.probs(var);
+    let upper_probs = bound.upper.probs_exact(var, limit);
     for i in 0..limit {
         let lo = lower_probs.get(i).unwrap_or(&Rational::zero()).clone() / norm_hi.clone();
         let mut hi = upper_probs[i].clone() / norm_lo.clone();
