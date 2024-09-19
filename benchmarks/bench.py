@@ -26,6 +26,8 @@ num_runs = 1  # TODO: increase
 total_time_re = re.compile("Total time: ([0-9.]*)s")
 flags_re = re.compile("flags: (.*)")
 tool_flags_re = re.compile("flags ?\((.*)\): (.*)")
+evbound_re = re.compile(r"1-th \(raw\) moment (.*)")
+tailbound_re = re.compile(r"Asymptotics: p\(n\) (.*)")
 
 
 def env(name, default):
@@ -48,7 +50,9 @@ class Tool:
 residual_path = "../target/debug/residual" # TODO: Change to release
 geo_bound_path = "../target/debug/geobound"  # TODO: Change to release
 tools = [
-    Tool("geobound", geo_bound_path, ["-u", "0", "--solver", "ipopt", "--keep-while", "--no-linear-optimize"]),
+    Tool("geobound-existence", geo_bound_path, ["-u", "0", "--keep-while", "--objective", "balance"]),
+    Tool("geobound-ev", geo_bound_path, ["-u", "50", "--keep-while", "--objective", "ev"]),
+    Tool("geobound-tail", geo_bound_path, ["-u", "0", "--keep-while", "--objective", "tail"]),
 ]
 
 
@@ -64,6 +68,8 @@ class BenchmarkResult:
         error=None,
         exitcode=None,
         timeout=None,
+        tailbound=None,
+        evbound=None,
     ):
         self.tool = tool
         self.path = path
@@ -74,6 +80,8 @@ class BenchmarkResult:
         self.error = error
         self.exitcode = exitcode
         self.timeout = timeout
+        self.tailbound = tailbound
+        self.evbound = evbound
 
 
 def run_tool(tool, tool_command, path, flags, timeout):
@@ -92,6 +100,10 @@ def run_tool(tool, tool_command, path, flags, timeout):
         stdout = (completed.stdout or b"").decode("utf-8")
         stderr = (completed.stderr or b"").decode("utf-8")
         exitcode = completed.returncode
+        m = evbound_re.search(stdout)
+        evbound = m.group(1) if m else None
+        m = tailbound_re.search(stdout)
+        tailbound = m.group(1) if m else None
         result = BenchmarkResult(
             tool,
             path,
@@ -101,6 +113,8 @@ def run_tool(tool, tool_command, path, flags, timeout):
             stderr=stderr,
             exitcode=exitcode,
             timeout=timeout,
+            evbound=evbound,
+            tailbound=tailbound,
         )
         if exitcode != 0:
             result.exitcode = exitcode
@@ -154,7 +168,7 @@ def bench_tool(tool, command, path: Path, timeout, flags=[]):
     if m:
         flags += m.group(1).split()
     for m in tool_flags_re.finditer(file_contents):
-        if m.group(1).strip() == tool:
+        if tool.startswith(m.group(1).strip()):
             extra_flags = m.group(2).strip().split()
             print(f"Setting flags for {tool}: {extra_flags}")  # TODO: remove
             flags = extra_flags
@@ -202,7 +216,7 @@ def jsonserialize(obj):
 
 if __name__ == "__main__":
     start = time.time()
-    cargo_command = "cargo build --bin residual --bin bound"  # TODO: Change to release
+    cargo_command = "cargo build --bin residual --bin geobound"  # TODO: Change to release
     print(f"Running `{cargo_command}`...")
     with subprocess.Popen(
         cargo_command.split(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT
@@ -228,6 +242,8 @@ if __name__ == "__main__":
                     print(f"  {tool}: {red}{res.error}{reset}")
                 else:
                     print(f"  {tool}: {green}{res.time:.5f}s{reset}")
+                    print(f"  {tool}: EV bound: {res.evbound}")
+                    print(f"  {tool}: tail bound: {res.tailbound}")
             print()
             print()
     end = time.time()
@@ -245,6 +261,8 @@ if __name__ == "__main__":
                 print(f"  {tool}: {red}{res.error}{reset}")
             else:
                 print(f"  {tool}: {green}{res.time:.5f}s{reset}")
+                print(f"  {tool}: EV bound: {res.evbound}")
+                print(f"  {tool}: tail bound: {res.tailbound}")
                 successes[tool] += 1
     print()
     for tool, successes in successes.items():

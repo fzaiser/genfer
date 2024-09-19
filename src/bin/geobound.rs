@@ -45,7 +45,7 @@ enum Optimizer {
     Ipopt,
 }
 
-#[derive(Clone, ValueEnum)]
+#[derive(Copy, Clone, ValueEnum)]
 enum Objective {
     Total,
     #[value(name = "ev")]
@@ -82,14 +82,14 @@ struct CliArgs {
     #[arg(long, default_value = "10000")]
     timeout: u64,
     /// The solver to use
-    #[arg(long, default_value = "z3")]
+    #[arg(long, default_value = "ipopt")]
     solver: Solver,
     /// The optimizer to use
-    #[arg(long)]
-    optimizer: Option<Optimizer>,
+    #[arg(long, default_value = "ipopt")]
+    optimizer: Optimizer,
     /// The optimization objective
-    #[arg(long, default_value = "ev")]
-    objective: Objective,
+    #[arg(long)]
+    objective: Option<Objective>,
     #[arg(long)]
     evt: bool,
     /// Whether to optimize the linear parts of the bound at the end
@@ -164,15 +164,8 @@ fn compute_constraints_solution(
         let (simple_problem, simple_bound) = generate_constraints(&modified_args, program, start);
         let simple_solution = solve_constraints(&modified_args, &simple_problem, timeout);
         if let Ok(simple_solution) = simple_solution {
-            let simple_objective = match args.objective {
-                Objective::Total => simple_bound.upper.total_mass(),
-                Objective::ExpectedValue => simple_bound.upper.expected_value(program.result),
-                Objective::Tail => simple_bound.upper.tail_objective(program.result),
-                Objective::Balance => {
-                    simple_bound.upper.total_mass()
-                        * simple_bound.upper.tail_objective(program.result).pow(4)
-                }
-            };
+            let simple_objective =
+                objective_function(&simple_bound, program.result, args.objective);
             println!("Optimizing solution to the simplified problem...");
             let opt_simple_solution = optimize_solution(
                 &modified_args,
@@ -191,14 +184,7 @@ fn compute_constraints_solution(
             for (simple_var, var) in simple_problem.decay_vars.iter().zip(&problem.decay_vars) {
                 solution[*var] = opt_simple_solution[*simple_var].clone();
             }
-            let objective = match args.objective {
-                Objective::Total => bound.upper.total_mass(),
-                Objective::ExpectedValue => bound.upper.expected_value(program.result),
-                Objective::Tail => bound.upper.tail_objective(program.result),
-                Objective::Balance => {
-                    bound.upper.total_mass() * bound.upper.tail_objective(program.result).pow(4)
-                }
-            };
+            let objective = objective_function(&bound, program.result, args.objective);
             // Solve the linear variables:
             if let Some(solution) = optimize_linear_parts(&problem, &objective, solution) {
                 return (problem, bound, Ok(solution));
@@ -306,14 +292,7 @@ fn continue_with_solution(
     solution: Vec<Rational>,
 ) -> ExitCode {
     let timeout = Duration::from_millis(args.timeout);
-    let objective = match args.objective {
-        Objective::Total => bound.upper.total_mass(),
-        Objective::ExpectedValue => bound.upper.expected_value(program.result),
-        Objective::Tail => bound.upper.tail_objective(program.result),
-        Objective::Balance => {
-            bound.upper.total_mass() * bound.upper.tail_objective(program.result).pow(4)
-        }
-    };
+    let objective = objective_function(&bound, program.result, args.objective);
     let optimized_solution = optimize_solution(args, problem, &objective, solution, timeout);
     bound.upper = bound.upper.resolve(&optimized_solution);
     // TODO: bound the probability masses by 1 (or even by the residual mass bound)
@@ -338,9 +317,9 @@ fn optimize_solution(
     timeout: Duration,
 ) -> Vec<Rational> {
     println!("Optimizing solution...");
-    let optimized_solution = if let Some(optimizer) = &args.optimizer {
+    let optimized_solution = if args.objective.is_some() {
         let start_optimizer = Instant::now();
-        let optimized_solution = match optimizer {
+        let optimized_solution = match args.optimizer {
             Optimizer::Z3 => Z3Optimizer.optimize(problem, objective, solution.clone(), timeout),
             Optimizer::GradientDescent => GradientDescent::default()
                 .with_verbose(args.verbose)
@@ -502,5 +481,21 @@ fn in_iv(iv: &Interval<Rational>) -> String {
             F64::from(iv.lo.round_down()),
             F64::from(iv.hi.round_up())
         )
+    }
+}
+
+fn objective_function(
+    bound: &GeometricBound,
+    result_var: Var,
+    objective: Option<Objective>,
+) -> SymExpr {
+    match objective {
+        None => SymExpr::zero(),
+        Some(Objective::Total) => bound.upper.total_mass(),
+        Some(Objective::ExpectedValue) => bound.upper.expected_value(result_var),
+        Some(Objective::Tail) => bound.upper.tail_objective(result_var),
+        Some(Objective::Balance) => {
+            bound.upper.total_mass() * bound.upper.tail_objective(result_var).pow(4)
+        }
     }
 }
