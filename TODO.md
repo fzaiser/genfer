@@ -28,4 +28,5 @@ Benchmarks
 Cleanups
 ========
 
+- [ ] make handling of lower bounds consistent between residual and geometric bound semantics
 - [ ] retain variable names

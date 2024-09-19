@@ -159,7 +159,7 @@ impl Transformer for ResidualSemantics {
                         let mut added_masses = res.lower * p.clone();
                         res.lower = FiniteDiscrete::zero(var_count);
                         // TODO: this could be more efficient by pre-allocating the array
-                        for _ in 0..self.unroll {
+                        for _ in 0..self.unroll + 1 {
                             res.lower += &added_masses;
                             added_masses *= Rational::one() - p.clone();
                             added_masses.shift_right(*var, 1);

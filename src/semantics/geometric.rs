@@ -76,25 +76,26 @@ impl Transformer for GeometricBoundSemantics {
                 let mut then_upper_bound = init.upper.clone();
                 let mut else_upper_bound = init.upper;
                 then_upper_bound.decays[v.id()] = SymExpr::zero();
+                for i in 0..len_lower {
+                    if set.contains(&Natural(i as u64)) {
+                        else_lower_bound
+                            .masses
+                            .index_axis_mut(axis, i)
+                            .fill(Rational::zero());
+                    } else {
+                        then_lower_bound
+                            .masses
+                            .index_axis_mut(axis, i)
+                            .fill(Rational::zero());
+                    }
+                }
                 for i in 0..len_upper {
                     if set.contains(&Natural(i as u64)) {
-                        if i < len_lower {
-                            else_lower_bound
-                                .masses
-                                .index_axis_mut(axis, i)
-                                .fill(Rational::zero());
-                        }
                         else_upper_bound
                             .block
                             .index_axis_mut(axis, i)
                             .fill(SymExpr::zero());
                     } else {
-                        if i < len_lower {
-                            then_lower_bound
-                                .masses
-                                .index_axis_mut(axis, i)
-                                .fill(Rational::zero());
-                        }
                         then_upper_bound
                             .block
                             .index_axis_mut(axis, i)
@@ -189,7 +190,13 @@ impl Transformer for GeometricBoundSemantics {
                     }
                     Distribution::Geometric(p) if !add_previous_value => {
                         let p = Rational::from_ratio(p.numer, p.denom);
-                        res.lower *= p.clone();
+                        let mut added_masses = res.lower.marginalize_out(*var) * p.clone();
+                        res.lower = FiniteDiscrete::zero(res.var_supports.num_vars());
+                        for _ in 0..self.unroll + 1 {
+                            res.lower += &added_masses;
+                            added_masses *= Rational::one() - p.clone();
+                            added_masses.shift_right(*var, 1);
+                        }
                         // TODO: should we extend lower in the `var` dimension? If so, how far?
                         res.upper *= SymExpr::from(p.clone());
                         res.upper.decays[var.id()] = SymExpr::from(Rational::one() - p);
