@@ -43,6 +43,20 @@ enum Optimizer {
     Adam,
     AdamBarrier,
     Ipopt,
+    Linear,
+}
+
+impl std::fmt::Display for Optimizer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Optimizer::Z3 => write!(f, "Z3"),
+            Optimizer::GradientDescent => write!(f, "Gradient Descent"),
+            Optimizer::Adam => write!(f, "ADAM"),
+            Optimizer::AdamBarrier => write!(f, "ADAM with Barrier Methgod"),
+            Optimizer::Ipopt => write!(f, "IPOPT"),
+            Optimizer::Linear => write!(f, "Linear Optimization"),
+        }
+    }
 }
 
 #[derive(Copy, Clone, ValueEnum)]
@@ -85,16 +99,13 @@ struct CliArgs {
     #[arg(long, default_value = "ipopt")]
     solver: Solver,
     /// The optimizer to use
-    #[arg(long, default_value = "ipopt")]
-    optimizer: Optimizer,
+    #[arg(long, default_values = ["ipopt", "adam-barrier", "linear"])]
+    optimizer: Vec<Optimizer>,
     /// The optimization objective
     #[arg(long)]
     objective: Option<Objective>,
     #[arg(long)]
     evt: bool,
-    /// Whether to optimize the linear parts of the bound at the end
-    #[arg(long)]
-    no_linear_optimize: bool,
     /// Don't transform while loops into do-while loops
     #[arg(long)]
     keep_while: bool,
@@ -313,38 +324,49 @@ fn optimize_solution(
     args: &CliArgs,
     problem: &ConstraintProblem,
     objective: &SymExpr,
-    solution: Vec<Rational>,
+    mut solution: Vec<Rational>,
     timeout: Duration,
 ) -> Vec<Rational> {
+    if args.objective.is_none() {
+        println!(
+            "SKIPPING optimization because no objective is set. Resulting bounds will be BAD."
+        );
+        return solution;
+    };
+    let start_optimizer = Instant::now();
     println!("Optimizing solution...");
-    let optimized_solution = if args.objective.is_some() {
-        let start_optimizer = Instant::now();
-        let optimized_solution = match args.optimizer {
-            Optimizer::Z3 => Z3Optimizer.optimize(problem, objective, solution.clone(), timeout),
+    for (i, optimizer) in args.optimizer.iter().enumerate() {
+        println!("Optimization step {}: {optimizer}", i + 1);
+        let cur_sol = solution.clone();
+        let optimized_solution = match optimizer {
+            Optimizer::Z3 => Z3Optimizer.optimize(problem, objective, cur_sol, timeout),
             Optimizer::GradientDescent => GradientDescent::default()
                 .with_verbose(args.verbose)
-                .optimize(problem, objective, solution, timeout),
+                .optimize(problem, objective, cur_sol, timeout),
             Optimizer::Adam => Adam::default()
                 .with_verbose(args.verbose)
-                .optimize(problem, objective, solution, timeout),
+                .optimize(problem, objective, cur_sol, timeout),
             Optimizer::AdamBarrier => AdamBarrier::default()
                 .with_verbose(args.verbose)
-                .optimize(problem, objective, solution, timeout),
+                .optimize(problem, objective, cur_sol, timeout),
             Optimizer::Ipopt => Ipopt::default()
                 .with_verbose(args.verbose)
-                .optimize(problem, objective, solution, timeout),
+                .optimize(problem, objective, cur_sol, timeout),
+            Optimizer::Linear => {
+                LinearProgrammingOptimizer.optimize(problem, objective, cur_sol, timeout)
+            }
         };
-        let optimizer_time = start_optimizer.elapsed();
-        println!("Optimizer time: {:.6}", optimizer_time.as_secs_f64());
-        optimized_solution
-    } else {
-        solution
-    };
-    if args.no_linear_optimize {
-        optimized_solution
-    } else {
-        LinearProgrammingOptimizer.optimize(problem, objective, optimized_solution, timeout)
+        if problem.holds_exact(&optimized_solution)
+            && objective.eval_exact(&optimized_solution) < objective.eval_exact(&solution)
+        {
+            solution = optimized_solution;
+        } else {
+            eprintln!("Optimization step failed. Continuing with the previous solution.");
+        }
     }
+    let optimizer_time = start_optimizer.elapsed();
+    println!("Optimizer time: {:.6}", optimizer_time.as_secs_f64());
+    solution
 }
 
 fn output_unnormalized(bound: &GeometricBound, var: Var) -> (usize, Rational, Rational) {

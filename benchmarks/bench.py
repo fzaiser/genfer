@@ -171,7 +171,7 @@ def bench_tool(tool, command, path: Path, timeout, flags=[]):
         if tool.startswith(m.group(1).strip()):
             extra_flags = m.group(2).strip().split()
             print(f"Setting flags for {tool}: {extra_flags}")  # TODO: remove
-            flags = extra_flags
+            flags += extra_flags
     path_noext = path.with_suffix("")
     path_with_tool = Path(f"{path_noext}_{tool}.sgcl")
     for ext in [".out", ".err"]:
