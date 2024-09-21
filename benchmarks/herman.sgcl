@@ -1,0 +1,83 @@
+
+process1 := 0;
+process2 := 0;
+process3 := 0;
+
+if 0 ~ Bernoulli(0.5) {
+  process1 := 1;
+}
+if 0 ~ Bernoulli(0.5) {
+  process2 := 1;
+}
+if 0 ~ Bernoulli(0.5) {
+  process3 := 1;
+}
+
+sum := process1;
+sum += process2;
+sum += process3;
+
+count := 0;
+
+while sum = 1 {
+    oldprocess1 := process1;
+    oldprocess2 := process2;
+    oldprocess3 := process3;
+
+    if process1 = 0 or oldprocess3 = 1 {
+        if process1 = 1 or oldprocess3 = 0 {
+            if 0 ~ Bernoulli(0.5) {
+                process1 := 0;
+            } else {
+                process1 := 1;
+            }
+        } else {
+            process1 := oldprocess3;
+        }
+    } else {
+        process1 := oldprocess3;
+    }
+
+    if process2 = 0 or oldprocess1 = 1 {
+        if process2 = 1 or oldprocess1 = 0 {
+            if 0 ~ Bernoulli(0.5) {
+                process2 := 0;
+            } else {
+                process2 := 1;
+            }
+        } else {
+            process2 := oldprocess1;
+        }
+    } else {
+        process2 := oldprocess1;
+    }
+
+    if process3 = 0 or oldprocess2 = 1 {
+        if process3 = 1 or oldprocess2 = 0 {
+            if 0 ~ Bernoulli(0.5) {
+                process3 := 0;
+            } else {
+                process3 := 1;
+            }
+        } else {
+            process3 := oldprocess2;
+        }
+    } else {
+        process3 := oldprocess2;
+    }
+
+    oldprocess1 := 0;
+    oldprocess2 := 0;
+    oldprocess3 := 0;
+
+    sum := process1;
+    sum += process2;
+    sum += process3;
+    count += 1;
+}
+
+process1 := 0;
+process2 := 0;
+process3 := 0;
+
+return count;
