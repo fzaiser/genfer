@@ -26,7 +26,7 @@ tail_bound_zero_re = re.compile(r"Asymptotics: p\(n\) = 0")
 tail_bound_re = re.compile(r"Asymptotics: p\(n\) (?:(?:.*) \* ([e.0123456789+-]+)\^n)")
 true_ev_re = re.compile(r"true EV: (.*)")
 exact_ev_re = re.compile(r"1-th \(raw\) moment = ([e.0123456789+-]+)")
-ev_bound_re = re.compile(r"1-th \(raw\) moment ∈ \[([eNa.0123456789+-]+), ([eNa.0123456789+-]+)\]")
+ev_bound_re = re.compile(r"1-th \(raw\) moment ∈ \[([e.0123456789+-]+), ([e.0123456789+-]+)\]")
 
 if __name__ == "__main__":
     own_path = Path(sys.argv[0]).parent
@@ -40,27 +40,23 @@ if __name__ == "__main__":
     for benchmark, bench_result in results.items():
         if not bench_result:
             continue
+        ev_flags = bench_result["geobound-ev"]["flags"]
+        ev_unroll = ev_flags[ev_flags.index("-u") + 1]
         program = Path(f"{benchmark}.sgcl").read_text()
         ev_result = bench_result["geobound-ev"]
         tail_result = bench_result["geobound-tail"]
         m = exact_ev_re.search(ev_result["stdout"])
+        ev_bound = r"\xmark{}"
+        true_ev = "?"
         if m:
             ev_lo = ev_hi = float(m.group(1))
-            ev_bound = f"{ev_lo:.6f}"
+            ev_bound = f"{ev_lo:.4f}"
             true_ev = ev_bound
-        else:
-            ev_bound = r"\xmark{}"
-            true_ev = "?"
-        
         m = ev_bound_re.search(ev_result["stdout"])
         if m:
-            ev_lo = round_down(float(m.group(1)), 6)
-            ev_hi = round_up(float(m.group(2)), 6)
-            ev_bound = f"[{ev_lo:.6g}, {ev_hi:.6g}]"
-            true_ev = "?"
-        else:
-            ev_bound = r"\xmark{}"
-            true_ev = "?"
+            ev_lo = round_down(float(m.group(1)), 4)
+            ev_hi = round_up(float(m.group(2)), 4)
+            ev_bound = f"[{ev_lo:.4g}, {ev_hi:.4g}]"
         m = true_ev_re.search(program)
         if m:
             true_ev = m.group(1)
@@ -72,14 +68,13 @@ if __name__ == "__main__":
 
         true_tail = "?"
         m = tail_bound_re.search(tail_result["stdout"])
+        tail_bound = r"\xmark{}"
         if m:
             tail_bound = float(m.group(1))
             tail_bound = f"$O({tail_bound:.4g}^n)$"
         elif tail_bound_zero_re.search(tail_result["stdout"]):
             tail_bound = r"$0$"
             true_tail = r"$0$"
-        else:
-            tail_bound = r"\xmark{}"
         m = true_tail_re.search(program)
         if m:
             true_tail = m.group(1).strip()

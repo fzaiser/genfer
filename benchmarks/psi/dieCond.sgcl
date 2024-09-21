@@ -1,3 +1,5 @@
+# flags(geobound-tail): -d 2 --solver adam-barrier --optimizer adam-barrier
+
 # true EV: 1.5
 # true tail: 0.3333...^n
 

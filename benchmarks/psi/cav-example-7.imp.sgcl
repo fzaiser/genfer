@@ -1,3 +1,5 @@
+# flags(geobound-ev): -u 50 --optimizer ipopt
+
 count := 0;
 i := 1;
 while i < 5 {

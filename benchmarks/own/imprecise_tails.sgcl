@@ -1,5 +1,5 @@
 # flags(geobound-ev):  -u 15 --optimizer ipopt -d 3
-# flags(geobound-tail): -d 2
+# flags(geobound-tail): -d 2 --optimizer adam-barrier
 # true EV: 0
 # true tail: 0
 
