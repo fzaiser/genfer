@@ -1,4 +1,6 @@
 # Modified by setting the symbolic parameter p to 3/4
+# true EV: 0.5
+
 x := 0;
 y := 0;
 while (x = 0 and y = 0) or (x = 1 and y = 1) {

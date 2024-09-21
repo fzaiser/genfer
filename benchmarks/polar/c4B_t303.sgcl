@@ -1,4 +1,5 @@
 # flags(geobound): -d 2
+
 swapped := 0;
 x ~ Geometric(1/2);
 y ~ Geometric(1/2);

@@ -1,3 +1,4 @@
+# true EV: 1
 
 n ~ Geometric(1/2);
 c := 0;

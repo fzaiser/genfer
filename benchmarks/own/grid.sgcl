@@ -1,4 +1,4 @@
-# flags(geobound): -d 2
+# flags(geobound): -d 3 --optimizer ipopt --optimizer linear
 
 X := 0;
 Y := 0;

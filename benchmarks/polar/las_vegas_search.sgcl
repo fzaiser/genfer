@@ -1,3 +1,6 @@
+# true EV: 20
+# true tail: 0.95^n
+
 found := 0;
 attempts := 0;
 while found = 0 {

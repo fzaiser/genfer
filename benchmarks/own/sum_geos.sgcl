@@ -1,3 +1,5 @@
+# true EV: 8
+
 X ~ Geometric(1/2);
 Y ~ Geometric(1/8);
 # Maybe it is better to write this using do-while and to adjust the semantics accordingly?

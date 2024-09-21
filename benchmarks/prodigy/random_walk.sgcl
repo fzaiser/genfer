@@ -1,3 +1,5 @@
+# true EV: $\infty$
+# SKIP
 
 s ~ Geometric(1/2);
 c := 0;

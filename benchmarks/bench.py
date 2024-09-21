@@ -20,7 +20,7 @@ benchmark_dirs = [
     "own",
 ]
 
-timeout = 10  # TODO: increase
+timeout = 120
 num_runs = 1  # TODO: increase
 
 total_time_re = re.compile("Total time: ([0-9.]*)s")
@@ -50,8 +50,8 @@ class Tool:
 residual_path = "../target/debug/residual" # TODO: Change to release
 geo_bound_path = "../target/debug/geobound"  # TODO: Change to release
 tools = [
-    Tool("geobound-existence", geo_bound_path, ["-u", "0", "--keep-while", "--objective", "balance"]),
-    Tool("geobound-ev", geo_bound_path, ["-u", "50", "--keep-while", "--objective", "ev"]),
+    # Tool("geobound-existence", geo_bound_path, ["-u", "0", "--keep-while", "--objective", "balance"]),
+    Tool("geobound-ev", geo_bound_path, ["-u", "30", "--keep-while", "--objective", "ev"]),
     Tool("geobound-tail", geo_bound_path, ["-u", "0", "--keep-while", "--objective", "tail"]),
 ]
 
@@ -88,7 +88,7 @@ def run_tool(tool, tool_command, path, flags, timeout):
     if not isinstance(tool_command, list):
         tool_command = [tool_command]
     try:
-        command = tool_command + flags + [path]
+        command = tool_command + [path] + flags
         print(f"Running {command}...")
         start = time.perf_counter()
         env = os.environ.copy()
@@ -171,7 +171,12 @@ def bench_tool(tool, command, path: Path, timeout, flags=[]):
         if tool.startswith(m.group(1).strip()):
             extra_flags = m.group(2).strip().split()
             print(f"Setting flags for {tool}: {extra_flags}")  # TODO: remove
-            flags += extra_flags
+            if extra_flags[0] == "-u":
+                unroll_index = flags.index("-u")
+                del flags[unroll_index : unroll_index + 2]
+                flags = flags + extra_flags
+            else:
+                flags += extra_flags
     path_noext = path.with_suffix("")
     path_with_tool = Path(f"{path_noext}_{tool}.sgcl")
     for ext in [".out", ".err"]:

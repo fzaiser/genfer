@@ -1,3 +1,4 @@
+# flags(geobound): --optimizer ipopt
 
 process1 := 0;
 process2 := 0;

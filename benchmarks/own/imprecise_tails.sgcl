@@ -1,4 +1,7 @@
-# flags(geobound): -d 2
+# flags(geobound-ev):  -u 15 --optimizer ipopt -d 3
+# flags(geobound-tail): -d 2
+# true EV: 0
+# true tail: 0
 
 X := 0;
 Y := 0;

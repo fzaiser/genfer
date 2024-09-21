@@ -52,7 +52,7 @@ impl std::fmt::Display for Optimizer {
             Optimizer::Z3 => write!(f, "Z3"),
             Optimizer::GradientDescent => write!(f, "Gradient Descent"),
             Optimizer::Adam => write!(f, "ADAM"),
-            Optimizer::AdamBarrier => write!(f, "ADAM with Barrier Methgod"),
+            Optimizer::AdamBarrier => write!(f, "ADAM with Barrier Method"),
             Optimizer::Ipopt => write!(f, "IPOPT"),
             Optimizer::Linear => write!(f, "Linear Optimization"),
         }
@@ -201,8 +201,8 @@ fn compute_constraints_solution(
                 return (problem, bound, Ok(solution));
             }
         }
-        eprintln!("Solving simplified problem (unrolling limit set to 0) failed.");
-        eprintln!("Continuing with the original problem.");
+        println!("Solving simplified problem (unrolling limit set to 0) failed.");
+        println!("Continuing with the original problem.");
     }
     let (problem, bound) = generate_constraints(args, program, start);
     let init_solution = solve_constraints(args, &problem, timeout);
@@ -361,7 +361,7 @@ fn optimize_solution(
         {
             solution = optimized_solution;
         } else {
-            eprintln!("Optimization step failed. Continuing with the previous solution.");
+            println!("Optimization step failed. Continuing with the previous solution.");
         }
     }
     let optimizer_time = start_optimizer.elapsed();

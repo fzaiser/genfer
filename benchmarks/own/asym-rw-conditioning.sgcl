@@ -1,3 +1,5 @@
+# flags(geobound-ev): -u 60 -d 3 --solver adam-barrier
+
 start ~ UniformDisc(1, 4);
 pos := start;
 steps := 0;

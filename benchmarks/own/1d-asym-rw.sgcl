@@ -1,3 +1,7 @@
+# flags(geobound-ev): -u 60 -d 4
+# true EV: 2
+# true tail: 0.8660...^n
+
 x := 1;
 n := 0;
 while x != 0 {

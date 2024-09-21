@@ -1,3 +1,5 @@
+# true EV: 0.375
+
 x ~ Geometric(1/2);
 
 while x >= 2 {

@@ -1,4 +1,7 @@
 # This program is not positively almost surely terminating.
+# true EV: $\infty$
+# true tail: 1/n
+# SKIP
 
 stop := 0;
 steps := 0;

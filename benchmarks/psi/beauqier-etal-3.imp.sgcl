@@ -1,3 +1,6 @@
+# flags(geobound): --optimizer ipopt
+# SKIP
+
 process1d := 0;
 process1p := 0;
 process2d := 0;

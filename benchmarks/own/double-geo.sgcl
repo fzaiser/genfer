@@ -1,3 +1,7 @@
+# flags(geobound-ev): -d 2
+# true EV: 2
+# true tail: 0.7071...^n
+
 X ~ Geometric(0.5);
 Y := 0;
 # Maybe it is better to write this using do-while and to adjust the semantics accordingly?

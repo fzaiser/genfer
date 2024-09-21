@@ -1,3 +1,5 @@
+# SKIP
+
 i ~ Geometric(1/2);
 n ~ Geometric(1/2);
 d ~ Geometric(1/2);

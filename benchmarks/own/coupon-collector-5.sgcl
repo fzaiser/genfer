@@ -1,3 +1,6 @@
+# flags(geobound-ev): -u 50 --optimizer ipopt
+# true EV: 12
+
 # Coupon collectors with n = 5 coupons
 
 c0 := 0;
@@ -20,6 +23,7 @@ while c0 = 0 or c1 = 0 or c2 = 0 or c3 = 0 or c4 = 0 {
     } else {
         c4 := 1;
     }
+    count += 1;
 }
 
 return count;
