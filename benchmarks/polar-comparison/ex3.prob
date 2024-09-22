@@ -1,0 +1,10 @@
+b = 1
+temp = Bernoulli(1/2)
+while temp == 1:
+    if b == 1:
+        b = 0
+    else:
+        b = 1
+    end
+    temp = Bernoulli(1/2)
+end

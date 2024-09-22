@@ -1,0 +1,19 @@
+c0, c1, c2, c3, c4 = 0, 0, 0, 0, 0
+continue = 1
+runtime = 0
+while continue == 1:
+    card = Categorical(1/5, 1/5, 1/5, 1/5, 1/5)
+    if card == 0:
+        c0 = 1
+    elif card == 1:
+        c1 = 1
+    elif card == 2:
+        c2 = 1
+    elif card == 3:
+        c3 = 1
+    elif card == 4:
+        c4 = 1
+    end
+    continue = 1 - c0*c1*c2*c3*c4
+    runtime = runtime + continue
+end

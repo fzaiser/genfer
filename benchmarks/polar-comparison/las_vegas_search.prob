@@ -1,0 +1,11 @@
+element = 0
+found = 0
+attempts = 0
+while found == 0:
+    random = DiscreteUniform(0, 20)
+    if random == element:
+        found = 1
+    else:
+        attempts = attempts + 1
+    end
+end

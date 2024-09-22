@@ -20,7 +20,7 @@ sum += process3;
 
 count := 0;
 
-while sum = 1 {
+while sum = 1 { # TODO: should this be != 1?
     oldprocess1 := process1;
     oldprocess2 := process2;
     oldprocess3 := process3;

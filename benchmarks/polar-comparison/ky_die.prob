@@ -1,0 +1,55 @@
+s = 0
+die = 0
+
+while s < 7:
+    temp = Bernoulli(1/2)
+    if s == 0:
+        if temp == 0:
+            s = 1
+        else:
+            s = 2
+        end
+    elif s == 1:
+        if temp == 0:
+            s = 3
+        else:
+            s = 4
+        end
+    elif s == 2:
+        if temp == 0:
+            s = 5
+        else:
+            s = 6
+        end
+    elif s == 3:
+        if temp == 0:
+            s = 1
+        else:
+            s = 7
+            die = 1
+        end
+    elif s == 4:
+        if temp == 0:
+            s = 7
+            die = 2
+        else:
+            s = 7
+            die = 3
+        end
+    elif s == 5:
+        if temp == 0:
+            s = 7
+            die = 4
+        else:
+            s = 7
+            die = 5
+        end
+    elif s == 6:
+        if temp == 0:
+            s = 2
+        else:
+            s = 7
+            die = 6
+        end
+    end
+end

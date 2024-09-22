@@ -1,0 +1,6 @@
+x = 0
+temp = Bernoulli(1/2)
+while temp == 1:
+    x = x + 1
+    temp = Bernoulli(1/2)
+end

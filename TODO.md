@@ -25,6 +25,8 @@ Benchmarks
 - [ ] more nested loops
 - [ ] more conditioning
 - [ ] smaller versions of stabilization algorithms
+- [ ] investigate and fix the self-stabilization benchmarks
+- [ ] investigate whether more benchmarks can be expressed in Polar
 
 Cleanups
 ========

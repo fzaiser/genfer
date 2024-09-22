@@ -1,0 +1,9 @@
+x = 0
+while x == 0:
+    a = Bernoulli(1/2)
+    if a == 1:
+        x = 0
+    else:
+        x = 2 {0.3} 1
+    end
+end
