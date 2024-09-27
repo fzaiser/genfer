@@ -1,3 +1,5 @@
+# true EV: 1.254...
+# true tail: 0.5^n
 
 i := 0;
 b1 ~ Bernoulli(1/2);

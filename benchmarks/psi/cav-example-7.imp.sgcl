@@ -1,5 +1,7 @@
 # flags(geobound-ev): -u 50 --optimizer ipopt
 
+# true EV: 10.41...
+
 count := 0;
 i := 1;
 while i < 5 {

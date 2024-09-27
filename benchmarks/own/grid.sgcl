@@ -1,5 +1,7 @@
 # flags(geobound): -d 3 --optimizer ipopt --optimizer linear
 
+# true EV: 2.75
+
 X := 0;
 Y := 0;
 while X < 2 || Y < 2 {

@@ -1,5 +1,7 @@
 # flags(geobound): --optimizer ipopt --optimizer linear
 
+# true EV: 0.2642...
+
 card0 := 0;
 card1 := 0;
 card2 := 0;

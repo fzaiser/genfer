@@ -1,4 +1,5 @@
 # true EV: 8
+# true tail: 0.875^n
 
 X ~ Geometric(1/2);
 Y ~ Geometric(1/8);

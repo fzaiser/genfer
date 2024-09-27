@@ -1,5 +1,7 @@
 # flags(geobound): -d 2
 
+# true EV: 0.1787...
+
 swapped := 0;
 x ~ Geometric(1/2);
 y ~ Geometric(1/2);

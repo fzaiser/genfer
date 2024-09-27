@@ -1,4 +1,5 @@
 # true EV: 0.5
+# true tail: 0.3333...^n
 
 c ~ Geometric(1/2);
 m := 0;

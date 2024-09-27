@@ -1,5 +1,7 @@
 # flags(geobound): --optimizer ipopt
 
+# true EV: 0.6666...
+
 process1 := 0;
 process2 := 0;
 process3 := 0;

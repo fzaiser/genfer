@@ -1,5 +1,7 @@
 # This example has a hypergeometric function as its invariant.
 
+# true EV: 0.75
+
 n ~ Geometric(1/2);
 m ~ Geometric(1/2);
 

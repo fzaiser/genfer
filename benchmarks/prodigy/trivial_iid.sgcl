@@ -1,4 +1,8 @@
 # true EV: 3.5
+# true tail: 0.8318...^n
+# = (1 / 1.2020992758908227132)^n
+# where m≈1.2020992758908227132 is a root of -12 + m + m^2 + m^3 + m^5 + m^4 + m^6
+# There might be other polynomial factors in the asymptotics.
 
 n ~ Geometric(1/2);
 m := 0;
