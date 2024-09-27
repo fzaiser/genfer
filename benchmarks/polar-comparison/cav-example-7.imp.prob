@@ -3,24 +3,12 @@ i = 1
 while i < 5:
 	count = count + 1
 	if i == 1:
-		temp = Bernoulli(0.8)
-		if 1 == temp:
-			i = i + 1
-		end
+		i = 2 {0.8} 1
 	elif i == 2:
-		temp = Bernoulli(0.6)
-		if 1 == temp:
-			i = i + 1
-		end
+		i = 3 {0.6} 2
 	elif i == 3:
-		temp = Bernoulli(0.4)
-		if 1 == temp:
-			i = i + 1
-		end
+		i = 4 {0.4} 3
 	elif i == 4:
-		temp = Bernoulli(0.2)
-		if 1 == temp:
-			i = i + 1
-		end
+		i = 5 {0.2} 4
 	end
 end

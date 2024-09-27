@@ -1,0 +1,7 @@
+x = 1
+c = Geometric(1/2)
+
+while x == 1:
+    x = Bernoulli(1/2)
+    c = c + x
+end

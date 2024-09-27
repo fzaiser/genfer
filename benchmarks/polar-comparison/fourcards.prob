@@ -15,11 +15,17 @@ while card0 == 0 || card1 == 0 || card2 == 0 || card3 == 0:
     elif card == 3:
         card3 = 1
     end
-    num_flips_mod_4 = num_flips_mod_4 + 1
-    if num_flips_mod_4 == 4:
+    if num_flips_mod_4 == 0:
+        num_flips_mod_4 = 1
+        answer = 0
+    elif num_flips_mod_4 == 1:
+        num_flips_mod_4 = 2
+        answer = 0
+    elif num_flips_mod_4 == 2:
+        num_flips_mod_4 = 3
+        answer = 0
+    else:
         num_flips_mod_4 = 0
         answer = 1
-    else:
-        answer = 0
     end
 end
