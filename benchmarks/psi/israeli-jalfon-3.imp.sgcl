@@ -2,61 +2,45 @@
 
 # true EV: 0.6666...
 
-process1 := 0;
-process2 := 0;
-process3 := 0;
+# See also: https://www.prismmodelchecker.org/casestudies/self-stabilisation.php
 
-if 1 ~ Bernoulli(1/2) {
-	process1 := 1;
-}
-if 1 ~ Bernoulli(1/2) {
-	process2 := 1;
-}
-if 1 ~ Bernoulli(1/2) {
-	process3 := 1;
-}
+process1 ~ Bernoulli(1/2);
+process2 ~ Bernoulli(1/2);
+process3 ~ Bernoulli(1/2);
 
 sum := process1;
 sum += process2;
 sum += process3;
-if sum > 1 {
-	notStable := 1;
-} else {
-	notStable := 0;
-}
 
 count := 0;
-while notStable = 1 {
+while sum > 1 {
 	oldprocess1 := process1;
 	oldprocess2 := process2;
 	oldprocess3 := process3;
 
 	if oldprocess1 = 1 {
+		process1 := 0;
 		if 1 ~ Bernoulli(1/2) {
-			process1 := 0;
 			process3 := 1;
 		} else {
-			process1 := 0;
 			process2 := 1;
 		}
 	}
 
 	if oldprocess2 = 1 {
+		process2 := 0;
 		if 1 ~ Bernoulli(1/2) {
-			process2 := 0;
 			process1 := 1;
 		} else {
-			process2 := 0;
 			process3 := 1;
 		}
 	}
 
 	if oldprocess3 = 1 {
+		process3 := 0;
 		if 1 ~ Bernoulli(1/2) {
-			process3 := 0;
 			process2 := 1;
 		} else {
-			process3 := 0;
 			process1 := 1;
 		}
 	}
@@ -64,11 +48,6 @@ while notStable = 1 {
 	sum := process1;
 	sum += process2;
 	sum += process3;
-	if sum > 1 {
-		notStable := 1;
-	} else {
-		notStable := 0;
-	}
 
 	count += 1;
 }

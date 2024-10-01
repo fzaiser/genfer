@@ -2,6 +2,8 @@
 
 # true EV: 1.333...
 
+# See also: https://www.prismmodelchecker.org/casestudies/self-stabilisation.php
+
 process1 ~ Bernoulli(0.5);
 process2 ~ Bernoulli(0.5);
 process3 ~ Bernoulli(0.5);

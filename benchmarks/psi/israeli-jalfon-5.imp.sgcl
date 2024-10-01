@@ -1,27 +1,13 @@
 # flags(geobound): --optimizer ipopt
 # SKIP
 
-process1 := 0;
-process2 := 0;
-process3 := 0;
-process4 := 0;
-process5 := 0;
+# See also: https://www.prismmodelchecker.org/casestudies/self-stabilisation.php
 
-if 1 ~ Bernoulli(1/2) {
-	process1 := 1;
-}
-if 1 ~ Bernoulli(1/2) {
-	process2 := 1;
-}
-if 1 ~ Bernoulli(1/2) {
-	process3 := 1;
-}
-if 1 ~ Bernoulli(1/2) {
-	process4 := 1;
-}
-if 1 ~ Bernoulli(1/2) {
-	process5 := 1;
-}
+process1 ~ Bernoulli(1/2);
+process2 ~ Bernoulli(1/2);
+process3 ~ Bernoulli(1/2);
+process4 ~ Bernoulli(1/2);
+process5 ~ Bernoulli(1/2);
 
 sum := process1;
 sum += process2;
@@ -29,14 +15,8 @@ sum += process3;
 sum += process4;
 sum += process5;
 
-if sum > 1 {
-	notStable := 1;
-} else {
-	notStable := 0;
-}
-
 count := 0;
-while notStable = 1 {
+while sum > 1 {
 	oldprocess1 := process1;
 	oldprocess2 := process2;
 	oldprocess3 := process3;
@@ -44,51 +24,46 @@ while notStable = 1 {
 	oldprocess5 := process5;
 
 	if oldprocess1 = 1 {
+		process1 := 0;
 		if 1 ~ Bernoulli(1/2) {
-			process1 := 0;
 			process5 := 1;
 		} else {
-			process1 := 0;
 			process2 := 1;
 		}
 	}
 
 	if oldprocess2 = 1 {
+		process2 := 0;
 		if 1 ~ Bernoulli(1/2) {
-			process2 := 0;
 			process1 := 1;
 		} else {
-			process2 := 0;
 			process3 := 1;
 		}
 	}
 
 	if oldprocess3 = 1 {
+		process3 := 0;
 		if 1 ~ Bernoulli(1/2) {
-			process3 := 0;
 			process2 := 1;
 		} else {
-			process3 := 0;
 			process4 := 1;
 		}
 	}
 
 	if oldprocess4 = 1 {
+		process4 := 0;
 		if 1 ~ Bernoulli(1/2) {
-			process4 := 0;
 			process3 := 1;
 		} else {
-			process4 := 0;
 			process5 := 1;
 		}
 	}
 
 	if oldprocess5 = 1 {
+		process5 := 0;
 		if 1 ~ Bernoulli(1/2) {
-			process5 := 0;
 			process4 := 1;
 		} else {
-			process5 := 0;
 			process1 := 1;
 		}
 	}
@@ -98,12 +73,6 @@ while notStable = 1 {
 	sum += process3;
 	sum += process4;
 	sum += process5;
-
-	if sum > 1 {
-		notStable := 1;
-	} else {
-		notStable := 0;
-	}
 
 	count += 1;
 }

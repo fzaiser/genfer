@@ -1,6 +1,8 @@
 # flags(geobound): --optimizer ipopt
 # SKIP
 
+# See also: https://www.prismmodelchecker.org/casestudies/self-stabilisation.php
+
 process1d := 0;
 process1p := 0;
 process2d := 0;
