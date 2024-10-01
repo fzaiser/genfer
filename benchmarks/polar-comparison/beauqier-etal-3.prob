@@ -1,0 +1,60 @@
+process1d = Bernoulli(1/2)
+process1p = Bernoulli(1/2)
+process2d = Bernoulli(1/2)
+process2p = Bernoulli(1/2)
+process3d = Bernoulli(1/2)
+process3p = Bernoulli(1/2)
+
+sum = process1p + process2p + process3p
+
+count = 0
+
+while sum > 1:
+    oldprocess1d = process1d
+    oldprocess1p = process1p
+    oldprocess2d = process2d
+    oldprocess2p = process2p
+    oldprocess3d = process3d
+    oldprocess3p = process3p
+
+    if oldprocess1d == oldprocess3d:
+        # Process 1 has the deterministic token.
+        # Pass the deterministic token:
+        if oldprocess1d == 1:
+            process1d = 0
+        else:
+            process1d = 1
+        end
+        if oldprocess1p == oldprocess3p:
+            # Process 1 has the probabilistic token.
+            # Pass the probabilistic token with probability 1/2:
+            process1p = Bernoulli(1/2)
+        end
+    end
+
+    if oldprocess2d == oldprocess1d:
+        if oldprocess2d == 1:
+            process2d = 0
+        else:
+            process2d = 1
+        end
+        if oldprocess2p == oldprocess1p:
+            process2p = Bernoulli(1/2)
+        end
+    end
+
+    if oldprocess3d == oldprocess2d:
+        if oldprocess3d == 1:
+            process3d = 0
+        else:
+            process3d = 1
+        end
+        if oldprocess3p == oldprocess2p:
+            process3p = Bernoulli(1/2)
+        end
+    end
+
+    sum = process1p + process2p + process3p
+
+    count = count + 1
+end

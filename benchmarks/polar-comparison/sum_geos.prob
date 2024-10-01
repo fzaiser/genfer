@@ -1,0 +1,6 @@
+x = Geometric(1/2)
+y = Geometric(1/8)
+x = x + y
+while 0 == 1: # Isn't this too unfair towards our tool? Polar has to do almost no work here...
+    x = 0
+end

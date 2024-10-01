@@ -6,6 +6,8 @@ sum = process1 + process2 + process3
 
 count = 0
 
+continue = 1
+
 while !(sum == 1):
     oldprocess1 = process1
     oldprocess2 = process2
@@ -30,5 +32,8 @@ while !(sum == 1):
     end
 
     sum = process1 + process2 + process3
+    if sum == 1:
+        continue = 0
+    end
     count = count + 1
 end
