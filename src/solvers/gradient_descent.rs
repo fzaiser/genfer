@@ -2,7 +2,6 @@ use std::time::Duration;
 
 use good_lp::{Expression, ProblemVariables, Solution, SolverModel, VariableDefinition};
 use ndarray::Array1;
-use num_traits::One;
 
 use crate::{
     numbers::Rational,
@@ -237,11 +236,11 @@ impl Optimizer for GradientDescent {
     fn optimize(
         &mut self,
         problem: &ConstraintProblem,
-        objective: &SymExpr,
         init: Vec<Rational>,
         _timeout: Duration,
     ) -> Vec<Rational> {
         let slack_epsilon = 1e-6;
+        let objective = &problem.objective;
         let lr = self.step_size;
         let mut point: Array1<f64> = Array1::from_vec(init).map(Rational::round_to_f64);
         let mut best_point: Array1<f64> = point.clone();
@@ -328,11 +327,11 @@ impl Optimizer for Adam {
     fn optimize(
         &mut self,
         problem: &ConstraintProblem,
-        objective: &SymExpr,
         init: Vec<Rational>,
         _timeout: Duration,
     ) -> Vec<Rational> {
         let slack_epsilon = 1e-6;
+        let objective = &problem.objective;
         let mut best_point = Array1::from_vec(init);
         let mut point = best_point.map(Rational::round_to_f64);
         let mut best_objective = objective.eval_float(point.as_slice().unwrap());
@@ -434,7 +433,7 @@ impl Solver for AdamBarrier {
         timeout: Duration,
     ) -> Result<Vec<Rational>, SolverError> {
         let init = vec![Rational::from(1.0 - 1e-3); problem.var_count];
-        let res = self.optimize(problem, &SymExpr::one(), init, timeout);
+        let res = self.optimize(problem, init, timeout);
         if problem.holds_exact(&res) {
             Ok(res)
         } else {
@@ -447,10 +446,10 @@ impl Optimizer for AdamBarrier {
     fn optimize(
         &mut self,
         problem: &ConstraintProblem,
-        objective: &SymExpr,
         init: Vec<Rational>,
         _timeout: Duration,
     ) -> Vec<Rational> {
+        let objective = &problem.objective;
         let mut best_point = Array1::from_vec(init);
         let mut point: Array1<f64> = best_point.map(Rational::round_to_f64);
         let mut best_objective = objective.eval_float(point.as_slice().unwrap());

@@ -17,7 +17,6 @@ pub trait Optimizer {
     fn optimize(
         &mut self,
         problem: &ConstraintProblem,
-        objective: &SymExpr,
         init: Vec<Rational>,
         timeout: Duration,
     ) -> Vec<Rational>;
@@ -29,7 +28,6 @@ impl Optimizer for Z3Optimizer {
     fn optimize(
         &mut self,
         problem: &ConstraintProblem,
-        objective: &SymExpr,
         init: Vec<Rational>,
         timeout: Duration,
     ) -> Vec<Rational> {
@@ -44,7 +42,7 @@ impl Optimizer for Z3Optimizer {
         solver.push();
         let mut best = init;
         let mut obj_lo = Rational::zero();
-        let mut obj_hi = objective.eval_exact(&best);
+        let mut obj_hi = problem.objective.eval_exact(&best);
         while obj_hi.clone() - obj_lo.clone() > Rational::from(0.1) * obj_hi.clone() {
             println!("Objective bound: [{obj_lo}, {obj_hi}]");
             solver.pop(1);
@@ -52,7 +50,8 @@ impl Optimizer for Z3Optimizer {
             let mid = (obj_lo.clone() + obj_hi.clone()) / Rational::from(2);
             println!("Trying objective bound: {mid}");
             solver.assert(
-                &objective
+                &problem
+                    .objective
                     .to_z3(&ctx, &rational_to_z3)
                     .le(&SymExpr::from(mid.clone()).to_z3(&ctx, &rational_to_z3)),
             );
@@ -77,7 +76,7 @@ impl Optimizer for Z3Optimizer {
             if let Some(model) = solver.get_model() {
                 let obj_val = z3_real_to_rational(
                     &model
-                        .eval(&objective.to_z3(&ctx, &rational_to_z3), false)
+                        .eval(&problem.objective.to_z3(&ctx, &rational_to_z3), false)
                         .unwrap(),
                 )
                 .unwrap();
@@ -110,13 +109,12 @@ impl Optimizer for LinearProgrammingOptimizer {
     fn optimize(
         &mut self,
         problem: &ConstraintProblem,
-        objective: &SymExpr,
         init: Vec<Rational>,
         _timeout: Duration,
     ) -> Vec<Rational> {
-        if let Some(solution) = optimize_linear_parts(problem, objective, init.clone()) {
-            let init_obj = objective.eval_exact(&init);
-            let objective_value = objective.eval_exact(&solution);
+        if let Some(solution) = optimize_linear_parts(problem, init.clone()) {
+            let init_obj = problem.objective.eval_exact(&init);
+            let objective_value = problem.objective.eval_exact(&solution);
             if init_obj < objective_value {
                 println!(
             "LP solver found a solution with a worse objective value than the initial solution."
@@ -141,14 +139,13 @@ impl Optimizer for LinearProgrammingOptimizer {
 
 fn construct_model(
     problem: &ConstraintProblem,
-    objective: &SymExpr,
     init: &[Rational],
 ) -> (Vec<Variable>, CoinCbcProblem) {
     let mut replacements = (0..problem.var_count).map(SymExpr::var).collect::<Vec<_>>();
     for v in problem.decay_vars.iter().chain(problem.factor_vars.iter()) {
         replacements[*v] = SymExpr::from(init[*v].clone());
     }
-    let objective = objective.substitute(&replacements);
+    let objective = problem.objective.substitute(&replacements);
     let constraints = problem
         .constraints
         .iter()
@@ -198,10 +195,9 @@ fn construct_model(
 
 pub fn optimize_linear_parts(
     problem: &ConstraintProblem,
-    objective: &SymExpr,
     init: Vec<Rational>,
 ) -> Option<Vec<Rational>> {
-    let (var_list, mut lp) = construct_model(problem, objective, &init);
+    let (var_list, mut lp) = construct_model(problem, &init);
     // For a feasible solution no primal infeasibility, i.e., constraint violation, may exceed this value:
     lp.set_parameter("primalT", &TOL.to_string());
     // For an optimal solution no dual infeasibility may exceed this value:

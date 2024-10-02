@@ -170,18 +170,16 @@ fn compute_constraints_solution(
         println!("Solving simplified problem with unroll limit set to 0 first...");
         let modified_args = CliArgs {
             unroll: 1,
+            objective: None,
             ..args.clone()
         };
-        let (simple_problem, simple_bound) = generate_constraints(&modified_args, program, start);
+        let (simple_problem, _) = generate_constraints(&modified_args, program, start);
         let simple_solution = solve_constraints(&modified_args, &simple_problem, timeout);
         if let Ok(simple_solution) = simple_solution {
-            let simple_objective =
-                objective_function(&simple_bound, program.result, args.objective);
             println!("Optimizing solution to the simplified problem...");
             let opt_simple_solution = optimize_solution(
                 &modified_args,
                 &simple_problem,
-                &simple_objective,
                 simple_solution.clone(),
                 timeout,
             );
@@ -195,9 +193,8 @@ fn compute_constraints_solution(
             for (simple_var, var) in simple_problem.decay_vars.iter().zip(&problem.decay_vars) {
                 solution[*var] = opt_simple_solution[*simple_var].clone();
             }
-            let objective = objective_function(&bound, program.result, args.objective);
             // Solve the linear variables:
-            if let Some(solution) = optimize_linear_parts(&problem, &objective, solution) {
+            if let Some(solution) = optimize_linear_parts(&problem, solution) {
                 return (problem, bound, Ok(solution));
             }
         }
@@ -260,6 +257,7 @@ fn generate_constraints(
         "Constraint generation time: {:.5}s",
         time_constraint_gen.as_secs_f64()
     );
+    let objective = objective_function(&bound, program.result, args.objective);
     let problem = ConstraintProblem {
         var_count: ctx.sym_var_count(),
         decay_vars: ctx.geom_vars().to_owned(),
@@ -267,6 +265,7 @@ fn generate_constraints(
         block_vars: ctx.block_vars().to_owned(),
         var_bounds: ctx.sym_var_bounds().to_owned(),
         constraints: ctx.constraints().to_owned(),
+        objective,
     };
     (problem, bound)
 }
@@ -303,8 +302,7 @@ fn continue_with_solution(
     solution: Vec<Rational>,
 ) -> ExitCode {
     let timeout = Duration::from_millis(args.timeout);
-    let objective = objective_function(&bound, program.result, args.objective);
-    let optimized_solution = optimize_solution(args, problem, &objective, solution, timeout);
+    let optimized_solution = optimize_solution(args, problem, solution, timeout);
     bound.upper = bound.upper.resolve(&optimized_solution);
     // TODO: bound the probability masses by 1 (or even by the residual mass bound)
     if args.verbose {
@@ -323,11 +321,10 @@ fn continue_with_solution(
 fn optimize_solution(
     args: &CliArgs,
     problem: &ConstraintProblem,
-    objective: &SymExpr,
     mut solution: Vec<Rational>,
     timeout: Duration,
 ) -> Vec<Rational> {
-    if args.objective.is_none() {
+    if problem.objective.is_zero() {
         println!(
             "SKIPPING optimization because no objective is set. Resulting bounds will be BAD."
         );
@@ -339,25 +336,24 @@ fn optimize_solution(
         println!("Optimization step {}: {optimizer}", i + 1);
         let cur_sol = solution.clone();
         let optimized_solution = match optimizer {
-            Optimizer::Z3 => Z3Optimizer.optimize(problem, objective, cur_sol, timeout),
+            Optimizer::Z3 => Z3Optimizer.optimize(problem, cur_sol, timeout),
             Optimizer::GradientDescent => GradientDescent::default()
                 .with_verbose(args.verbose)
-                .optimize(problem, objective, cur_sol, timeout),
+                .optimize(problem, cur_sol, timeout),
             Optimizer::Adam => Adam::default()
                 .with_verbose(args.verbose)
-                .optimize(problem, objective, cur_sol, timeout),
+                .optimize(problem, cur_sol, timeout),
             Optimizer::AdamBarrier => AdamBarrier::default()
                 .with_verbose(args.verbose)
-                .optimize(problem, objective, cur_sol, timeout),
+                .optimize(problem, cur_sol, timeout),
             Optimizer::Ipopt => Ipopt::default()
                 .with_verbose(args.verbose)
-                .optimize(problem, objective, cur_sol, timeout),
-            Optimizer::Linear => {
-                LinearProgrammingOptimizer.optimize(problem, objective, cur_sol, timeout)
-            }
+                .optimize(problem, cur_sol, timeout),
+            Optimizer::Linear => LinearProgrammingOptimizer.optimize(problem, cur_sol, timeout),
         };
         if problem.holds_exact(&optimized_solution)
-            && objective.eval_exact(&optimized_solution) < objective.eval_exact(&solution)
+            && problem.objective.eval_exact(&optimized_solution)
+                < problem.objective.eval_exact(&solution)
         {
             solution = optimized_solution;
         } else {

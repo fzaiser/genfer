@@ -122,16 +122,15 @@ impl Optimizer for Ipopt {
     fn optimize(
         &mut self,
         problem: &ConstraintProblem,
-        objective: &SymExpr,
         init: Vec<Rational>,
         _timeout: Duration,
     ) -> Vec<Rational> {
-        let init_obj = objective.eval_exact(&init);
+        let init_obj = problem.objective.eval_exact(&init);
         let (vars, mut model) = self.construct_model(problem, Some(&init));
-        model.set_obj(ipopt_expr(objective, &vars));
+        model.set_obj(ipopt_expr(&problem.objective, &vars));
         match Self::solve(&vars, &mut model) {
             Ok((status, solution)) => {
-                let obj_value = objective.eval_exact(&solution);
+                let obj_value = problem.objective.eval_exact(&solution);
                 let holds_exact = problem.holds_exact(&solution);
                 match status {
                     SolutionStatus::Solved => {

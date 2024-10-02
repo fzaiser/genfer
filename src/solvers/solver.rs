@@ -20,6 +20,8 @@ pub struct ConstraintProblem {
     pub block_vars: Vec<usize>,
     pub var_bounds: Vec<(Rational, Rational)>,
     pub constraints: Vec<SymConstraint>,
+    /// Optimization objective (zero means no optimization)
+    pub objective: SymExpr,
 }
 
 impl ConstraintProblem {
