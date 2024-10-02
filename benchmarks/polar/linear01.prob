@@ -1,7 +1,0 @@
-# flags: --goals E(x)
-
-x = Geometric(1/2)
-
-while 2 <= x:
-    x = x - 1 {1/3} x - 2
-end

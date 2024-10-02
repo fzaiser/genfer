@@ -1,7 +1,7 @@
 # flags(geobound-ev): -u 200 --optimizer ipopt
 
 # true EV: 20
-# true tail: 0.95^n
+# true tail: 9.523...^n
 
 found := 0;
 attempts := 0;

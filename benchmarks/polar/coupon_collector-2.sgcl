@@ -1,3 +1,4 @@
+# flags(geobound-ev): --optimizer ipopt
 # flags(geobound-tail): -d 3
 
 # true EV: 2
