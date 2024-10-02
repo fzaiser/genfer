@@ -1,0 +1,13 @@
+# flags(geobound): --solver z3 -d 2
+
+x ~ Geometric(1/2);
+c := 0;
+
+while x > 0 {
+    while flip(1/4) {
+        x += 1;
+    }
+    x -= 1;
+    c += 1;
+}
+return c;
