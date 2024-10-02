@@ -5,7 +5,7 @@ x := 1;
 c ~ Geometric(1/2);
 
 while x = 1 {
-    if 0 ~ Bernoulli(1/2) {
+    if flip(1/2) {
         x := 0;
     } else {
         c += 1;

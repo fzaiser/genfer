@@ -7,7 +7,7 @@ c := 0;
 while x > 0 {
     y := 1;
     while y = 1 {
-        if 1 ~ Bernoulli(1/2) {
+        if flip(1/2) {
             y := 0;
         } else {
             x += 1;

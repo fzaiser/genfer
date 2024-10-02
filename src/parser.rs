@@ -231,6 +231,15 @@ fn data_from_dist(input: &str) -> IResult<&str, Event> {
     Ok((input, Event::DataFromDist(data, dist)))
 }
 
+fn flip(input: &str) -> IResult<&str, Event> {
+    let (input, _) = delimited(ws, keyword("flip"), ws)(input)?;
+    let (input, p) = delimited(cut(char('(')), pos_ratio, char(')'))(input)?;
+    Ok((
+        input,
+        Event::DataFromDist(Natural(1), Distribution::Bernoulli(p)),
+    ))
+}
+
 fn atomic_event<'a>(vars: &[&'a str], input: &'a str) -> IResult<&'a str, Event> {
     context(
         "simple event",
@@ -251,6 +260,7 @@ fn atomic_event<'a>(vars: &[&'a str], input: &'a str) -> IResult<&'a str, Event>
                     preceded(ws, char(')')),
                 )(input)
             },
+            flip,
             |input| comparison(vars, input),
             data_from_dist,
         )),

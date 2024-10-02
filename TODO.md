@@ -14,7 +14,7 @@ Features
 - [ ] Recognize cyclic `<=` constraints (nested loops)
 - [ ] Find a way to deal with rounding errors
 - [ ] scale constraints by setting the sum of coefficients to 1 (after substituting 1 for all nonlinear variables)
-- [ ] Add faster LP solver (HIGHS?)
+- [ ] Add faster LP solver (HIGHS? russell_sparse?)
 
 Bugs
 ====

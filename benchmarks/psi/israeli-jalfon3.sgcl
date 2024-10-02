@@ -20,7 +20,7 @@ while sum > 1 {
 
 	if oldprocess1 = 1 {
 		process1 := 0;
-		if 1 ~ Bernoulli(1/2) {
+		if flip(1/2) {
 			process3 := 1;
 		} else {
 			process2 := 1;
@@ -29,7 +29,7 @@ while sum > 1 {
 
 	if oldprocess2 = 1 {
 		process2 := 0;
-		if 1 ~ Bernoulli(1/2) {
+		if flip(1/2) {
 			process1 := 1;
 		} else {
 			process3 := 1;
@@ -38,7 +38,7 @@ while sum > 1 {
 
 	if oldprocess3 = 1 {
 		process3 := 0;
-		if 1 ~ Bernoulli(1/2) {
+		if flip(1/2) {
 			process2 := 1;
 		} else {
 			process1 := 1;

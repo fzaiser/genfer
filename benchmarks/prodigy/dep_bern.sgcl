@@ -6,7 +6,7 @@ m := 0;
 n := 0;
 
 while c > 0 {
-    if 0 ~ Bernoulli(1/2) {
+    if flip(1/2) {
         m += 1;
     } else {
         n += 1;

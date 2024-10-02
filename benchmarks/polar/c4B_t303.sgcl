@@ -6,7 +6,7 @@ swapped := 0;
 x ~ Geometric(1/2);
 y ~ Geometric(1/2);
 while (x > 0 and swapped = 0) or (y > 0 and swapped = 1) {
-    if 1 ~ Bernoulli(1/3) {
+    if flip(1/3) {
         if swapped = 0 {
             x -= 1;
             swapped := 1;
@@ -14,7 +14,7 @@ while (x > 0 and swapped = 0) or (y > 0 and swapped = 1) {
             y -= 1;
             swapped := 0;
         }
-    } else if 1 ~ Bernoulli(1/2) {
+    } else if flip(1/2) {
         if swapped = 0 {
             x -= 2;
             swapped := 1;

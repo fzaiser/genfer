@@ -6,7 +6,7 @@ start ~ UniformDisc(1, 4);
 pos := start;
 steps := 0;
 while pos > 0 {
-    if 1 ~ Bernoulli(1/4) {
+    if flip(1/4) {
         pos += 1;
     } else {
         pos -= 1;

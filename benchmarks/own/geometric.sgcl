@@ -2,7 +2,7 @@
 # true tail: 0.5^n
 
 X := 0;
-while 1 ~ Bernoulli(1/2) {
+while flip(1/2) {
     X += 1;
 }
 return X

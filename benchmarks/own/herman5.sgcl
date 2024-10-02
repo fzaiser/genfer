@@ -3,11 +3,11 @@
 
 # See also: https://www.prismmodelchecker.org/casestudies/self-stabilisation.php
 
-process1 ~ Bernoulli(0.5);
-process2 ~ Bernoulli(0.5);
-process3 ~ Bernoulli(0.5);
-process4 ~ Bernoulli(0.5);
-process5 ~ Bernoulli(0.5);
+process1 ~ Bernoulli(1/2);
+process2 ~ Bernoulli(1/2);
+process3 ~ Bernoulli(1/2);
+process4 ~ Bernoulli(1/2);
+process5 ~ Bernoulli(1/2);
 
 sum := process1;
 sum += process2;
@@ -25,31 +25,31 @@ while sum != 1 {
     oldprocess5 := process5;
 
     if (process1 = 0 and oldprocess5 = 0) or (process1 = 1 and oldprocess5 = 1) {
-        process1 ~ Bernoulli(0.5);
+        process1 ~ Bernoulli(1/2);
     } else {
         process1 := oldprocess5;
     }
 
     if (process2 = 0 and oldprocess1 = 0) or (process2 = 1 and oldprocess1 = 1) {
-        process2 ~ Bernoulli(0.5);
+        process2 ~ Bernoulli(1/2);
     } else {
         process2 := oldprocess1;
     }
 
     if (process3 = 0 and oldprocess2 = 0) or (process3 = 1 and oldprocess2 = 1) {
-        process3 ~ Bernoulli(0.5);
+        process3 ~ Bernoulli(1/2);
     } else {
         process3 := oldprocess2;
     }
 
     if (process4 = 0 and oldprocess3 = 0) or (process4 = 1 and oldprocess3 = 1) {
-        process4 ~ Bernoulli(0.5);
+        process4 ~ Bernoulli(1/2);
     } else {
         process4 := oldprocess3;
     }
 
     if (process5 = 0 and oldprocess4 = 0) or (process5 = 1 and oldprocess4 = 1) {
-        process5 ~ Bernoulli(0.5);
+        process5 ~ Bernoulli(1/2);
     } else {
         process5 := oldprocess4;
     }

@@ -6,7 +6,7 @@ s ~ Geometric(1/2);
 f := 0;
 
 while s > 0 and f < 5 {
-    if 1 ~ Bernoulli(1/100) {
+    if flip(1/100) {
         observe s < 10;
         f += 1;
     } else {

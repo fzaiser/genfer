@@ -5,7 +5,7 @@
 X := 0;
 Y := 0;
 while X < 2 || Y < 2 {
-    if 0 ~ Bernoulli(1/2) {
+    if flip(1/2) {
         X += 1;
     } else {
         Y += 1;

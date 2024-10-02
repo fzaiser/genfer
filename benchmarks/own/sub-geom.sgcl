@@ -2,7 +2,7 @@
 
 X ~ Geometric(1/2);
 
-while 0 ~ Bernoulli(1/2) {
+while flip(1/2) {
     X -= 1;
 }
 

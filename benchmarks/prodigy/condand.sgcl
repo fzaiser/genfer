@@ -6,7 +6,7 @@ n ~ Geometric(1/2);
 m ~ Geometric(1/2);
 
 while 0 < n and 0 < m {
-    if 0 ~ Bernoulli(1/2) {
+    if flip(1/2) {
         n -= 1;
     } else {
         m -= 1;

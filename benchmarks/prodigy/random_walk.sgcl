@@ -4,7 +4,7 @@ s ~ Geometric(1/2);
 c := 0;
 
 while s > 0 {
-    if 1 ~ Bernoulli(1/2) {
+    if flip(1/2) {
         s += 1;
     } else {
         s -= 1;
