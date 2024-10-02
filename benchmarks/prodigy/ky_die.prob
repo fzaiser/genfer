@@ -1,3 +1,5 @@
+# flags: --goals E(die)
+
 s = 0
 die = 0
 

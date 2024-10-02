@@ -1,3 +1,5 @@
+# flags: --goals E(c1)
+
 c1 = Bernoulli(1/2)
 c2 = Bernoulli(1/2)
 while (! (c1 == 1 || c2 == 1)):

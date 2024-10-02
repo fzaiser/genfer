@@ -27,10 +27,9 @@ tail_bound_re = re.compile(r"Asymptotics: p\(n\) (?:(?:.*) \* ([e.0123456789+-]+
 true_ev_re = re.compile(r"true EV: (.*)")
 exact_ev_re = re.compile(r"1-th \(raw\) moment = ([e.0123456789+-]+)")
 ev_bound_re = re.compile(r"1-th \(raw\) moment ∈ \[([e.0123456789+-]+), ([e.0123456789+-]+)\]")
+polar_ev_re = re.compile(r"E\([A-Za-z0-9_]*\) = (.*)")
 
-if __name__ == "__main__":
-    own_path = Path(sys.argv[0]).parent
-    os.chdir(own_path)
+def quality_of_bounds_table():
     with open("bench-results.json") as f:
         results = json.load(f)
     print(r"\begin{tabular}{l|ccc|ccc}")
@@ -89,3 +88,58 @@ if __name__ == "__main__":
             )
     print(r"\bottomrule")
     print(r"\end{tabular}")
+
+def polar_comparison_table():
+    with open("bench-results.json") as f:
+        results = json.load(f)
+    print(r"\begin{tabular}{l|cc|cc}")
+    print(r"\toprule")
+    print(r"Benchmark & exact EV (Polar) & time (Polar) & EV bound (ours) & time (ours) \\")
+    print(r"\midrule")
+    for benchmark, bench_result in results.items():
+        if not bench_result or "geobound-ev" not in bench_result or "polar" not in bench_result:
+            continue
+
+        ev_result = bench_result["geobound-ev"]
+        m = exact_ev_re.search(ev_result["stdout"])
+        ev_bound = r"\xmark{}"
+        if m:
+            ev_lo = ev_hi = float(m.group(1))
+            ev_bound = f"{ev_lo:.4f}"
+        m = ev_bound_re.search(ev_result["stdout"])
+        if m:
+            ev_lo = round_down(float(m.group(1)), 4)
+            ev_hi = round_up(float(m.group(2)), 4)
+            ev_bound = f"[{ev_lo:.4g}, {ev_hi:.4g}]"
+        ev_runtime = ev_result["time"]
+        ev_runtime = f"{ev_runtime:.2f} s"
+        ev_error = ev_result["error"]
+        if ev_error == "timeout":
+            ev_runtime = r"t/o"
+
+        polar_result = bench_result["polar"]
+        m = polar_ev_re.search(polar_result["stdout"])
+        if m:
+            polar_ev = m.group(1)
+        else:
+            polar_ev = r"\xmark{}"
+        polar_runtime = polar_result["time"]
+        polar_runtime = f"{polar_runtime:.2f} s"
+        polar_error = polar_result["error"]
+        if polar_error == "timeout":
+            polar_runtime = r"t/o"
+
+        print(
+                fr"\verb|{benchmark}| & {polar_ev} & {polar_runtime} & {ev_bound} & {ev_runtime} \\"
+            )
+    print(r"\bottomrule")
+    print(r"\end{tabular}")
+
+if __name__ == "__main__":
+    own_path = Path(sys.argv[0]).parent
+    os.chdir(own_path)
+    try:
+        quality_of_bounds_table()
+    finally:
+        print("\n\n=========================================\n\n")
+        polar_comparison_table()

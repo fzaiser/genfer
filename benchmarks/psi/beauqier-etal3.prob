@@ -1,3 +1,5 @@
+# flags: --goals E(count)
+
 process1d = Bernoulli(1/2)
 process1p = Bernoulli(1/2)
 process2d = Bernoulli(1/2)

@@ -1,3 +1,5 @@
+# flags: --goals E(attempts)
+
 element = 0
 found = 0
 attempts = 0

@@ -1,3 +1,5 @@
+# flags: --goals E(x)
+
 x = Geometric(1/2)
 y = Geometric(1/8)
 x = x + y

@@ -9,6 +9,7 @@ import subprocess
 import sys
 import time
 
+blue = "\033[94m"
 green = "\033[92m"
 red = "\033[91m"
 reset = "\033[0m"
@@ -23,10 +24,10 @@ benchmark_dirs = [
 timeout = 120
 num_runs = 1  # TODO: increase
 
-total_time_re = re.compile("Total time: ([0-9.]*)s")
-flags_re = re.compile("flags: (.*)")
-tool_flags_re = re.compile("flags ?\((.*)\): (.*)")
-evbound_re = re.compile(r"1-th \(raw\) moment (.*)")
+total_time_re = re.compile(r"(?:Total|Elapsed) time: ([0-9.]*) *s")
+flags_re = re.compile(r"flags: (.*)")
+tool_flags_re = re.compile(r"flags ?\((.*)\): (.*)")
+evbound_re = re.compile(r"(?:1-th \(raw\) moment|E\([A-Za-z0-9_]*\)) (.*)")
 tailbound_re = re.compile(r"Asymptotics: p\(n\) (.*)")
 
 
@@ -41,18 +42,21 @@ def env(name, default):
 
 
 class Tool:
-    def __init__(self, name, path, flags=[]):
+    def __init__(self, name, path, flags=[], file_ext=".sgcl"):
         self.name = name
         self.path = path
         self.flags = flags
+        self.file_ext = file_ext
 
 
 residual_path = "../target/debug/residual" # TODO: Change to release
 geo_bound_path = "../target/debug/geobound"  # TODO: Change to release
+polar_path = os.environ.get("POLAR_PATH", "/home/fabian/repos/polar") # TODO: don't hardcode
 tools = [
     # Tool("geobound-existence", geo_bound_path, ["-u", "0", "--keep-while", "--objective", "balance"]),
     Tool("geobound-ev", geo_bound_path, ["-u", "30", "--keep-while", "--objective", "ev"]),
-    Tool("geobound-tail", geo_bound_path, ["-u", "0", "--keep-while", "--objective", "tail"]),
+    # Tool("geobound-tail", geo_bound_path, ["-u", "0", "--keep-while", "--objective", "tail"]),
+    Tool("polar", [fr"{polar_path}/.venv/bin/python", fr"{polar_path}/polar.py"], ["--after_loop"], file_ext=".prob"),
 ]
 
 
@@ -96,10 +100,18 @@ def run_tool(tool, tool_command, path, flags, timeout):
         completed = subprocess.run(
             command, timeout=timeout, capture_output=True, env=env
         )
-        elapsed = time.perf_counter() - start
+        measured_time = time.perf_counter() - start
         stdout = (completed.stdout or b"").decode("utf-8")
         stderr = (completed.stderr or b"").decode("utf-8")
         exitcode = completed.returncode
+        m = total_time_re.search(stdout)
+        if m:
+            elapsed = float(m.group(1))
+        else:
+            print(
+                f"Tool {tool} {red}did not output its total inference time{reset}. Using the total running time instead..."
+            )
+            elapsed = measured_time
         m = evbound_re.search(stdout)
         evbound = m.group(1) if m else None
         m = tailbound_re.search(stdout)
@@ -116,7 +128,11 @@ def run_tool(tool, tool_command, path, flags, timeout):
             evbound=evbound,
             tailbound=tailbound,
         )
-        if exitcode != 0:
+        if exitcode == 0:
+            print(
+                f"Tool {tool} {green}successfully{reset} inferred {path} in {result.time:.4f}s"
+            )
+        else:
             result.exitcode = exitcode
             result.error = "crashed"
             if "Solver failed" in stderr:
@@ -129,19 +145,7 @@ def run_tool(tool, tool_command, path, flags, timeout):
             if "panicked" in stderr:
                 result.error = "panic"
             print(
-                f"Tool {tool} {red}FAILED ({result.error}){reset} with exit code {exitcode} in {elapsed:.3f}s."
-            )
-        else:
-            m = total_time_re.search(stdout)
-            if m:
-                total_time = float(m.group(1))
-            else:
-                print(
-                    f"Tool {tool} {red}did not output its total inference time{reset}. Using the total running time instead..."
-                )
-                result.time = elapsed
-            print(
-                f"Tool {tool} {green}successfully{reset} inferred {path} in {total_time:.4f}s"
+                f"Tool {tool} {red}FAILED ({result.error}){reset} with exit code {exitcode} in {measured_time:.3f}s."
             )
     except subprocess.TimeoutExpired as e:
         stdout = (e.stdout or b"").decode("utf-8")
@@ -161,8 +165,6 @@ def run_tool(tool, tool_command, path, flags, timeout):
 
 def bench_tool(tool, command, path: Path, timeout, flags=[]):
     flags = list(flags)
-    if not path.is_file():
-        return None
     file_contents = path.read_text()
     m = flags_re.search(file_contents)
     if m:
@@ -200,13 +202,15 @@ def bench_tool(tool, command, path: Path, timeout, flags=[]):
 
 
 def bench(name, timeout):
-    path = Path(f"{name}.sgcl")
-    if "# SKIP" in path.read_text():
-        print(f"{red}Skipping {name}...{reset}")
-        return {}
-
     result = {}
     for tool in tools:
+        path = Path(f"{name}{tool.file_ext}")
+        if not path.is_file():
+            print(f"{red}File {path} not found, skipping this benchmark for tool {tool.name} ...{reset}")
+            continue
+        if "# SKIP" in path.read_text():
+            print(f"{red}Skipping benchmark {name} for tool {tool.name} ...{reset}")
+            continue
         result[tool.name] = bench_tool(tool.name, tool.path, path, timeout, tool.flags)
     return result
 
@@ -232,13 +236,13 @@ if __name__ == "__main__":
     os.chdir(own_path)
     all_results = {}
     for benchmark_dir in benchmark_dirs:
-        print(f"Benchmark suite {benchmark_dir}")
+        print(f"{blue}Benchmark suite {benchmark_dir}{reset}")
         print("===============")
         for benchmark in sorted(Path(benchmark_dir).iterdir()):
             if not benchmark.is_file() or benchmark.suffix != ".sgcl":
                 continue
             benchmark = benchmark.with_suffix("")
-            print(f"Benchmarking {benchmark}")
+            print(f"{blue}Benchmarking {benchmark}{reset}")
             print("------------")
             results = bench(benchmark, timeout)
             all_results[str(benchmark)] = results
@@ -256,12 +260,19 @@ if __name__ == "__main__":
     print(f"{green}Benchmarking finished successfully in {elapsed:.1f}s.{reset}")
 
     successes = Counter()
+    skipped = Counter()
     total = len(all_results)
-    print(f"Summary of {len(all_results)} benchmarks:")
+    print(f"{blue}Summary of {len(all_results)} benchmarks:{reset}")
     print("===================")
     for benchmark, result in all_results.items():
-        print(f"{benchmark}.sgcl:")
-        for tool, res in result.items():
+        print(f"{benchmark}:")
+        for tool in tools:
+            tool = tool.name
+            if tool not in result:
+                print(f"  {tool}: {red}SKIPPED{reset}")
+                skipped[tool] += 1
+                continue
+            res = result[tool]
             if res.error:
                 print(f"  {tool}: {red}{res.error}{reset}")
             else:
@@ -271,10 +282,11 @@ if __name__ == "__main__":
                 successes[tool] += 1
     print()
     for tool, successes in successes.items():
+        total_run = total - skipped[tool]
         print(
-            f"{tool}: {green}{successes}{reset} / {total} = {round((successes / total) * 100)}% succeeded"
+            f"{tool}: {green}{successes}{reset} / {total_run} = {round((successes / total_run) * 100)}% succeeded ({skipped[tool]} skipped)"
         )
     with open("bench-results.json", "w") as f:
         json.dump(all_results, f, indent=2, default=jsonserialize)
     print(f"Results written to {own_path}/bench-results.json")
-    print(f"Total time: {elapsed:.1f}s")
+    print(f"{blue}Total time: {elapsed:.1f}s{reset}")

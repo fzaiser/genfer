@@ -1,24 +1,22 @@
+# flags: --goals E(count)
+
 process1 = Bernoulli(1/2)
 process2 = Bernoulli(1/2)
 process3 = Bernoulli(1/2)
-process4 = Bernoulli(1/2)
-process5 = Bernoulli(1/2)
 
-sum = process1 + process2 + process3 + process4 + process5
+sum = process1 + process2 + process3
 count = 0
 while sum > 1:
 	oldprocess1 = process1
 	oldprocess2 = process2
 	oldprocess3 = process3
-	oldprocess4 = process4
-	oldprocess5 = process5
 	temp = 0
 
 	if oldprocess1 == 1:
 		process1 = 0
 		temp = Bernoulli(1/2)
 		if temp == 1:
-			process5 = 1
+			process3 = 1
 		else:
 			process2 = 1
 		end
@@ -40,31 +38,11 @@ while sum > 1:
 		if temp == 1:
 			process2 = 1
 		else:
-			process4 = 1
-		end
-	end
-
-	if oldprocess4 == 1:
-		process4 = 0
-		temp = Bernoulli(1/2)
-		if temp == 1:
-			process3 = 1
-		else:
-			process5 = 1
-		end
-	end
-
-	if oldprocess5 == 1:
-		process5 = 0
-		temp = Bernoulli(1/2)
-		if temp == 1:
-			process4 = 1
-		else:
 			process1 = 1
 		end
 	end
 
 	temp = 0
-	sum = process1 + process2 + process3 + process4 + process5
+	sum = process1 + process2 + process3
 	count = count + 1
 end

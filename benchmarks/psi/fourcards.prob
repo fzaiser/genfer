@@ -1,3 +1,5 @@
+# flags: --goals E(answer)
+
 card0 = 0
 card1 = 0
 card2 = 0

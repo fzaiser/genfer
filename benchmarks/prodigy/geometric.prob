@@ -1,3 +1,5 @@
+# flags: --goals E(c)
+
 x = 1
 c = Geometric(1/2)
 

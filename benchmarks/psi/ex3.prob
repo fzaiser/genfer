@@ -1,3 +1,5 @@
+# flags: --goals E(b)
+
 b = 1
 temp = Bernoulli(1/2)
 while temp == 1:
