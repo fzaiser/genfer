@@ -1,4 +1,4 @@
-# SKIP
+# flags(geobound): --optimizer ipopt
 
 i ~ Geometric(1/2);
 n ~ Geometric(1/2);

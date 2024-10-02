@@ -1,4 +1,4 @@
-# SKIP
+# flags(geobound): --optimizer ipopt
 
 x := 1;
 y := 1;
