@@ -174,7 +174,17 @@ fn compute_constraints_solution(
         let (simple_problem, _) = generate_constraints(&modified_args, program);
         let simple_solution = solve_constraints(&modified_args, &simple_problem, timeout);
         if let Ok(simple_solution) = simple_solution {
-            // TODO: optimize solution
+            println!("Optimizing solution to the simplified problem...");
+            let modified_args = CliArgs {
+                objective: args.objective,
+                ..args.clone()
+            };
+            let simple_solution = optimize_solution(
+                &modified_args,
+                &simple_problem,
+                simple_solution.clone(),
+                timeout,
+            );
             println!("Extending solution to the original problem...");
             let (problem, bound) = generate_constraints(args, program);
             // The nonlinear variables can be reused from the simplified problem:
@@ -328,6 +338,7 @@ fn optimize_solution(
     for (i, optimizer) in args.optimizer.iter().enumerate() {
         println!("Optimization step {}: {optimizer}", i + 1);
         let cur_sol = solution.clone();
+        let start = Instant::now();
         let optimized_solution = match optimizer {
             Optimizer::Z3 => Z3Optimizer.optimize(problem, cur_sol, timeout),
             Optimizer::GradientDescent => GradientDescent::default()
@@ -344,6 +355,10 @@ fn optimize_solution(
                 .optimize(problem, cur_sol, timeout),
             Optimizer::Linear => LinearProgrammingOptimizer.optimize(problem, cur_sol, timeout),
         };
+        println!(
+            "Optimizer ({optimizer}) time: {:.6} s",
+            start.elapsed().as_secs_f64()
+        );
         if let Some(optimized_objective) = problem.objective_if_holds_exactly(&optimized_solution) {
             if optimized_objective <= objective {
                 solution = optimized_solution;
@@ -356,7 +371,7 @@ fn optimize_solution(
         }
     }
     let optimizer_time = start_optimizer.elapsed();
-    println!("Optimizer time: {:.6}", optimizer_time.as_secs_f64());
+    println!("Optimization time: {:.6}", optimizer_time.as_secs_f64());
     solution
 }
 
