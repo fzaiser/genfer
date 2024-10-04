@@ -5,6 +5,7 @@ use std::{
 
 use ndarray::ArrayView1;
 use num_traits::{One, Zero};
+use rustc_hash::FxHashMap;
 
 use crate::{
     numbers::{FloatRat, Rational},
@@ -33,6 +34,29 @@ pub struct SymExpr(Rc<SymExprKind>);
 impl SymExpr {
     pub(crate) fn kind(&self) -> &SymExprKind {
         self.0.as_ref()
+    }
+
+    /// To estimate the memory usage of the expression
+    pub fn count_nodes(&self) -> usize {
+        self.count_nodes_with(&mut FxHashMap::default())
+    }
+
+    fn count_nodes_with(&self, cache: &mut FxHashMap<usize, usize>) -> usize {
+        let key = self.0.as_ref() as *const SymExprKind as usize;
+        if Rc::strong_count(&self.0) > 1 {
+            if let Some(_) = cache.get(&key) {
+                return 1;
+            }
+            cache.insert(key, 1);
+        }
+        match self.kind() {
+            SymExprKind::Constant(_) => 1,
+            SymExprKind::Variable(_) => 1,
+            SymExprKind::Add(lhs, rhs) | SymExprKind::Mul(lhs, rhs) => {
+                1 + lhs.count_nodes_with(cache) + rhs.count_nodes_with(cache)
+            }
+            SymExprKind::Pow(base, _) => 1 + base.count_nodes_with(cache),
+        }
     }
 
     pub fn var(i: usize) -> Self {
@@ -80,18 +104,33 @@ impl SymExpr {
         SymConstraint::Le(rhs, self)
     }
 
-    pub fn substitute(&self, replacements: &[Self]) -> Self {
-        match self.kind() {
+    pub fn substitute_with(
+        &self,
+        replacements: &[Self],
+        cache: &mut FxHashMap<usize, Self>,
+    ) -> Self {
+        let key = self.0.as_ref() as *const SymExprKind as usize;
+        if Rc::strong_count(&self.0) > 1 {
+            if let Some(cached_result) = cache.get(&key) {
+                return cached_result.clone();
+            }
+        }
+        let result = match self.kind() {
             SymExprKind::Constant(_) => self.clone(),
             SymExprKind::Variable(i) => replacements[*i].clone(),
             SymExprKind::Add(lhs, rhs) => {
-                lhs.substitute(replacements) + rhs.substitute(replacements)
+                lhs.substitute_with(replacements, cache) + rhs.substitute_with(replacements, cache)
             }
             SymExprKind::Mul(lhs, rhs) => {
-                lhs.substitute(replacements) * rhs.substitute(replacements)
+                lhs.substitute_with(replacements, cache) * rhs.substitute_with(replacements, cache)
             }
-            SymExprKind::Pow(base, n) => base.substitute(replacements).pow(*n),
+            SymExprKind::Pow(base, n) => base.substitute_with(replacements, cache).pow(*n),
+        };
+        // Only cache the result if it is shared:
+        if Rc::strong_count(&self.0) > 1 {
+            cache.insert(key, result.clone());
         }
+        result
     }
 
     pub fn extract_constant(&self) -> Option<FloatRat> {
@@ -542,21 +581,28 @@ impl SymConstraint {
         }
     }
 
-    pub fn substitute(&self, replacements: &[SymExpr]) -> SymConstraint {
+    pub fn substitute_with(
+        &self,
+        replacements: &[SymExpr],
+        cache: &mut FxHashMap<usize, SymExpr>,
+    ) -> SymConstraint {
         match self {
-            SymConstraint::Eq(e1, e2) => {
-                SymConstraint::Eq(e1.substitute(replacements), e2.substitute(replacements))
-            }
-            SymConstraint::Lt(e1, e2) => {
-                SymConstraint::Lt(e1.substitute(replacements), e2.substitute(replacements))
-            }
-            SymConstraint::Le(e1, e2) => {
-                SymConstraint::Le(e1.substitute(replacements), e2.substitute(replacements))
-            }
+            SymConstraint::Eq(e1, e2) => SymConstraint::Eq(
+                e1.substitute_with(replacements, cache),
+                e2.substitute_with(replacements, cache),
+            ),
+            SymConstraint::Lt(e1, e2) => SymConstraint::Lt(
+                e1.substitute_with(replacements, cache),
+                e2.substitute_with(replacements, cache),
+            ),
+            SymConstraint::Le(e1, e2) => SymConstraint::Le(
+                e1.substitute_with(replacements, cache),
+                e2.substitute_with(replacements, cache),
+            ),
             SymConstraint::Or(constraints) => SymConstraint::Or(
                 constraints
                     .iter()
-                    .map(|c| c.substitute(replacements))
+                    .map(|c| c.substitute_with(replacements, cache))
                     .collect(),
             ),
         }

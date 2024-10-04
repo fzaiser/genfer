@@ -145,13 +145,9 @@ fn construct_model(
     for v in problem.decay_vars.iter().chain(problem.factor_vars.iter()) {
         replacements[*v] = SymExpr::from(init[*v].clone());
     }
-    let objective = problem.objective.substitute(&replacements);
-    let constraints = problem
+    let problem = problem.substitute(&replacements);
+    let linear_constraints = problem
         .constraints
-        .iter()
-        .map(|c| c.substitute(&replacements))
-        .collect::<Vec<_>>();
-    let linear_constraints = constraints
         .iter()
         .filter(|constraint| !matches!(constraint, SymConstraint::Or(..)))
         .map(|constraint| {
@@ -182,9 +178,15 @@ fn construct_model(
             _ => unreachable!(),
         }
     }
-    let linear_objective = objective
+    let linear_objective = problem
+        .objective
         .extract_linear()
-        .unwrap_or_else(|| panic!("Objective is not linear in the program variables: {objective}"))
+        .unwrap_or_else(|| {
+            panic!(
+                "Objective is not linear in the program variables: {}",
+                problem.objective
+            )
+        })
         .to_lp_expr(&var_list, &FloatRat::float);
     let mut lp = lp.minimise(linear_objective).using(good_lp::default_solver);
     for constraint in &linear_constraints {

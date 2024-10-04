@@ -133,8 +133,7 @@ pub fn main() -> std::io::Result<ExitCode> {
 fn run_program(program: &Program, args: &CliArgs) -> ExitCode {
     let start = Instant::now();
     let timeout = Duration::from_millis(args.timeout);
-    let (problem, bound, init_solution) =
-        compute_constraints_solution(args, program, start, timeout);
+    let (problem, bound, init_solution) = compute_constraints_solution(args, program, timeout);
     let exit_code = match init_solution {
         Ok(solution) => continue_with_solution(args, bound, program, &problem, solution),
         Err(e) => {
@@ -159,7 +158,6 @@ fn run_program(program: &Program, args: &CliArgs) -> ExitCode {
 fn compute_constraints_solution(
     args: &CliArgs,
     program: &Program,
-    start: Instant,
     timeout: Duration,
 ) -> (
     ConstraintProblem,
@@ -173,25 +171,18 @@ fn compute_constraints_solution(
             objective: None,
             ..args.clone()
         };
-        let (simple_problem, _) = generate_constraints(&modified_args, program, start);
+        let (simple_problem, _) = generate_constraints(&modified_args, program);
         let simple_solution = solve_constraints(&modified_args, &simple_problem, timeout);
         if let Ok(simple_solution) = simple_solution {
-            println!("Optimizing solution to the simplified problem...");
-            let opt_simple_solution = optimize_solution(
-                &modified_args,
-                &simple_problem,
-                simple_solution.clone(),
-                timeout,
-            );
             println!("Extending solution to the original problem...");
-            let (problem, bound) = generate_constraints(args, program, start);
+            let (problem, bound) = generate_constraints(args, program);
             // The nonlinear variables can be reused from the simplified problem:
             let mut solution = vec![Rational::zero(); problem.var_count];
             for (simple_var, var) in simple_problem.factor_vars.iter().zip(&problem.factor_vars) {
-                solution[*var] = opt_simple_solution[*simple_var].clone();
+                solution[*var] = simple_solution[*simple_var].clone();
             }
             for (simple_var, var) in simple_problem.decay_vars.iter().zip(&problem.decay_vars) {
-                solution[*var] = opt_simple_solution[*simple_var].clone();
+                solution[*var] = simple_solution[*simple_var].clone();
             }
             // Solve the linear variables:
             if let Some(solution) = optimize_linear_parts(&problem, solution) {
@@ -201,16 +192,13 @@ fn compute_constraints_solution(
         println!("Solving simplified problem (unrolling limit set to 0) failed.");
         println!("Continuing with the original problem.");
     }
-    let (problem, bound) = generate_constraints(args, program, start);
+    let (problem, bound) = generate_constraints(args, program);
     let init_solution = solve_constraints(args, &problem, timeout);
     (problem, bound, init_solution)
 }
 
-fn generate_constraints(
-    args: &CliArgs,
-    program: &Program,
-    start: Instant,
-) -> (ConstraintProblem, GeometricBound) {
+fn generate_constraints(args: &CliArgs, program: &Program) -> (ConstraintProblem, GeometricBound) {
+    let start = Instant::now();
     let mut ctx = GeometricBoundSemantics::new()
         .with_verbose(args.verbose)
         .with_min_degree(args.min_degree)
@@ -252,13 +240,8 @@ fn generate_constraints(
         let mut out = std::fs::File::create(path).unwrap();
         ctx.output_qepcad(&mut out).unwrap();
     }
-    let time_constraint_gen = start.elapsed();
-    println!(
-        "Constraint generation time: {:.5}s",
-        time_constraint_gen.as_secs_f64()
-    );
     let objective = objective_function(&bound, program.result, args.objective);
-    let problem = ConstraintProblem {
+    let mut problem = ConstraintProblem {
         var_count: ctx.sym_var_count(),
         decay_vars: ctx.geom_vars().to_owned(),
         factor_vars: ctx.factor_vars().to_owned(),
@@ -267,6 +250,12 @@ fn generate_constraints(
         constraints: ctx.constraints().to_owned(),
         objective,
     };
+    problem.preprocess();
+    let time_constraint_gen = start.elapsed();
+    println!(
+        "Constraint generation time: {:.5}s",
+        time_constraint_gen.as_secs_f64()
+    );
     (problem, bound)
 }
 
