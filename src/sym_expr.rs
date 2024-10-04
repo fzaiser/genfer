@@ -3,6 +3,7 @@ use std::{
     rc::Rc,
 };
 
+use descent::expr::{dynam::Expr, Var};
 use ndarray::ArrayView1;
 use num_traits::{One, Zero};
 use rustc_hash::FxHashMap;
@@ -140,18 +141,27 @@ impl SymExpr {
         }
     }
 
-    pub fn extract_linear(&self) -> Option<LinearExpr> {
-        match self.kind() {
+    pub fn extract_linear(
+        &self,
+        cache: &mut FxHashMap<usize, Option<LinearExpr>>,
+    ) -> Option<LinearExpr> {
+        let key = self.0.as_ref() as *const SymExprKind as usize;
+        if Rc::strong_count(&self.0) > 1 {
+            if let Some(cached_result) = cache.get(&key) {
+                return cached_result.clone();
+            }
+        }
+        let result = match self.kind() {
             SymExprKind::Constant(c) => Some(LinearExpr::constant(c.clone())),
             SymExprKind::Variable(i) => Some(LinearExpr::var(*i)),
             SymExprKind::Add(lhs, rhs) => {
-                let lhs = lhs.extract_linear()?;
-                let rhs = rhs.extract_linear()?;
+                let lhs = lhs.extract_linear(cache)?;
+                let rhs = rhs.extract_linear(cache)?;
                 Some(lhs + rhs)
             }
             SymExprKind::Mul(lhs, rhs) => {
-                let lhs = lhs.extract_linear()?;
-                let rhs = rhs.extract_linear()?;
+                let lhs = lhs.extract_linear(cache)?;
+                let rhs = rhs.extract_linear(cache)?;
                 if let Some(factor) = lhs.as_constant() {
                     Some(rhs * factor.clone())
                 } else {
@@ -162,7 +172,7 @@ impl SymExpr {
                 if *n == 0 {
                     return Some(LinearExpr::one());
                 }
-                let base = base.extract_linear()?;
+                let base = base.extract_linear(cache)?;
                 if let Some(base) = base.as_constant() {
                     return Some(LinearExpr::constant(pow(base.clone(), *n)));
                 }
@@ -172,11 +182,26 @@ impl SymExpr {
                     None
                 }
             }
+        };
+        if Rc::strong_count(&self.0) > 1 {
+            cache.insert(key, result.clone());
         }
+        result
     }
 
-    fn eval_dual(&self, values: &[f64], var: usize) -> (f64, f64) {
-        match self.kind() {
+    fn eval_dual(
+        &self,
+        values: &[f64],
+        var: usize,
+        cache: &mut FxHashMap<usize, (f64, f64)>,
+    ) -> (f64, f64) {
+        let key = self.0.as_ref() as *const SymExprKind as usize;
+        if Rc::strong_count(&self.0) > 1 {
+            if let Some(cached_result) = cache.get(&key) {
+                return *cached_result;
+            }
+        }
+        let result = match self.kind() {
             SymExprKind::Constant(c) => (c.float(), 0.0),
             SymExprKind::Variable(v) => {
                 if *v == var {
@@ -186,35 +211,49 @@ impl SymExpr {
                 }
             }
             SymExprKind::Add(lhs, rhs) => {
-                let (lhs_val, lhs_grad) = lhs.eval_dual(values, var);
-                let (rhs_val, rhs_grad) = rhs.eval_dual(values, var);
+                let (lhs_val, lhs_grad) = lhs.eval_dual(values, var, cache);
+                let (rhs_val, rhs_grad) = rhs.eval_dual(values, var, cache);
                 (lhs_val + rhs_val, lhs_grad + rhs_grad)
             }
             SymExprKind::Mul(lhs, rhs) => {
-                let (lhs_val, lhs_grad) = lhs.eval_dual(values, var);
-                let (rhs_val, rhs_grad) = rhs.eval_dual(values, var);
+                let (lhs_val, lhs_grad) = lhs.eval_dual(values, var, cache);
+                let (rhs_val, rhs_grad) = rhs.eval_dual(values, var, cache);
                 (lhs_val * rhs_val, lhs_grad * rhs_val + rhs_grad * lhs_val)
             }
             SymExprKind::Pow(base, n) => {
                 if n == &0 {
                     (1.0, 0.0)
                 } else {
-                    let (base_val, base_grad) = base.eval_dual(values, var);
+                    let (base_val, base_grad) = base.eval_dual(values, var, cache);
                     let outer_deriv = pow(base_val, *n - 1);
                     let grad = base_grad * outer_deriv * f64::from(*n);
                     (outer_deriv * base_val, grad)
                 }
             }
+        };
+        if Rc::strong_count(&self.0) > 1 {
+            cache.insert(key, result);
         }
+        result
     }
 
-    pub fn derivative_at(&self, values: &[f64], var: usize) -> f64 {
-        self.eval_dual(values, var).1
+    pub fn derivative_at(
+        &self,
+        values: &[f64],
+        var: usize,
+        cache: &mut FxHashMap<usize, (f64, f64)>,
+    ) -> f64 {
+        self.eval_dual(values, var, cache).1
     }
 
-    pub fn gradient_at(&self, values: &[f64]) -> Vec<f64> {
+    pub fn gradient_at(
+        &self,
+        values: &[f64],
+        grad_cache: &mut [FxHashMap<usize, (f64, f64)>],
+    ) -> Vec<f64> {
+        // TODO: reverse-mode AD would be faster
         (0..values.len())
-            .map(|i| self.derivative_at(values, i))
+            .map(|i| self.derivative_at(values, i, &mut grad_cache[i]))
             .collect()
     }
 
@@ -302,24 +341,83 @@ impl SymExpr {
         }
     }
 
-    pub fn eval_float(&self, values: &[f64]) -> f64 {
-        match self.kind() {
+    pub fn eval_float(&self, values: &[f64], cache: &mut FxHashMap<usize, f64>) -> f64 {
+        let key = self.0.as_ref() as *const SymExprKind as usize;
+        if Rc::strong_count(&self.0) > 1 {
+            if let Some(cached_result) = cache.get(&key) {
+                return *cached_result;
+            }
+        }
+        let result = match self.kind() {
             SymExprKind::Constant(c) => c.float(),
             SymExprKind::Variable(v) => values[*v],
-            SymExprKind::Add(lhs, rhs) => lhs.eval_float(values) + rhs.eval_float(values),
-            SymExprKind::Mul(lhs, rhs) => lhs.eval_float(values) * rhs.eval_float(values),
-            SymExprKind::Pow(base, n) => pow(base.eval_float(values), *n),
+            SymExprKind::Add(lhs, rhs) => {
+                lhs.eval_float(values, cache) + rhs.eval_float(values, cache)
+            }
+            SymExprKind::Mul(lhs, rhs) => {
+                lhs.eval_float(values, cache) * rhs.eval_float(values, cache)
+            }
+            SymExprKind::Pow(base, n) => pow(base.eval_float(values, cache), *n),
+        };
+        if Rc::strong_count(&self.0) > 1 {
+            cache.insert(key, result);
         }
+        result
     }
 
-    pub fn eval_exact(&self, values: &[Rational]) -> Rational {
-        match self.kind() {
+    pub fn eval_exact(
+        &self,
+        values: &[Rational],
+        cache: &mut FxHashMap<usize, Rational>,
+    ) -> Rational {
+        let key = self.0.as_ref() as *const SymExprKind as usize;
+        if Rc::strong_count(&self.0) > 1 {
+            if let Some(cached_result) = cache.get(&key) {
+                return cached_result.clone();
+            }
+        }
+        let result = match self.kind() {
             SymExprKind::Constant(c) => c.rat().clone(),
             SymExprKind::Variable(v) => values[*v].clone(),
-            SymExprKind::Add(lhs, rhs) => lhs.eval_exact(values) + rhs.eval_exact(values),
-            SymExprKind::Mul(lhs, rhs) => lhs.eval_exact(values) * rhs.eval_exact(values),
-            SymExprKind::Pow(base, n) => base.eval_exact(values).pow(*n),
+            SymExprKind::Add(lhs, rhs) => {
+                lhs.eval_exact(values, cache) + rhs.eval_exact(values, cache)
+            }
+            SymExprKind::Mul(lhs, rhs) => {
+                lhs.eval_exact(values, cache) * rhs.eval_exact(values, cache)
+            }
+            SymExprKind::Pow(base, n) => base.eval_exact(values, cache).pow(*n),
+        };
+        if Rc::strong_count(&self.0) > 1 {
+            cache.insert(key, result.clone());
         }
+        result
+    }
+
+    pub fn to_ipopt_expr(&self, vars: &[Var], cache: &mut FxHashMap<usize, Expr>) -> Expr {
+        let key = self.0.as_ref() as *const SymExprKind as usize;
+        if Rc::strong_count(&self.0) > 1 {
+            if let Some(cached_result) = cache.get(&key) {
+                return cached_result.clone();
+            }
+        }
+        let result = match self.kind() {
+            SymExprKind::Constant(c) => c.float().into(),
+            SymExprKind::Variable(v) => vars[*v].into(),
+            SymExprKind::Add(lhs, rhs) => {
+                lhs.to_ipopt_expr(vars, cache) + rhs.to_ipopt_expr(vars, cache)
+            }
+            SymExprKind::Mul(lhs, rhs) => {
+                lhs.to_ipopt_expr(vars, cache) * rhs.to_ipopt_expr(vars, cache)
+            }
+            SymExprKind::Pow(base, exp) => {
+                use descent::expr::dynam::NumOps;
+                base.to_ipopt_expr(vars, cache).powi(*exp)
+            }
+        };
+        if Rc::strong_count(&self.0) > 1 {
+            cache.insert(key, result.clone());
+        }
+        result
     }
 }
 
@@ -608,30 +706,37 @@ impl SymConstraint {
         }
     }
 
-    pub fn gradient_at(&self, values: &[f64]) -> Vec<f64> {
+    pub fn gradient_at(
+        &self,
+        values: &[f64],
+        cache: &mut [FxHashMap<usize, (f64, f64)>],
+    ) -> Vec<f64> {
         match self {
             SymConstraint::Lt(lhs, rhs) | SymConstraint::Le(lhs, rhs) => {
                 let term = rhs.clone() - lhs.clone();
-                term.gradient_at(values)
+                term.gradient_at(values, cache)
             }
             _ => vec![0.0; values.len()],
         }
     }
 
-    pub fn extract_linear(&self) -> Option<LinearConstraint> {
+    pub fn extract_linear(
+        &self,
+        cache: &mut FxHashMap<usize, Option<LinearExpr>>,
+    ) -> Option<LinearConstraint> {
         match self {
             SymConstraint::Eq(e1, e2) => Some(LinearConstraint::eq(
-                e1.extract_linear()?,
-                e2.extract_linear()?,
+                e1.extract_linear(cache)?,
+                e2.extract_linear(cache)?,
             )),
             SymConstraint::Lt(e1, e2) | SymConstraint::Le(e1, e2) => Some(LinearConstraint::le(
-                e1.extract_linear()?,
-                e2.extract_linear()?,
+                e1.extract_linear(cache)?,
+                e2.extract_linear(cache)?,
             )),
             SymConstraint::Or(constraints) => {
                 // Here we only support constraints without variables
                 for constraint in constraints {
-                    if let Some(linear_constraint) = constraint.extract_linear() {
+                    if let Some(linear_constraint) = constraint.extract_linear(cache) {
                         if linear_constraint.eval_constant() == Some(true) {
                             return Some(LinearConstraint::eq(
                                 LinearExpr::constant(FloatRat::zero()),
@@ -645,28 +750,38 @@ impl SymConstraint {
         }
     }
 
-    pub fn holds_exact_f64(&self, values: &[f64]) -> bool {
+    pub fn holds_exact_f64(&self, values: &[f64], cache: &mut FxHashMap<usize, Rational>) -> bool {
         let values = values
             .iter()
             .map(|r| Rational::from(*r))
             .collect::<Vec<_>>();
-        self.holds_exact(&values)
+        self.holds_exact(&values, cache)
     }
 
-    pub fn holds_exact(&self, values: &[Rational]) -> bool {
+    pub fn holds_exact(&self, values: &[Rational], cache: &mut FxHashMap<usize, Rational>) -> bool {
         match self {
-            SymConstraint::Lt(lhs, rhs) => lhs.eval_exact(values) < rhs.eval_exact(values),
-            SymConstraint::Le(lhs, rhs) => lhs.eval_exact(values) <= rhs.eval_exact(values),
+            SymConstraint::Lt(lhs, rhs) => {
+                lhs.eval_exact(values, cache) < rhs.eval_exact(values, cache)
+            }
+            SymConstraint::Le(lhs, rhs) => {
+                lhs.eval_exact(values, cache) <= rhs.eval_exact(values, cache)
+            }
             _ => true,
         }
     }
 
-    pub fn is_close(&self, point: &[f64], min_dist: f64) -> bool {
+    pub fn is_close(
+        &self,
+        point: &[f64],
+        min_dist: f64,
+        cache: &mut FxHashMap<usize, f64>,
+        grad_cache: &mut [FxHashMap<usize, (f64, f64)>],
+    ) -> bool {
         match self {
             SymConstraint::Lt(lhs, rhs) | SymConstraint::Le(lhs, rhs) => {
                 let term = lhs.clone() - rhs.clone();
-                let val = term.eval_float(point);
-                let grad = term.gradient_at(point);
+                let val = term.eval_float(point, cache);
+                let grad = term.gradient_at(point, grad_cache);
                 let grad_len_sq = grad.iter().map(|g| g * g).fold(0.0, |acc, f| acc + f);
                 if grad_len_sq.is_zero() {
                     return false;
@@ -677,12 +792,17 @@ impl SymConstraint {
             _ => false,
         }
     }
-    pub fn estimate_signed_dist(&self, point: &[f64]) -> f64 {
+    pub fn estimate_signed_dist(
+        &self,
+        point: &[f64],
+        cache: &mut FxHashMap<usize, f64>,
+        grad_cache: &mut [FxHashMap<usize, (f64, f64)>],
+    ) -> f64 {
         match self {
             SymConstraint::Lt(lhs, rhs) | SymConstraint::Le(lhs, rhs) => {
                 let term = lhs.clone() - rhs.clone();
-                let val = term.eval_float(point);
-                let grad = term.gradient_at(point);
+                let val = term.eval_float(point, cache);
+                let grad = term.gradient_at(point, grad_cache);
                 if val == 0.0 {
                     return 0.0;
                 }

@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use good_lp::{Expression, ProblemVariables, Solution, SolverModel, VariableDefinition};
 use ndarray::Array1;
+use rustc_hash::FxHashMap;
 
 use crate::{
     numbers::Rational,
@@ -64,20 +65,26 @@ impl Solver for GradientDescent {
         // Repeatedly update the point with the gradient of all the (almost) violated inequalities.
         // In most cases, one iteration should suffice.
         for _ in 0..self.max_iters {
+            let cache = &mut FxHashMap::default();
             let violated_constraints = constraints
                 .iter()
-                .filter(|c| !c.holds_exact(point.map(|f| Rational::from(*f)).as_slice().unwrap()))
+                .filter(|c| {
+                    !c.holds_exact(point.map(|f| Rational::from(*f)).as_slice().unwrap(), cache)
+                })
                 .collect::<Vec<_>>();
             if violated_constraints.is_empty() {
                 break;
             }
+            let min_dist = self.step_size * self.step_size;
+            let cache = &mut FxHashMap::default();
+            let grad_cache = &mut vec![FxHashMap::default(); point.len()];
             let tight_constraints = constraints
                 .iter()
-                .filter(|c| c.is_close(point.as_slice().unwrap(), self.step_size * self.step_size))
+                .filter(|c| c.is_close(point.as_slice().unwrap(), min_dist, cache, grad_cache))
                 .collect::<Vec<_>>();
             let gradients = tight_constraints
                 .iter()
-                .map(|c| Array1::from_vec(c.gradient_at(point.as_slice().unwrap())))
+                .map(|c| Array1::from_vec(c.gradient_at(point.as_slice().unwrap(), grad_cache)))
                 .collect::<Vec<_>>();
             let direction = match self.dir_selection_strategy {
                 DirSelectionStrategy::Greedy => largest_gradient(problem, &gradients),
@@ -103,11 +110,11 @@ impl Solver for GradientDescent {
                 println!("{p},");
             }
         }
-        let exact_point = point.mapv(Rational::from);
-        if !problem.holds_exact(exact_point.as_slice().unwrap()) {
+        let exact_point = point.mapv(Rational::from).to_vec();
+        if !problem.holds_exact(&exact_point) {
             return Err(SolverError::Timeout);
         }
-        Ok(exact_point.to_vec())
+        Ok(exact_point)
     }
 }
 
@@ -117,10 +124,14 @@ fn line_search(
     constraints: &[SymConstraint],
 ) -> Option<Array1<f64>> {
     let mut update = direction.clone();
-    while !constraints
-        .iter()
-        .all(|c| c.holds_exact_f64((point + &update).as_slice().unwrap()))
-    {
+    loop {
+        let cache = &mut FxHashMap::default();
+        if constraints
+            .iter()
+            .all(|c| c.holds_exact_f64((point + &update).as_slice().unwrap(), cache))
+        {
+            break;
+        }
         if update.iter().all(|x| x.abs() < 1e-9) {
             return None;
         }
@@ -128,9 +139,10 @@ fn line_search(
     }
     loop {
         update *= 1.5;
+        let cache = &mut FxHashMap::default();
         if !constraints
             .iter()
-            .all(|c| c.holds_exact_f64((point + &update).as_slice().unwrap()))
+            .all(|c| c.holds_exact_f64((point + &update).as_slice().unwrap(), cache))
         {
             update /= 1.5;
             break;
@@ -146,16 +158,20 @@ fn line_search_with_objective(
     objective: &SymExpr,
 ) -> Option<Array1<f64>> {
     let mut update = direction.clone();
-    let mut best_obj = objective.eval_float(point.as_slice().unwrap());
+    let mut best_obj = objective.eval_float(point.as_slice().unwrap(), &mut FxHashMap::default());
     let mut best_update = None;
     loop {
         if update.iter().all(|x| x.abs() < 1e-9) {
             break;
         }
+        let cache = &mut FxHashMap::default();
         let feasible = constraints
             .iter()
-            .all(|c| c.holds_exact_f64((point + &update).as_slice().unwrap()));
-        let cur_obj = objective.eval_float((point + &update).as_slice().unwrap());
+            .all(|c| c.holds_exact_f64((point + &update).as_slice().unwrap(), cache));
+        let cur_obj = objective.eval_float(
+            (point + &update).as_slice().unwrap(),
+            &mut FxHashMap::default(),
+        );
         if feasible && cur_obj < best_obj {
             best_obj = cur_obj;
             best_update = Some(update.clone());
@@ -164,10 +180,14 @@ fn line_search_with_objective(
     }
     best_update.map(|mut best_update| {
         loop {
+            let cache = &mut FxHashMap::default();
             let feasible = constraints
                 .iter()
-                .all(|c| c.holds_exact_f64((point + &best_update).as_slice().unwrap()));
-            let cur_obj = objective.eval_float((point + &best_update).as_slice().unwrap());
+                .all(|c| c.holds_exact_f64((point + &best_update).as_slice().unwrap(), cache));
+            let cur_obj = objective.eval_float(
+                (point + &best_update).as_slice().unwrap(),
+                &mut FxHashMap::default(),
+            );
             if !feasible || cur_obj > best_obj {
                 best_update /= 1.5;
                 break;
@@ -244,20 +264,23 @@ impl Optimizer for GradientDescent {
         let lr = self.step_size;
         let mut point: Array1<f64> = Array1::from_vec(init).map(Rational::round_to_f64);
         let mut best_point: Array1<f64> = point.clone();
-        let mut best_objective = objective.eval_float(point.as_slice().unwrap());
+        let mut best_objective =
+            objective.eval_float(point.as_slice().unwrap(), &mut FxHashMap::default());
         let mut trajectory = vec![point.clone()];
         let constraints = problem.all_constraints().collect::<Vec<_>>();
         for _ in 0..500 {
+            let cache = &mut FxHashMap::default();
+            let grad_cache = &mut vec![FxHashMap::default(); point.len()];
             let tight_constraints = constraints
                 .iter()
-                .filter(|c| c.is_close(point.as_slice().unwrap(), slack_epsilon))
+                .filter(|c| c.is_close(point.as_slice().unwrap(), slack_epsilon, cache, grad_cache))
                 .collect::<Vec<_>>();
             let gradients = tight_constraints
                 .iter()
-                .map(|c| Array1::from_vec(c.gradient_at(point.as_slice().unwrap())))
+                .map(|c| Array1::from_vec(c.gradient_at(point.as_slice().unwrap(), grad_cache)))
                 .collect::<Vec<_>>();
             let objective_grad =
-                -Array1::from_vec(objective.gradient_at(point.as_slice().unwrap()));
+                -Array1::from_vec(objective.gradient_at(point.as_slice().unwrap(), grad_cache));
 
             let direction = match self.dir_selection_strategy {
                 DirSelectionStrategy::Greedy => largest_gradient(problem, &gradients),
@@ -273,7 +296,8 @@ impl Optimizer for GradientDescent {
             } else {
                 point += &(lr * direction);
             }
-            let objective = objective.eval_float(point.as_slice().unwrap());
+            let objective =
+                objective.eval_float(point.as_slice().unwrap(), &mut FxHashMap::default());
             if objective < best_objective && problem.holds_exact_f64(point.as_slice().unwrap()) {
                 best_objective = objective;
                 best_point = point.clone();
@@ -332,25 +356,28 @@ impl Optimizer for Adam {
     ) -> Vec<Rational> {
         let slack_epsilon = 1e-6;
         let objective = &problem.objective;
-        let mut best_point = Array1::from_vec(init);
-        let mut point = best_point.map(Rational::round_to_f64);
-        let mut best_objective = objective.eval_float(point.as_slice().unwrap());
+        let mut best_point = Array1::from_vec(init).map(Rational::round_to_f64);
+        let mut point = best_point.clone();
+        let mut best_objective =
+            objective.eval_float(point.as_slice().unwrap(), &mut FxHashMap::default());
         let mut trajectory = vec![point.clone()];
         let mut m = Array1::zeros(problem.var_count);
         let mut v = Array1::zeros(problem.var_count);
         let mut t = 1;
         let constraints = problem.all_constraints().collect::<Vec<_>>();
         for _ in 0..500 {
+            let cache = &mut FxHashMap::default();
+            let grad_cache = &mut vec![FxHashMap::default(); point.len()];
             let tight_constraints = constraints
                 .iter()
-                .filter(|c| c.is_close(point.as_slice().unwrap(), slack_epsilon))
+                .filter(|c| c.is_close(point.as_slice().unwrap(), slack_epsilon, cache, grad_cache))
                 .collect::<Vec<_>>();
             let gradients = tight_constraints
                 .iter()
-                .map(|c| Array1::from_vec(c.gradient_at(point.as_slice().unwrap())))
+                .map(|c| Array1::from_vec(c.gradient_at(point.as_slice().unwrap(), grad_cache)))
                 .collect::<Vec<_>>();
             let objective_grad =
-                -Array1::from_vec(objective.gradient_at(point.as_slice().unwrap()));
+                -Array1::from_vec(objective.gradient_at(point.as_slice().unwrap(), grad_cache));
 
             let direction = match self.dir_selection_strategy {
                 DirSelectionStrategy::Greedy => largest_gradient(problem, &gradients),
@@ -371,11 +398,11 @@ impl Optimizer for Adam {
             } else {
                 point += &update_dir;
             };
-            let objective = objective.eval_float(point.as_slice().unwrap());
-            let point_exact = point.mapv(Rational::from);
-            if objective < best_objective && problem.holds_exact(point_exact.as_slice().unwrap()) {
+            let objective =
+                objective.eval_float(point.as_slice().unwrap(), &mut FxHashMap::default());
+            if objective < best_objective && problem.holds_exact_f64(point.as_slice().unwrap()) {
                 best_objective = objective;
-                best_point = point_exact;
+                best_point = point.clone();
             }
             if self.verbose {
                 println!("Objective: {objective} at {point}");
@@ -389,11 +416,8 @@ impl Optimizer for Adam {
                 println!("{p},");
             }
         }
-        println!(
-            "Best objective: {best_objective} at {}",
-            best_point.mapv(|r| r.round_to_f64())
-        );
-        best_point.to_vec()
+        println!("Best objective: {best_objective} at {best_point}");
+        best_point.mapv(Rational::from).to_vec()
     }
 }
 
@@ -450,22 +474,27 @@ impl Optimizer for AdamBarrier {
         _timeout: Duration,
     ) -> Vec<Rational> {
         let objective = &problem.objective;
-        let mut best_point = Array1::from_vec(init);
-        let mut point: Array1<f64> = best_point.map(Rational::round_to_f64);
-        let mut best_objective = objective.eval_float(point.as_slice().unwrap());
+        let mut best_point = Array1::from_vec(init).map(Rational::round_to_f64);
+        let mut point: Array1<f64> = best_point.clone();
+        let mut best_objective =
+            objective.eval_float(point.as_slice().unwrap(), &mut FxHashMap::default());
         let mut trajectory = vec![point.clone()];
         let mut m = Array1::zeros(problem.var_count);
         let mut v = Array1::zeros(problem.var_count);
         let mut t = 1;
         let constraints = problem.all_constraints().collect::<Vec<_>>();
         for _ in 0..5000 {
-            let obj = objective.eval_float(point.as_slice().unwrap());
+            let cache = &mut FxHashMap::default();
+            let grad_cache = &mut vec![FxHashMap::default(); point.len()];
+            let obj = objective.eval_float(point.as_slice().unwrap(), &mut FxHashMap::default());
             let mut objective_grad =
-                -Array1::from_vec(objective.gradient_at(point.as_slice().unwrap())) / obj;
+                -Array1::from_vec(objective.gradient_at(point.as_slice().unwrap(), grad_cache))
+                    / obj;
             // let mut barrier_penalty = 0.0;
             for c in &constraints {
-                let constraint_grad = Array1::from_vec(c.gradient_at(point.as_slice().unwrap()));
-                let dist = c.estimate_signed_dist(point.as_slice().unwrap());
+                let constraint_grad =
+                    Array1::from_vec(c.gradient_at(point.as_slice().unwrap(), grad_cache));
+                let dist = c.estimate_signed_dist(point.as_slice().unwrap(), cache, grad_cache);
                 let concentration = f64::from(t);
                 let barrier_grad = (concentration * dist).exp()
                     * concentration
@@ -480,11 +509,11 @@ impl Optimizer for AdamBarrier {
             let v_hat = &v / (1.0 - self.beta2.powi(t));
             let update_dir = self.lr * &m_hat / (&v_hat.map(|x| x.sqrt()) + self.epsilon);
             point += &update_dir;
-            let objective = objective.eval_float(point.as_slice().unwrap());
-            let point_exact = point.mapv(Rational::from);
-            if objective <= best_objective && problem.holds_exact(point_exact.as_slice().unwrap()) {
+            let objective =
+                objective.eval_float(point.as_slice().unwrap(), &mut FxHashMap::default());
+            if objective <= best_objective && problem.holds_exact_f64(point.as_slice().unwrap()) {
                 best_objective = objective;
-                best_point = point_exact;
+                best_point = point.clone();
             }
             trajectory.push(point.clone());
             t += 1;
@@ -495,10 +524,7 @@ impl Optimizer for AdamBarrier {
                 println!("{p},");
             }
         }
-        println!(
-            "Best objective: {best_objective} at {}",
-            best_point.mapv(|r| r.round_to_f64())
-        );
-        best_point.to_vec()
+        println!("Best objective: {best_objective} at {}", best_point);
+        best_point.mapv(Rational::from).to_vec()
     }
 }

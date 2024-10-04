@@ -36,7 +36,25 @@ impl ConstraintProblem {
     }
 
     pub fn holds_exact(&self, assignment: &[Rational]) -> bool {
-        self.all_constraints().all(|c| c.holds_exact(assignment))
+        self.holds_exact_with(assignment, &mut FxHashMap::default())
+    }
+
+    pub fn holds_exact_with(
+        &self,
+        assignment: &[Rational],
+        cache: &mut FxHashMap<usize, Rational>,
+    ) -> bool {
+        self.all_constraints()
+            .all(|c| c.holds_exact(assignment, cache))
+    }
+
+    pub fn objective_if_holds_exactly(&self, assignment: &[Rational]) -> Option<Rational> {
+        let cache = &mut FxHashMap::default();
+        if self.holds_exact_with(assignment, cache) {
+            Some(self.objective.eval_exact(assignment, cache))
+        } else {
+            None
+        }
     }
 
     pub fn all_constraints(&self) -> impl Iterator<Item = SymConstraint> + '_ {
@@ -56,12 +74,12 @@ impl ConstraintProblem {
     }
 
     pub fn substitute(&self, replacements: &[SymExpr]) -> Self {
-        let mut cache = FxHashMap::default();
-        let objective = self.objective.substitute_with(replacements, &mut cache);
+        let cache = &mut FxHashMap::default();
+        let objective = self.objective.substitute_with(replacements, cache);
         let constraints = self
             .constraints
             .iter()
-            .map(|c| c.substitute_with(replacements, &mut cache))
+            .map(|c| c.substitute_with(replacements, cache))
             .collect::<Vec<_>>();
         let var_count = self.var_count;
         let decay_vars = self.decay_vars.clone();

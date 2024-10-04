@@ -174,6 +174,7 @@ fn compute_constraints_solution(
         let (simple_problem, _) = generate_constraints(&modified_args, program);
         let simple_solution = solve_constraints(&modified_args, &simple_problem, timeout);
         if let Ok(simple_solution) = simple_solution {
+            // TODO: optimize solution
             println!("Extending solution to the original problem...");
             let (problem, bound) = generate_constraints(args, program);
             // The nonlinear variables can be reused from the simplified problem:
@@ -321,6 +322,9 @@ fn optimize_solution(
     };
     let start_optimizer = Instant::now();
     println!("Optimizing solution...");
+    let mut objective = problem
+        .objective
+        .eval_exact(&solution, &mut Default::default());
     for (i, optimizer) in args.optimizer.iter().enumerate() {
         println!("Optimization step {}: {optimizer}", i + 1);
         let cur_sol = solution.clone();
@@ -340,13 +344,15 @@ fn optimize_solution(
                 .optimize(problem, cur_sol, timeout),
             Optimizer::Linear => LinearProgrammingOptimizer.optimize(problem, cur_sol, timeout),
         };
-        if problem.holds_exact(&optimized_solution)
-            && problem.objective.eval_exact(&optimized_solution)
-                < problem.objective.eval_exact(&solution)
-        {
-            solution = optimized_solution;
+        if let Some(optimized_objective) = problem.objective_if_holds_exactly(&optimized_solution) {
+            if optimized_objective <= objective {
+                solution = optimized_solution;
+                objective = optimized_objective;
+            } else {
+                println!("Optimization step failed (worse objective). Continuing with the previous solution.");
+            }
         } else {
-            println!("Optimization step failed. Continuing with the previous solution.");
+            println!("Optimization step failed (constraint violation). Continuing with the previous solution.");
         }
     }
     let optimizer_time = start_optimizer.elapsed();

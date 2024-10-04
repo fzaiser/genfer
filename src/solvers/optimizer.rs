@@ -4,6 +4,7 @@ use good_lp::{
     solvers::coin_cbc::CoinCbcProblem, variable, ProblemVariables, Solution, SolverModel, Variable,
 };
 use num_traits::Zero;
+use rustc_hash::FxHashMap;
 
 use crate::{
     numbers::{FloatNumber, FloatRat, Rational},
@@ -42,7 +43,9 @@ impl Optimizer for Z3Optimizer {
         solver.push();
         let mut best = init;
         let mut obj_lo = Rational::zero();
-        let mut obj_hi = problem.objective.eval_exact(&best);
+        let mut obj_hi = problem
+            .objective
+            .eval_exact(&best, &mut FxHashMap::default());
         while obj_hi.clone() - obj_lo.clone() > Rational::from(0.1) * obj_hi.clone() {
             println!("Objective bound: [{obj_lo}, {obj_hi}]");
             solver.pop(1);
@@ -113,8 +116,12 @@ impl Optimizer for LinearProgrammingOptimizer {
         _timeout: Duration,
     ) -> Vec<Rational> {
         if let Some(solution) = optimize_linear_parts(problem, init.clone()) {
-            let init_obj = problem.objective.eval_exact(&init);
-            let objective_value = problem.objective.eval_exact(&solution);
+            let init_obj = problem
+                .objective
+                .eval_exact(&init, &mut FxHashMap::default());
+            let objective_value = problem
+                .objective
+                .eval_exact(&solution, &mut FxHashMap::default());
             if init_obj < objective_value {
                 println!(
             "LP solver found a solution with a worse objective value than the initial solution."
@@ -146,13 +153,14 @@ fn construct_model(
         replacements[*v] = SymExpr::from(init[*v].clone());
     }
     let problem = problem.substitute(&replacements);
+    let cache = &mut FxHashMap::default();
     let linear_constraints = problem
         .constraints
         .iter()
         .filter(|constraint| !matches!(constraint, SymConstraint::Or(..)))
         .map(|constraint| {
             constraint
-                .extract_linear()
+                .extract_linear(cache)
                 .unwrap_or_else(|| {
                     panic!("Constraint is not linear in the program variables: {constraint}")
                 })
@@ -180,7 +188,7 @@ fn construct_model(
     }
     let linear_objective = problem
         .objective
-        .extract_linear()
+        .extract_linear(cache)
         .unwrap_or_else(|| {
             panic!(
                 "Objective is not linear in the program variables: {}",

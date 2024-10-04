@@ -1,9 +1,6 @@
 use std::time::Duration;
 
-use crate::{
-    numbers::Rational,
-    sym_expr::{SymConstraint, SymExpr, SymExprKind},
-};
+use crate::{numbers::Rational, sym_expr::SymConstraint};
 
 use super::{
     optimizer::Optimizer,
@@ -15,7 +12,7 @@ use descent::{
     model::{Model, SolutionStatus},
 };
 use descent_ipopt::IpoptModel;
-use num_traits::Zero;
+use rustc_hash::FxHashMap;
 
 pub struct Ipopt {
     verbose: bool,
@@ -33,6 +30,7 @@ impl Ipopt {
         problem: &ConstraintProblem,
         init: Option<&[Rational]>,
     ) -> (Vec<Var>, IpoptModel) {
+        let cache = &mut FxHashMap::default();
         let mut model = IpoptModel::new();
         model.set_num_option("constr_viol_tol", self.tol);
         let mut vars = Vec::new();
@@ -48,9 +46,11 @@ impl Ipopt {
             vars.push(model.add_var(lo, hi, start));
         }
         for constraint in &problem.constraints {
-            let (expr, lo, hi) = ipopt_constraint(constraint, &vars, self.tol);
-            model.add_con(expr, lo, hi);
+            if let Some((expr, lo, hi)) = to_ipopt_constraint(constraint, &vars, self.tol, cache) {
+                model.add_con(expr, lo, hi);
+            }
         }
+        model.set_obj(problem.objective.to_ipopt_expr(&vars, cache));
         (vars, model)
     }
 
@@ -80,7 +80,6 @@ impl Solver for Ipopt {
         _timeout: Duration,
     ) -> Result<Vec<Rational>, SolverError> {
         let (vars, mut model) = self.construct_model(problem, None);
-        model.set_obj(ipopt_expr(&SymExpr::zero(), &vars));
         match Self::solve(&vars, &mut model) {
             Ok((status, solution)) => match status {
                 SolutionStatus::Solved => {
@@ -125,13 +124,13 @@ impl Optimizer for Ipopt {
         init: Vec<Rational>,
         _timeout: Duration,
     ) -> Vec<Rational> {
-        let init_obj = problem.objective.eval_exact(&init);
+        let init_obj = problem.objective.eval_exact(&init, &mut Default::default());
         let (vars, mut model) = self.construct_model(problem, Some(&init));
-        model.set_obj(ipopt_expr(&problem.objective, &vars));
         match Self::solve(&vars, &mut model) {
             Ok((status, solution)) => {
-                let obj_value = problem.objective.eval_exact(&solution);
-                let holds_exact = problem.holds_exact(&solution);
+                let cache = &mut FxHashMap::default();
+                let obj_value = problem.objective.eval_exact(&solution, cache);
+                let holds_exact = problem.holds_exact_with(&solution, cache);
                 match status {
                     SolutionStatus::Solved => {
                         println!("IPOPT found the following solution:");
@@ -176,29 +175,21 @@ impl Optimizer for Ipopt {
     }
 }
 
-fn ipopt_expr(expr: &SymExpr, vars: &[Var]) -> Expr {
-    match expr.kind() {
-        SymExprKind::Constant(c) => c.float().into(),
-        SymExprKind::Variable(v) => vars[*v].into(),
-        SymExprKind::Add(lhs, rhs) => ipopt_expr(lhs, vars) + ipopt_expr(rhs, vars),
-        SymExprKind::Mul(lhs, rhs) => ipopt_expr(lhs, vars) * ipopt_expr(rhs, vars),
-        SymExprKind::Pow(base, exp) => {
-            use descent::expr::dynam::NumOps;
-            ipopt_expr(base, vars).powi(*exp)
-        }
-    }
-}
-
-fn ipopt_constraint(constraint: &SymConstraint, vars: &[Var], tol: f64) -> (Expr, f64, f64) {
+fn to_ipopt_constraint(
+    constraint: &SymConstraint,
+    vars: &[Var],
+    tol: f64,
+    cache: &mut FxHashMap<usize, Expr>,
+) -> Option<(Expr, f64, f64)> {
     match constraint {
         SymConstraint::Eq(lhs, rhs) => {
-            let expr = ipopt_expr(lhs, vars) - ipopt_expr(rhs, vars);
-            (expr, 0.0, 0.0)
+            let expr = lhs.to_ipopt_expr(vars, cache) - rhs.to_ipopt_expr(vars, cache);
+            Some((expr, 0.0, 0.0))
         }
         SymConstraint::Lt(lhs, rhs) | SymConstraint::Le(lhs, rhs) => {
-            let expr = ipopt_expr(lhs, vars) - ipopt_expr(rhs, vars);
-            (expr, f64::NEG_INFINITY, -2.0 * tol)
+            let expr = lhs.to_ipopt_expr(vars, cache) - rhs.to_ipopt_expr(vars, cache);
+            Some((expr, f64::NEG_INFINITY, -2.0 * tol))
         }
-        SymConstraint::Or(_) => (0.0.into(), 0.0, 0.0),
+        SymConstraint::Or(_) => None,
     }
 }

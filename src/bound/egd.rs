@@ -1,5 +1,6 @@
 use ndarray::{ArrayD, Axis, Slice};
 use num_traits::{One, Zero};
+use rustc_hash::FxHashMap;
 use std::ops::AddAssign;
 
 use crate::{
@@ -129,11 +130,14 @@ impl Egd {
     }
 
     pub fn resolve(&self, assignments: &[Rational]) -> Egd {
-        let block = self.block.map(|c| SymExpr::from(c.eval_exact(assignments)));
+        let cache = &mut FxHashMap::default();
+        let block = self
+            .block
+            .map(|c| SymExpr::from(c.eval_exact(assignments, cache)));
         let decays = self
             .decays
             .iter()
-            .map(|p| SymExpr::from(p.eval_exact(assignments)))
+            .map(|p| SymExpr::from(p.eval_exact(assignments, cache)))
             .collect();
         Self { block, decays }
     }
