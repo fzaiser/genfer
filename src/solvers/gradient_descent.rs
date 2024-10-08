@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use good_lp::{Expression, ProblemVariables, Solution, SolverModel, VariableDefinition};
 use ndarray::Array1;
+use num_traits::Zero;
 use rustc_hash::FxHashMap;
 
 use crate::{
@@ -457,7 +458,10 @@ impl Solver for AdamBarrier {
         timeout: Duration,
     ) -> Result<Vec<Rational>, SolverError> {
         let init = vec![Rational::from(1.0 - 1e-3); problem.var_count];
-        let res = self.optimize(problem, init, timeout);
+        let mut problem = problem.clone();
+        // Set objective to zero because we're just solving, not optimizing
+        problem.objective = SymExpr::zero();
+        let res = self.optimize(&problem, init, timeout);
         if problem.holds_exact(&res) {
             Ok(res)
         } else {

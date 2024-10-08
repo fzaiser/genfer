@@ -15,6 +15,7 @@ pub enum SolverError {
     Other,
 }
 
+#[derive(Clone, Debug)]
 pub struct ConstraintProblem {
     pub var_count: usize,
     pub decay_vars: Vec<usize>,

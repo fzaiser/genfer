@@ -1,6 +1,9 @@
 use std::time::Duration;
 
-use crate::{numbers::Rational, sym_expr::SymConstraint};
+use crate::{
+    numbers::Rational,
+    sym_expr::{SymConstraint, SymExpr},
+};
 
 use super::{
     optimizer::Optimizer,
@@ -12,6 +15,7 @@ use descent::{
     model::{Model, SolutionStatus},
 };
 use descent_ipopt::IpoptModel;
+use num_traits::Zero;
 use rustc_hash::FxHashMap;
 
 pub struct Ipopt {
@@ -80,6 +84,8 @@ impl Solver for Ipopt {
         _timeout: Duration,
     ) -> Result<Vec<Rational>, SolverError> {
         let (vars, mut model) = self.construct_model(problem, None);
+        // Set objective to zero because we're just solving, not optimizing
+        model.set_obj(SymExpr::zero().to_ipopt_expr(&vars, &mut FxHashMap::default()));
         match Self::solve(&vars, &mut model) {
             Ok((status, solution)) => match status {
                 SolutionStatus::Solved => {
