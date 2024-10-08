@@ -54,6 +54,8 @@ impl Ipopt {
                 model.add_con(expr, lo, hi);
             }
         }
+        // Weirdly, adding this trivial constraint helps IPOPT find feasible solutions:
+        model.add_con(Expr::from(0.0), 0.0, 0.0);
         model.set_obj(problem.objective.to_ipopt_expr(&vars, cache));
         (vars, model)
     }
