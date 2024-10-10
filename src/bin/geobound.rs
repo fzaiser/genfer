@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
 
+use rustc_hash::FxHashMap;
 use tool::bound::GeometricBound;
 use tool::interval::Interval;
 use tool::numbers::{Rational, F64};
@@ -324,7 +325,7 @@ fn optimize_solution(
     println!("Optimizing solution...");
     let mut objective = problem
         .objective
-        .eval_exact(&solution, &mut Default::default());
+        .eval_exact(&solution, &mut FxHashMap::default());
     for (i, optimizer) in args.optimizer.iter().enumerate() {
         println!("Optimization step {}: {optimizer}", i + 1);
         let cur_sol = solution.clone();

@@ -93,8 +93,8 @@ impl ConstraintProblem {
             factor_vars,
             block_vars,
             var_bounds,
-            objective,
             constraints,
+            objective,
         }
     }
 
@@ -107,87 +107,28 @@ impl ConstraintProblem {
         let mut edges = vec![vec![]; self.var_count];
         for constraint in &self.constraints {
             match constraint {
-                SymConstraint::Eq(a, b) => match (a.kind(), b.kind()) {
-                    (SymExprKind::Variable(a), SymExprKind::Variable(b)) => {
+                SymConstraint::Eq(a, b) => {
+                    if let (SymExprKind::Variable(a), SymExprKind::Variable(b)) =
+                        (a.kind(), b.kind())
+                    {
                         edges[*a].push(*b);
                         edges[*b].push(*a);
                     }
-                    _ => {}
-                },
-                SymConstraint::Le(a, b) => match (a.kind(), b.kind()) {
-                    (SymExprKind::Variable(a), SymExprKind::Variable(b)) => {
+                }
+                SymConstraint::Le(a, b) => {
+                    if let (SymExprKind::Variable(a), SymExprKind::Variable(b)) =
+                        (a.kind(), b.kind())
+                    {
                         edges[*a].push(*b);
                     }
-                    _ => {}
-                },
+                }
                 _ => {}
-            }
-        }
-        // Find strongly connected components using Tarjan's algorithm
-        struct Tarjan {
-            index: usize,
-            stack: Vec<usize>,
-            scc: Vec<usize>,
-            lowlink: Vec<usize>,
-            on_stack: Vec<bool>,
-            components: Vec<Vec<usize>>,
-        }
-        impl Tarjan {
-            pub fn new(var_count: usize) -> Self {
-                Self {
-                    index: 1,
-                    stack: Vec::new(),
-                    scc: vec![0; var_count],
-                    lowlink: vec![0; var_count],
-                    on_stack: vec![false; var_count],
-                    components: Vec::new(),
-                }
-            }
-
-            pub fn sccs(mut self, edges: &[Vec<usize>]) -> Vec<Vec<usize>> {
-                // Nonrecursive Tarjan:
-                for v in 0..edges.len() {
-                    if self.lowlink[v] == 0 {
-                        self.strongconnect(v, edges);
-                    }
-                }
-                self.components
-            }
-
-            fn strongconnect(&mut self, v: usize, edges: &[Vec<usize>]) {
-                self.lowlink[v] = self.index;
-                self.index += 1;
-                self.scc[v] = self.lowlink[v];
-                self.stack.push(v);
-                self.on_stack[v] = true;
-                for &w in &edges[v] {
-                    if self.lowlink[w] == 0 {
-                        self.strongconnect(w, edges);
-                        self.scc[v] = self.scc[v].min(self.scc[w]);
-                    } else if self.on_stack[w] {
-                        self.scc[v] = self.scc[v].min(self.lowlink[w]);
-                    }
-                }
-                if self.scc[v] == self.lowlink[v] {
-                    let mut component = Vec::new();
-                    loop {
-                        let w = self.stack.pop().unwrap();
-                        self.on_stack[w] = false;
-                        component.push(w);
-                        if w == v {
-                            break;
-                        }
-                    }
-                    self.components.push(component);
-                }
             }
         }
         // The strongly-connected components are sets of variables that must be equal.
         // So for each SCC, we replace each of its variables by a canonical one.
         let sccs = Tarjan::new(self.var_count).sccs(&edges);
-        let mut substitution = (0..self.var_count)
-            .map(|v| SymExpr::var(v))
-            .collect::<Vec<_>>();
+        let mut substitution = (0..self.var_count).map(SymExpr::var).collect::<Vec<_>>();
         for scc in &sccs {
             let canonical_var = scc.iter().min().unwrap();
             for var in scc {
@@ -195,6 +136,67 @@ impl ConstraintProblem {
             }
         }
         *self = self.substitute(&substitution);
+    }
+}
+
+/// Find strongly connected components using Tarjan's algorithm
+struct Tarjan {
+    index: usize,
+    stack: Vec<usize>,
+    scc: Vec<usize>,
+    lowlink: Vec<usize>,
+    on_stack: Vec<bool>,
+    components: Vec<Vec<usize>>,
+}
+
+impl Tarjan {
+    pub fn new(var_count: usize) -> Self {
+        Self {
+            index: 1,
+            stack: Vec::new(),
+            scc: vec![0; var_count],
+            lowlink: vec![0; var_count],
+            on_stack: vec![false; var_count],
+            components: Vec::new(),
+        }
+    }
+
+    pub fn sccs(mut self, edges: &[Vec<usize>]) -> Vec<Vec<usize>> {
+        // Nonrecursive Tarjan:
+        for v in 0..edges.len() {
+            if self.lowlink[v] == 0 {
+                self.strongconnect(v, edges);
+            }
+        }
+        self.components
+    }
+
+    fn strongconnect(&mut self, v: usize, edges: &[Vec<usize>]) {
+        self.lowlink[v] = self.index;
+        self.index += 1;
+        self.scc[v] = self.lowlink[v];
+        self.stack.push(v);
+        self.on_stack[v] = true;
+        for &w in &edges[v] {
+            if self.lowlink[w] == 0 {
+                self.strongconnect(w, edges);
+                self.scc[v] = self.scc[v].min(self.scc[w]);
+            } else if self.on_stack[w] {
+                self.scc[v] = self.scc[v].min(self.lowlink[w]);
+            }
+        }
+        if self.scc[v] == self.lowlink[v] {
+            let mut component = Vec::new();
+            loop {
+                let w = self.stack.pop().unwrap();
+                self.on_stack[w] = false;
+                component.push(w);
+                if w == v {
+                    break;
+                }
+            }
+            self.components.push(component);
+        }
     }
 }
 

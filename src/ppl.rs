@@ -2,8 +2,6 @@ use std::borrow::Borrow;
 use std::fmt::Display;
 
 use crate::{numbers::Number, support::SupportSet};
-use Distribution::*;
-use Statement::*;
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Natural(pub u64);
@@ -188,14 +186,13 @@ pub enum Distribution {
 
 impl Distribution {
     pub fn support(&self) -> SupportSet {
-        use Distribution::*;
         match self {
-            Dirac(a) => SupportSet::point(a.0),
-            Bernoulli(_) => (0..=1).into(),
-            Binomial(n, _) => (0..=n.0).into(),
-            Categorical(rs) => (0..rs.len() as u64).into(),
-            NegBinomial(..) | Geometric(_) => SupportSet::naturals(),
-            Uniform { start, end } => (start.0..end.0).into(),
+            Distribution::Dirac(a) => SupportSet::point(a.0),
+            Distribution::Bernoulli(_) => (0..=1).into(),
+            Distribution::Binomial(n, _) => (0..=n.0).into(),
+            Distribution::Categorical(rs) => (0..rs.len() as u64).into(),
+            Distribution::NegBinomial(..) | Distribution::Geometric(_) => SupportSet::naturals(),
+            Distribution::Uniform { start, end } => (start.0..end.0).into(),
         }
     }
 }
@@ -203,10 +200,10 @@ impl Distribution {
 impl Display for Distribution {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Dirac(a) => write!(f, "Dirac({a})"),
-            Bernoulli(p) => write!(f, "Bernoulli({p})"),
-            Binomial(n, p) => write!(f, "Binomial({n}, {p})"),
-            Categorical(rs) => {
+            Distribution::Dirac(a) => write!(f, "Dirac({a})"),
+            Distribution::Bernoulli(p) => write!(f, "Bernoulli({p})"),
+            Distribution::Binomial(n, p) => write!(f, "Binomial({n}, {p})"),
+            Distribution::Categorical(rs) => {
                 write!(f, "Categorical(")?;
                 let mut first = true;
                 for r in rs {
@@ -219,9 +216,9 @@ impl Display for Distribution {
                 }
                 write!(f, ")")
             }
-            NegBinomial(r, p) => write!(f, "NegBinomial({r}, {p})"),
-            Geometric(p) => write!(f, "Geometric({p})"),
-            Uniform { start, end } => write!(f, "Uniform({start}, {end})"),
+            Distribution::NegBinomial(r, p) => write!(f, "NegBinomial({r}, {p})"),
+            Distribution::Geometric(p) => write!(f, "Geometric({p})"),
+            Distribution::Uniform { start, end } => write!(f, "Uniform({start}, {end})"),
         }
     }
 }
@@ -434,7 +431,7 @@ impl Statement {
 
     fn indent_fmt(&self, indent: usize, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Sample {
+            Statement::Sample {
                 var,
                 distribution: dist,
                 add_previous_value: add_previous,
@@ -445,7 +442,7 @@ impl Statement {
                     writeln!(f, "{var} ~ {dist};")
                 }
             }
-            Assign {
+            Statement::Assign {
                 var,
                 add_previous_value,
                 addend,
@@ -471,8 +468,8 @@ impl Statement {
                 }
                 Ok(())
             }
-            Decrement { var, offset } => writeln!(f, "{var} -= {offset};"),
-            IfThenElse { cond, then, els } => {
+            Statement::Decrement { var, offset } => writeln!(f, "{var} -= {offset};"),
+            Statement::IfThenElse { cond, then, els } => {
                 if let Some(event) = self.recognize_observe() {
                     return writeln!(f, "observe {event};");
                 }
@@ -481,7 +478,7 @@ impl Statement {
                 let indent_str = " ".repeat(indent);
                 match els.as_slice() {
                     [] => writeln!(f, "{indent_str}}}")?,
-                    [if_stmt @ IfThenElse { .. }] => {
+                    [if_stmt @ Statement::IfThenElse { .. }] => {
                         write!(f, "{indent_str}}} else ")?;
                         if_stmt.indent_fmt(indent, f)?;
                     }
@@ -493,7 +490,7 @@ impl Statement {
                 }
                 Ok(())
             }
-            While { cond, unroll, body } => {
+            Statement::While { cond, unroll, body } => {
                 let indent_str = " ".repeat(indent);
                 write!(f, "while {cond} ")?;
                 if let Some(unroll) = unroll {
@@ -503,54 +500,61 @@ impl Statement {
                 Self::fmt_block(body, indent + 2, f)?;
                 writeln!(f, "{indent_str}}}")
             }
-            Fail => writeln!(f, "fail;"),
+            Statement::Fail => writeln!(f, "fail;"),
         }
     }
 
     pub fn uses_observe(&self) -> bool {
         match self {
-            Sample { .. } | Assign { .. } | Decrement { .. } => false,
-            IfThenElse { then, els, .. } => {
+            Statement::Sample { .. } | Statement::Assign { .. } | Statement::Decrement { .. } => {
+                false
+            }
+            Statement::IfThenElse { then, els, .. } => {
                 then.iter().any(Statement::uses_observe) || els.iter().any(Statement::uses_observe)
             }
-            While { body, .. } => body.iter().any(Statement::uses_observe),
-            Fail => true,
+            Statement::While { body, .. } => body.iter().any(Statement::uses_observe),
+            Statement::Fail => true,
         }
     }
 
     pub fn used_vars(&self) -> VarRange {
         match self {
-            Sample { var: v, .. } | Decrement { var: v, offset: _ } => VarRange::new(*v),
-            Assign {
+            Statement::Sample { var: v, .. } | Statement::Decrement { var: v, offset: _ } => {
+                VarRange::new(*v)
+            }
+            Statement::Assign {
                 var: v, addend: a, ..
             } => VarRange::new(*v).union(&if let Some((_, w)) = a {
                 VarRange::new(*w)
             } else {
                 VarRange::empty()
             }),
-            IfThenElse { cond, then, els } => cond
+            Statement::IfThenElse { cond, then, els } => cond
                 .used_vars()
                 .union(&VarRange::union_all(then.iter().map(Statement::used_vars)))
                 .union(&VarRange::union_all(els.iter().map(Statement::used_vars))),
-            While {
+            Statement::While {
                 cond,
                 body,
                 unroll: _,
             } => cond
                 .used_vars()
                 .union(&VarRange::union_all(body.iter().map(Statement::used_vars))),
-            Fail => VarRange::empty(),
+            Statement::Fail => VarRange::empty(),
         }
     }
 
     fn size(&self) -> usize {
         match self {
-            Sample { .. } | Assign { .. } | Decrement { .. } | Fail => 1,
-            IfThenElse { then, els, .. } => {
+            Statement::Sample { .. }
+            | Statement::Assign { .. }
+            | Statement::Decrement { .. }
+            | Statement::Fail => 1,
+            Statement::IfThenElse { then, els, .. } => {
                 1 + then.iter().fold(0, |acc, stmt| acc + stmt.size())
                     + els.iter().fold(0, |acc, stmt| acc + stmt.size())
             }
-            While { body, .. } => 1 + body.iter().fold(0, |acc, stmt| acc + stmt.size()),
+            Statement::While { body, .. } => 1 + body.iter().fold(0, |acc, stmt| acc + stmt.size()),
         }
     }
 }

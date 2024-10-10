@@ -43,16 +43,15 @@ impl SymExpr {
     }
 
     fn count_nodes_with(&self, cache: &mut FxHashMap<usize, usize>) -> usize {
-        let key = self.0.as_ref() as *const SymExprKind as usize;
+        let key = std::ptr::from_ref::<SymExprKind>(self.0.as_ref()) as usize;
         if Rc::strong_count(&self.0) > 1 {
-            if let Some(_) = cache.get(&key) {
+            if cache.get(&key).is_some() {
                 return 1;
             }
             cache.insert(key, 1);
         }
         match self.kind() {
-            SymExprKind::Constant(_) => 1,
-            SymExprKind::Variable(_) => 1,
+            SymExprKind::Constant(_) | SymExprKind::Variable(_) => 1,
             SymExprKind::Add(lhs, rhs) | SymExprKind::Mul(lhs, rhs) => {
                 1 + lhs.count_nodes_with(cache) + rhs.count_nodes_with(cache)
             }
@@ -110,7 +109,7 @@ impl SymExpr {
         replacements: &[Self],
         cache: &mut FxHashMap<usize, Self>,
     ) -> Self {
-        let key = self.0.as_ref() as *const SymExprKind as usize;
+        let key = std::ptr::from_ref::<SymExprKind>(self.0.as_ref()) as usize;
         if Rc::strong_count(&self.0) > 1 {
             if let Some(cached_result) = cache.get(&key) {
                 return cached_result.clone();
@@ -145,7 +144,7 @@ impl SymExpr {
         &self,
         cache: &mut FxHashMap<usize, Option<LinearExpr>>,
     ) -> Option<LinearExpr> {
-        let key = self.0.as_ref() as *const SymExprKind as usize;
+        let key = std::ptr::from_ref::<SymExprKind>(self.0.as_ref()) as usize;
         if Rc::strong_count(&self.0) > 1 {
             if let Some(cached_result) = cache.get(&key) {
                 return cached_result.clone();
@@ -195,7 +194,7 @@ impl SymExpr {
         var: usize,
         cache: &mut FxHashMap<usize, (f64, f64)>,
     ) -> (f64, f64) {
-        let key = self.0.as_ref() as *const SymExprKind as usize;
+        let key = std::ptr::from_ref::<SymExprKind>(self.0.as_ref()) as usize;
         if Rc::strong_count(&self.0) > 1 {
             if let Some(cached_result) = cache.get(&key) {
                 return *cached_result;
@@ -342,7 +341,7 @@ impl SymExpr {
     }
 
     pub fn eval_float(&self, values: &[f64], cache: &mut FxHashMap<usize, f64>) -> f64 {
-        let key = self.0.as_ref() as *const SymExprKind as usize;
+        let key = std::ptr::from_ref::<SymExprKind>(self.0.as_ref()) as usize;
         if Rc::strong_count(&self.0) > 1 {
             if let Some(cached_result) = cache.get(&key) {
                 return *cached_result;
@@ -370,7 +369,7 @@ impl SymExpr {
         values: &[Rational],
         cache: &mut FxHashMap<usize, Rational>,
     ) -> Rational {
-        let key = self.0.as_ref() as *const SymExprKind as usize;
+        let key = std::ptr::from_ref::<SymExprKind>(self.0.as_ref()) as usize;
         if Rc::strong_count(&self.0) > 1 {
             if let Some(cached_result) = cache.get(&key) {
                 return cached_result.clone();
@@ -394,7 +393,7 @@ impl SymExpr {
     }
 
     pub fn to_ipopt_expr(&self, vars: &[Var], cache: &mut FxHashMap<usize, Expr>) -> Expr {
-        let key = self.0.as_ref() as *const SymExprKind as usize;
+        let key = std::ptr::from_ref::<SymExprKind>(self.0.as_ref()) as usize;
         if Rc::strong_count(&self.0) > 1 {
             if let Some(cached_result) = cache.get(&key) {
                 return cached_result.clone();

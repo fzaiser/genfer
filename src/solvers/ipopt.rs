@@ -129,7 +129,9 @@ impl Optimizer for Ipopt {
         init: Vec<Rational>,
         _timeout: Duration,
     ) -> Vec<Rational> {
-        let init_obj = problem.objective.eval_exact(&init, &mut Default::default());
+        let init_obj = problem
+            .objective
+            .eval_exact(&init, &mut FxHashMap::default());
         let (vars, mut model) = self.construct_model(problem, Some(&init));
         match Self::solve(&vars, &mut model) {
             Ok((status, solution)) => {

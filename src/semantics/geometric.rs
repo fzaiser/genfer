@@ -192,7 +192,8 @@ impl Transformer for GeometricBoundSemantics {
                         let p = Rational::from_ratio(p.numer, p.denom);
                         let mut added_masses = res.lower.marginalize_out(*var) * p.clone();
                         res.lower = FiniteDiscrete::zero(res.var_supports.num_vars());
-                        for _ in 0..self.unroll + 1 {
+                        let limit = self.unroll + 1;
+                        for _ in 0..limit {
                             res.lower += &added_masses;
                             added_masses *= Rational::one() - p.clone();
                             added_masses.shift_right(*var, 1);

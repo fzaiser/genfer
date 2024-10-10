@@ -3,7 +3,6 @@
 #![expect(clippy::must_use_candidate)]
 #![expect(clippy::return_self_not_must_use)]
 #![expect(clippy::cast_precision_loss)]
-#![expect(clippy::enum_glob_use)]
 #![expect(clippy::cast_possible_truncation)]
 #![expect(clippy::cast_possible_wrap)]
 #![expect(clippy::cast_sign_loss)]
