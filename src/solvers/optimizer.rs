@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use good_lp::{
     solvers::coin_cbc::CoinCbcProblem, variable, ProblemVariables, Solution, SolverModel, Variable,
@@ -131,10 +131,7 @@ impl Optimizer for LinearProgrammingOptimizer {
             println!(
                 "Best objective: {} at {:?}",
                 objective_value.round(),
-                solution
-                    .iter()
-                    .map(Rational::round)
-                    .collect::<Vec<_>>()
+                solution.iter().map(Rational::round).collect::<Vec<_>>()
             );
             solution
         } else {
@@ -207,6 +204,8 @@ pub fn optimize_linear_parts(
     problem: &ConstraintProblem,
     init: Vec<Rational>,
 ) -> Option<Vec<Rational>> {
+    let start = Instant::now();
+    println!("Running LP solver...");
     let (var_list, mut lp) = construct_model(problem, &init);
     // For a feasible solution no primal infeasibility, i.e., constraint violation, may exceed this value:
     lp.set_parameter("primalT", &TOL.to_string());
@@ -229,6 +228,7 @@ pub fn optimize_linear_parts(
             todo!("Error: {msg}");
         }
     };
+    println!("LP solver time: {} s", start.elapsed().as_secs_f64());
     let solution = var_list
         .iter()
         .map(|v| Rational::from(solution.value(*v)))

@@ -14,7 +14,7 @@ use tool::ppl::{Program, Var};
 use tool::semantics::geometric::GeometricBoundSemantics;
 use tool::semantics::support::VarSupport;
 use tool::semantics::Transformer;
-use tool::solvers::gradient_descent::{Adam, AdamBarrier, GradientDescent};
+use tool::solvers::adam::AdamBarrier;
 use tool::solvers::ipopt::Ipopt;
 use tool::solvers::optimizer::{
     optimize_linear_parts, LinearProgrammingOptimizer, Optimizer as _, Z3Optimizer,
@@ -29,8 +29,6 @@ use tool::sym_expr::SymExpr;
 #[derive(Clone, ValueEnum)]
 enum Solver {
     Z3,
-    #[value(name = "gd")]
-    GradientDescent,
     AdamBarrier,
     Ipopt,
 }
@@ -38,9 +36,6 @@ enum Solver {
 #[derive(Clone, ValueEnum)]
 enum Optimizer {
     Z3,
-    #[value(name = "gd")]
-    GradientDescent,
-    Adam,
     AdamBarrier,
     Ipopt,
     Linear,
@@ -50,8 +45,6 @@ impl std::fmt::Display for Optimizer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Optimizer::Z3 => write!(f, "Z3"),
-            Optimizer::GradientDescent => write!(f, "Gradient Descent"),
-            Optimizer::Adam => write!(f, "ADAM"),
             Optimizer::AdamBarrier => write!(f, "ADAM with Barrier Method"),
             Optimizer::Ipopt => write!(f, "IPOPT"),
             Optimizer::Linear => write!(f, "Linear Optimization"),
@@ -167,6 +160,7 @@ fn compute_constraints_solution(
     GeometricBound,
     Result<Vec<Rational>, SolverError>,
 ) {
+    let (problem, bound) = generate_constraints(args, program);
     if args.unroll != 0 {
         println!("Solving simplified problem with unroll limit set to 0 first...");
         let modified_args = CliArgs {
@@ -189,7 +183,6 @@ fn compute_constraints_solution(
                 timeout,
             );
             println!("Extending solution to the original problem...");
-            let (problem, bound) = generate_constraints(args, program);
             // The nonlinear variables can be reused from the simplified problem:
             let mut solution = vec![Rational::zero(); problem.var_count];
             for (simple_var, var) in simple_problem.factor_vars.iter().zip(&problem.factor_vars) {
@@ -206,13 +199,13 @@ fn compute_constraints_solution(
         println!("Solving simplified problem (unrolling limit set to 0) failed.");
         println!("Continuing with the original problem.");
     }
-    let (problem, bound) = generate_constraints(args, program);
     let init_solution = solve_constraints(args, &problem, timeout);
     (problem, bound, init_solution)
 }
 
 fn generate_constraints(args: &CliArgs, program: &Program) -> (ConstraintProblem, GeometricBound) {
     let start = Instant::now();
+    println!("Generating constraints...");
     let mut ctx = GeometricBoundSemantics::new()
         .with_verbose(args.verbose)
         .with_min_degree(args.min_degree)
@@ -282,9 +275,6 @@ fn solve_constraints(
     let start_solver = Instant::now();
     let solution = match args.solver {
         Solver::Z3 => Z3Solver.solve(problem, timeout),
-        Solver::GradientDescent => GradientDescent::default()
-            .with_verbose(args.verbose)
-            .solve(problem, timeout),
         Solver::AdamBarrier => AdamBarrier::default()
             .with_verbose(args.verbose)
             .solve(problem, timeout),
@@ -341,12 +331,6 @@ fn optimize_solution(
         let start = Instant::now();
         let optimized_solution = match optimizer {
             Optimizer::Z3 => Z3Optimizer.optimize(problem, cur_sol, timeout),
-            Optimizer::GradientDescent => GradientDescent::default()
-                .with_verbose(args.verbose)
-                .optimize(problem, cur_sol, timeout),
-            Optimizer::Adam => Adam::default()
-                .with_verbose(args.verbose)
-                .optimize(problem, cur_sol, timeout),
             Optimizer::AdamBarrier => AdamBarrier::default()
                 .with_verbose(args.verbose)
                 .optimize(problem, cur_sol, timeout),

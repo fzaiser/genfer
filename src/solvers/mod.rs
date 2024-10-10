@@ -1,4 +1,4 @@
-pub mod gradient_descent;
+pub mod adam;
 pub mod ipopt;
 pub mod linear;
 pub mod optimizer;

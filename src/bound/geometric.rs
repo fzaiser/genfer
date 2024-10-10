@@ -1,6 +1,6 @@
 use crate::{ppl::Var, semantics::support::VarSupport, support::SupportSet};
 
-use super::{FiniteDiscrete, Egd};
+use super::{Egd, FiniteDiscrete};
 
 #[derive(Debug, Clone)]
 pub struct GeometricBound {
