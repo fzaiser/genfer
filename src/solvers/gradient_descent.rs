@@ -58,7 +58,7 @@ impl Solver for GradientDescent {
         // initialize the polynomial coefficient values to their lower bounds (plus some slack)
         for (v, (lo, _)) in problem.var_bounds.iter().enumerate() {
             if problem.block_vars.contains(&v) {
-                point[v] = (lo.round_to_f64() + 0.5) * 2.0; // TODO: is this robust enough?
+                point[v] = (lo.round() + 0.5) * 2.0; // TODO: is this robust enough?
             }
         }
         let mut trajectory = vec![point.clone()];
@@ -263,7 +263,7 @@ impl Optimizer for GradientDescent {
         let slack_epsilon = 1e-6;
         let objective = &problem.objective;
         let lr = self.step_size;
-        let mut point: Array1<f64> = Array1::from_vec(init).map(Rational::round_to_f64);
+        let mut point: Array1<f64> = Array1::from_vec(init).map(Rational::round);
         let mut best_point: Array1<f64> = point.clone();
         let mut best_objective =
             objective.eval_float(point.as_slice().unwrap(), &mut FxHashMap::default());
@@ -357,7 +357,7 @@ impl Optimizer for Adam {
     ) -> Vec<Rational> {
         let slack_epsilon = 1e-6;
         let objective = &problem.objective;
-        let mut best_point = Array1::from_vec(init).map(Rational::round_to_f64);
+        let mut best_point = Array1::from_vec(init).map(Rational::round);
         let mut point = best_point.clone();
         let mut best_objective =
             objective.eval_float(point.as_slice().unwrap(), &mut FxHashMap::default());
@@ -478,7 +478,7 @@ impl Optimizer for AdamBarrier {
         _timeout: Duration,
     ) -> Vec<Rational> {
         let objective = &problem.objective;
-        let mut best_point = Array1::from_vec(init).map(Rational::round_to_f64);
+        let mut best_point = Array1::from_vec(init).map(Rational::round);
         let mut point: Array1<f64> = best_point.clone();
         let mut best_objective =
             objective.eval_float(point.as_slice().unwrap(), &mut FxHashMap::default());

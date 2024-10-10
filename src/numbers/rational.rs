@@ -55,7 +55,7 @@ impl Rational {
         Self::Frac(Rc::new(r))
     }
 
-    pub fn round_to_f64(&self) -> f64 {
+    pub fn round(&self) -> f64 {
         match self {
             Rational::Frac(r) => r.to_f64(),
             Rational::Special(s) => match s {
@@ -67,7 +67,7 @@ impl Rational {
     }
 
     pub fn round_down(&self) -> f64 {
-        let rounded = self.round_to_f64();
+        let rounded = self.round();
         if &Rational::from(rounded) > self {
             F64::from(rounded).next_down().to_f64()
         } else {
@@ -76,7 +76,7 @@ impl Rational {
     }
 
     pub fn round_up(&self) -> f64 {
-        let rounded = self.round_to_f64();
+        let rounded = self.round();
         if &Rational::from(rounded) < self {
             F64::from(rounded).next_up().to_f64()
         } else {
@@ -196,13 +196,6 @@ impl From<f64> for Rational {
             }
             _ => Self::from_rug_rational(rug::Rational::from_f64(f).unwrap()),
         }
-    }
-}
-
-impl From<Rational> for f64 {
-    #[inline]
-    fn from(r: Rational) -> Self {
-        r.round_to_f64()
     }
 }
 

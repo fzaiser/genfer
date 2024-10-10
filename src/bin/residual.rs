@@ -89,23 +89,21 @@ fn run_program(program: &Program, args: &CliArgs) {
                 .unwrap()
                 .clone();
             let hi = lo.clone() + residual.clone();
-            println!("{i}: [{}, {}]", lo.round_to_f64(), hi.round_to_f64());
+            println!("p'({i}) {}", in_iv(&Interval::exact(lo, hi)));
         }
     }
 
-    let (norm_lo, norm_hi) = if !args.no_normalize && program.uses_observe() {
+    let norm = if !args.no_normalize && program.uses_observe() {
         let total_lo = result.lower.total_mass().clone();
         let total_hi = Rational::one() - result.reject.clone();
+        let total = Interval::exact(total_lo.clone(), total_hi.clone());
         if args.verbose {
-            println!(
-                "\nNormalizing constant: Z {}",
-                in_iv(&Interval::exact(total_lo.clone(), total_hi.clone()))
-            );
+            println!("\nNormalizing constant: Z {}", in_iv(&total));
             println!("Everything from here on is normalized.");
         }
-        (total_lo, total_hi)
+        total
     } else {
-        (Rational::one(), Rational::one())
+        Interval::one()
     };
 
     println!("\nProbability masses:");
@@ -123,13 +121,11 @@ fn run_program(program: &Program, args: &CliArgs) {
             assert!(lo.is_zero());
             Rational::zero()
         };
-        let prob = Interval::exact(lo / norm_hi.clone(), hi / norm_lo.clone());
+        let prob = Interval::exact(lo, hi) / norm.clone();
         println!("p({i}) {}", in_iv(&prob));
     }
-    println!(
-        "p(n) {} for all n >= {limit}",
-        in_iv(&Interval::exact(Rational::zero(), residual.clone()))
-    );
+    let residual_norm = Interval::exact(Rational::zero(), residual.clone()) / norm.clone();
+    println!("p(n) {} for all n >= {limit}", in_iv(&residual_norm));
 
     println!("\nMoments:");
     let lower_moments = result.lower.moments(program.result, 5);
@@ -138,7 +134,7 @@ fn run_program(program: &Program, args: &CliArgs) {
         let added = residual.clone() * range.hi.clone().pow(i32::try_from(i).unwrap());
         let lo = lower_moments[i].clone();
         let hi = lo.clone() + added.clone();
-        let moment = Interval::exact(lo / norm_hi.clone(), hi / norm_lo.clone());
+        let moment = Interval::exact(lo, hi) / norm.clone();
         println!("{i}-th (raw) moment {}", in_iv(&moment));
     }
     println!("Total time: {:.5}s", start.elapsed().as_secs_f64());
@@ -146,7 +142,7 @@ fn run_program(program: &Program, args: &CliArgs) {
 
 fn in_iv(iv: &Interval<Rational>) -> String {
     if iv.lo == iv.hi {
-        format!("= {}", iv.lo.round_to_f64())
+        format!("= {}", iv.lo.round())
     } else {
         format!(
             "∈ [{}, {}]",

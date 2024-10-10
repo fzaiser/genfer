@@ -130,10 +130,10 @@ impl Optimizer for LinearProgrammingOptimizer {
             }
             println!(
                 "Best objective: {} at {:?}",
-                objective_value.round_to_f64(),
+                objective_value.round(),
                 solution
                     .iter()
-                    .map(Rational::round_to_f64)
+                    .map(Rational::round)
                     .collect::<Vec<_>>()
             );
             solution
@@ -172,9 +172,9 @@ fn construct_model(
     for (replacement, (lo, hi)) in replacements.iter().zip(&problem.var_bounds) {
         match replacement.kind() {
             SymExprKind::Variable(_) => {
-                let var = variable().min(lo.round_to_f64());
+                let var = variable().min(lo.round());
                 let var = if hi.is_finite() {
-                    var.max(hi.round_to_f64())
+                    var.max(hi.round())
                 } else {
                     var
                 };

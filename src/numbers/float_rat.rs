@@ -12,7 +12,7 @@ pub struct FloatRat {
 
 impl FloatRat {
     pub fn new(rat: Rational) -> Self {
-        let float = rat.round_to_f64();
+        let float = rat.round();
         FloatRat { rat, float }
     }
 
@@ -85,7 +85,7 @@ impl Neg for FloatRat {
 impl AddAssign<FloatRat> for FloatRat {
     fn add_assign(&mut self, other: FloatRat) {
         self.rat += other.rat;
-        self.float = self.rat.round_to_f64();
+        self.float = self.rat.round();
     }
 }
 
@@ -101,7 +101,7 @@ impl Add<FloatRat> for FloatRat {
 impl SubAssign<FloatRat> for FloatRat {
     fn sub_assign(&mut self, other: FloatRat) {
         self.rat -= other.rat;
-        self.float = self.rat.round_to_f64();
+        self.float = self.rat.round();
     }
 }
 
@@ -117,7 +117,7 @@ impl Sub<FloatRat> for FloatRat {
 impl MulAssign<FloatRat> for FloatRat {
     fn mul_assign(&mut self, other: FloatRat) {
         self.rat *= other.rat;
-        self.float = self.rat.round_to_f64();
+        self.float = self.rat.round();
     }
 }
 
@@ -133,7 +133,7 @@ impl Mul<FloatRat> for FloatRat {
 impl DivAssign<FloatRat> for FloatRat {
     fn div_assign(&mut self, other: FloatRat) {
         self.rat /= other.rat;
-        self.float = self.rat.round_to_f64();
+        self.float = self.rat.round();
     }
 }
 

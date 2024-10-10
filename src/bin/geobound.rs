@@ -127,6 +127,9 @@ pub fn main() -> std::io::Result<ExitCode> {
     if args.print_program {
         println!("Parsed program:\n{program}\n");
     }
+    if args.objective.is_none() {
+        println!("WARNING: No optimization objective set. The resulting bounds will be BAD.");
+    }
     Ok(run_program(&program, &args))
 }
 
@@ -311,10 +314,10 @@ fn continue_with_solution(
     }
     let marginal = bound.marginal(program.result);
     let (thresh, decay, thresh_hi) = output_unnormalized(&marginal, program.result);
-    let (norm_lo, norm_hi) = bound_normalization_constant(args, program, &marginal);
-    output_probabilities(&marginal, program.result, args.limit, &norm_lo, &norm_hi);
-    output_tail_asymptotics(&decay, thresh_hi, thresh, &norm_lo);
-    output_moments(&marginal, program.result, &norm_lo, &norm_hi);
+    let norm = bound_normalization_constant(args, program, &marginal);
+    output_probabilities(&marginal, program.result, args.limit, &norm, "p");
+    output_tail_asymptotics(&decay, &thresh_hi, thresh, &norm.lo, "p");
+    output_moments(&marginal, program.result, &norm);
     ExitCode::SUCCESS
 }
 
@@ -325,9 +328,6 @@ fn optimize_solution(
     timeout: Duration,
 ) -> Vec<Rational> {
     if problem.objective.is_zero() {
-        println!(
-            "SKIPPING optimization because no objective is set. Resulting bounds will be BAD."
-        );
         return solution;
     };
     let start_optimizer = Instant::now();
@@ -385,27 +385,10 @@ fn output_unnormalized(bound: &GeometricBound, var: Var) -> (usize, Rational, Ra
         .extract_constant()
         .unwrap()
         .rat();
-    let lower_probs = bound.lower.probs(var);
     let upper_probs = bound.upper.probs_exact(var, thresh + 1);
-    for i in 0..thresh {
-        let lo = if i < lower_len {
-            lower_probs[i].clone()
-        } else {
-            Rational::zero()
-        };
-        let hi = upper_probs[i].clone();
-        println!(
-            "{i}: [{}, {}]",
-            F64::from(lo.round_to_f64()),
-            F64::from(hi.round_to_f64())
-        );
-    }
+    output_probabilities(bound, var, Some(thresh), &Interval::one(), "p'");
     let thresh_hi = upper_probs[thresh].clone();
-    println!(
-        "n >= {thresh}: [0, {} * {}^(n - {thresh})]",
-        F64::from(thresh_hi.round_to_f64()),
-        F64::from(decay.round_to_f64()),
-    );
+    output_tail_asymptotics(&decay, &thresh_hi, thresh, &Rational::one(), "p'");
     (thresh, decay, thresh_hi)
 }
 
@@ -413,9 +396,9 @@ fn bound_normalization_constant(
     args: &CliArgs,
     program: &Program,
     bound: &GeometricBound,
-) -> (Rational, Rational) {
+) -> Interval<Rational> {
     if args.no_normalize || !program.uses_observe() {
-        (Rational::one(), Rational::one())
+        Interval::one()
     } else {
         let total_lo = bound.lower.total_mass();
         let total_hi = bound.upper.total_mass().extract_constant().unwrap().rat();
@@ -424,14 +407,12 @@ fn bound_normalization_constant(
         } else {
             total_hi
         };
+        let total = Interval::exact(total_lo, total_hi);
         if args.verbose {
-            println!(
-                "\nNormalizing constant: Z {}",
-                in_iv(&Interval::exact(total_lo.clone(), total_hi.clone()))
-            );
+            println!("\nNormalizing constant: Z {}", in_iv(&total));
             println!("Everything from here on is normalized.");
         }
-        (total_lo, total_hi)
+        total
     }
 }
 
@@ -439,8 +420,8 @@ fn output_probabilities(
     bound: &GeometricBound,
     var: Var,
     limit: Option<usize>,
-    norm_lo: &Rational,
-    norm_hi: &Rational,
+    norm: &Interval<Rational>,
+    p: &str,
 ) {
     println!("\nProbability masses:");
     let limit = if let Some(range) = bound.var_supports[var].finite_nonempty_range() {
@@ -452,21 +433,22 @@ fn output_probabilities(
     let lower_probs = bound.lower.probs(var);
     let upper_probs = bound.upper.probs_exact(var, limit);
     for i in 0..limit {
-        let lo = lower_probs.get(i).unwrap_or(&Rational::zero()).clone() / norm_hi.clone();
-        let mut hi = upper_probs[i].clone() / norm_lo.clone();
+        let lo = lower_probs.get(i).unwrap_or(&Rational::zero()).clone() / norm.hi.clone();
+        let mut hi = upper_probs[i].clone() / norm.lo.clone();
         if hi > Rational::one() {
             hi = Rational::one();
         }
         let prob = Interval::exact(lo, hi);
-        println!("p({i}) {}", in_iv(&prob));
+        println!("{p}({i}) {}", in_iv(&prob));
     }
 }
 
 fn output_tail_asymptotics(
     decay: &Rational,
-    thresh_hi: Rational,
+    thresh_hi: &Rational,
     thresh: usize,
     norm_lo: &Rational,
+    p: &str,
 ) {
     if decay.is_zero() {
         let from = if thresh_hi.is_zero() {
@@ -474,26 +456,27 @@ fn output_tail_asymptotics(
         } else {
             thresh + 1
         };
-        println!("Asymptotics: p(n) = 0 for n >= {from}");
+        println!("Asymptotics: {p}(n) = 0 for n >= {from}");
     } else {
-        let factor = thresh_hi / norm_lo.clone() * decay.pow(-(i32::try_from(thresh).unwrap()));
+        let factor =
+            thresh_hi.clone() / norm_lo.clone() * decay.pow(-(i32::try_from(thresh).unwrap()));
         println!(
-            "\nAsymptotics: p(n) <= {} * {}^n for n >= {}",
-            F64::from(factor.round_to_f64()),
-            F64::from(decay.round_to_f64()),
+            "\nAsymptotics: {p}(n) <= {} * {}^n for n >= {}",
+            F64::from(factor.round_up()),
+            F64::from(decay.round_up()),
             thresh
         );
     }
 }
 
-fn output_moments(result: &GeometricBound, var: Var, norm_lo: &Rational, norm_hi: &Rational) {
+fn output_moments(result: &GeometricBound, var: Var, norm: &Interval<Rational>) {
     println!("\nMoments:");
     let lower_moments = result.lower.moments(var, 5);
     let upper_moments = result.upper.moments_exact(var, 5);
     let mut factorial = Rational::one();
     for i in 0..5 {
-        let lo = lower_moments[i].clone() / norm_hi.clone();
-        let hi = upper_moments[i].clone() / norm_lo.clone();
+        let lo = lower_moments[i].clone() / norm.hi.clone();
+        let hi = upper_moments[i].clone() / norm.lo.clone();
         let moment = Interval::exact(lo, hi);
         println!("{i}-th (raw) moment {}", in_iv(&moment));
         factorial *= Rational::from_int(i + 1);
@@ -502,7 +485,7 @@ fn output_moments(result: &GeometricBound, var: Var, norm_lo: &Rational, norm_hi
 
 fn in_iv(iv: &Interval<Rational>) -> String {
     if iv.lo == iv.hi {
-        format!("= {}", F64::from(iv.lo.round_to_f64()))
+        format!("= {}", F64::from(iv.lo.round()))
     } else {
         format!(
             "∈ [{}, {}]",
