@@ -1,4 +1,4 @@
-from collections import Counter
+from collections import defaultdict
 import json
 import os
 from pathlib import Path
@@ -188,7 +188,7 @@ def compare():
     with open("test.json") as f:
         test = json.load(f)
     keys = set(baseline.keys()) | set(test.keys())
-    total = Counter()
+    total = defaultdict(int)
     for key in sorted(keys):
         if key not in baseline:
             print(f"Test result for {key} is missing in baseline")
@@ -196,9 +196,12 @@ def compare():
             print(f"Baseline result for {key} is missing in test")
         else:
             result = compare_benchmark(key, baseline[key], test[key])
-            total += Counter(result)
+            for key, count in result.items():
+                total[key] += count
     for key, count in total.items():
-        if count > 0:
+        if count == 0:
+            print(f"{key}: {blue}similar{reset}")
+        elif count > 0:
             print(f"{key}: {green}{count} better{reset}")
         elif count < 0:
             print(f"{key}: {red}{-count} worse{reset}")
