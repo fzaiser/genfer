@@ -114,6 +114,9 @@ impl Rational {
         if exp == 1 {
             return self.clone();
         }
+        if self.is_zero() && exp < 0 {
+            return Self::infinity();
+        }
         match self {
             Self::Special(s) => match s {
                 Special::NaR => Self::not_a_rational(),
