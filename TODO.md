@@ -26,7 +26,7 @@ Benchmarks
 - [x] smaller versions of stabilization algorithms
 - [x] investigate whether more benchmarks can be expressed in Polar
 - [x] more nested loops
-- [ ] "own" -> "ours"
+- [x] "own" -> "ours"
 - [ ] more conditioning
 
 Cleanups

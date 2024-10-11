@@ -32,20 +32,20 @@ def bench(benchmark, unroll=None, inv_size=None, flags=None):
     return benchmark
 
 benchmarks = [
-    "own/1d-asym-rw",
-    "own/2d-asym-rw",
-    # "own/3d-asym-rw",
-    "own/asym-rw-conditioning",
-    bench("own/coupon-collector5", unroll=5, flags=["--optimizer", "ipopt"]),
-    "own/double-geo",
-    "own/geometric",
-    bench("own/grid", inv_size=2),
-    # "own/herman5",
-    bench("own/imprecise_tails", inv_size=2),
-    # "own/israeli-jalfon4",
-    bench("own/nested", unroll=3),
-    "own/sub-geom",
-    "own/sum-geos",
+    "ours/1d-asym-rw",
+    "ours/2d-asym-rw",
+    # "ours/3d-asym-rw",
+    "ours/asym-rw-conditioning",
+    bench("ours/coupon-collector5", unroll=5, flags=["--optimizer", "ipopt"]),
+    "ours/double-geo",
+    "ours/geometric",
+    bench("ours/grid", inv_size=2),
+    # "ours/herman5",
+    bench("ours/imprecise_tails", inv_size=2),
+    # "ours/israeli-jalfon4",
+    bench("ours/nested", unroll=3),
+    "ours/sub-geom",
+    "ours/sum-geos",
 ]
 
 def compile():

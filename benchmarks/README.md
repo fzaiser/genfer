@@ -2,7 +2,7 @@
 
 ## Applicability of the geometric bound semantics (Section 6.1)
 
-* The benchmarks can be found in `own/`, `polar/`, `prodigy/` and `psi/`.
+* The benchmarks can be found in `ours/`, `polar/`, `prodigy/` and `psi/`.
   Each folder contains a file `unsupported.txt` with a list of benchmarks that we filtered out and for what reason (e.g. it uses continuous distributions).
 * The script `bench.py` runs our tool on all of them and collects the outputs in `bench-results.json`.
 * The script `existence.py` reads this file and outputs the data for Table 2.

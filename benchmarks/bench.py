@@ -18,7 +18,7 @@ benchmark_dirs = [
     "polar",
     "prodigy",
     "psi",
-    "own",
+    "ours",
 ]
 
 timeout = 120
