@@ -22,7 +22,7 @@ tail_bound_re = re.compile(r"Asymptotics: p\(n\) (?:(?:.*) \* ([e.0123456789+-]+
 exact_ev_re = re.compile(r"1-th \(raw\) moment = ([e.0123456789+-]+)")
 ev_bound_re = re.compile(r"1-th \(raw\) moment ∈ \[([e.0123456789+-]+), ([e.0123456789+-]+)\]")
 
-def bench(benchmark, unroll=None, inv_size=None, flags=None):
+def bench(benchmark, unroll=None, inv_size=None, flags=None, slow=False):
     benchmark = { "name": benchmark }
     if unroll is not None:
         benchmark["unroll"] = unroll
@@ -30,6 +30,7 @@ def bench(benchmark, unroll=None, inv_size=None, flags=None):
         benchmark["inv_size"] = inv_size
     if flags is not None:
         benchmark["flags"] = flags
+    benchmark["slow"] = slow
     return benchmark
 
 benchmarks = [
@@ -67,14 +68,14 @@ benchmarks = [
     # "prodigy/nested_while",
     # "prodigy/random_walk",
     "prodigy/trivial_iid",
-    "psi/beauquier-etal3",
+    bench("psi/beauquier-etal3", slow=True),
     "psi/cav-example7",
     "psi/dieCond",
     "psi/ex3",
     "psi/ex4",
-    "psi/fourcards",
-    "psi/herman3",
-    "psi/israeli-jalfon3",
+    bench("psi/fourcards", slow=True),
+    bench("psi/herman3", slow=True),
+    bench("psi/israeli-jalfon3", slow=True),
     # "psi/israeli-jalfon5",
 ]
 
@@ -110,7 +111,7 @@ def run_benchmark(benchmark, flags):
         print("Command: ", " ".join(command))
         return "timeout"
 
-def run_benchmarks():
+def run_benchmarks(run_slow=False):
     compile()
     start = time.time()
     results = {}
@@ -121,6 +122,10 @@ def run_benchmarks():
         unroll = benchmark.get("unroll", default_unroll)
         inv_size = benchmark.get("inv_size", 1)
         flags = benchmark.get("flags", [])
+        slow = benchmark.get("slow", False)
+        if slow and not run_slow:
+            print(f"Skipping slow benchmark {name}")
+            continue
         print(f"Running benchmark {name}...")
         result = {}
         out = run_benchmark(name, ["--objective", "ev", "-u", f"{unroll}", "-d", f"{inv_size}"] + flags)
@@ -224,9 +229,9 @@ def compare():
     total = defaultdict(int)
     for key in sorted(keys):
         if key not in baseline:
-            print(f"Test result for {key} is missing in baseline")
+            print(f"{blue}Test result for {key} is {red}missing in baseline{reset}")
         elif key not in test:
-            print(f"Baseline result for {key} is missing in test")
+            print(f"{blue}Baseline result for {key} is {red}missing in test{reset}")
         else:
             result = compare_benchmark(key, baseline[key], test[key])
             for key, count in result.items():
@@ -245,12 +250,13 @@ if __name__ == '__main__':
     if len(sys.argv) < 2:
         print("Usage: test.py baseline|test|compare")
         sys.exit(1)
+    run_slow = len(sys.argv) > 2 and sys.argv[2] == "slow"
     if sys.argv[1] == "baseline":
-        results = run_benchmarks()
+        results = run_benchmarks(run_slow=run_slow)
         with open("baseline.json", "w") as f:
             json.dump(results, f, indent=2)
     elif sys.argv[1] == "test":
-        results = run_benchmarks()
+        results = run_benchmarks(run_slow=run_slow)
         with open("test.json", "w") as f:
             json.dump(results, f, indent=2)
         compare()
