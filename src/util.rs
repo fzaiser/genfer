@@ -68,6 +68,10 @@ where
     result
 }
 
+pub fn max(vec: &ArrayView1<f64>) -> f64 {
+    vec.iter().cloned().fold(f64::NEG_INFINITY, f64::max)
+}
+
 pub fn norm(vec: &ArrayView1<f64>) -> f64 {
     vec.iter().map(|x| x * x).sum::<f64>().sqrt()
 }
