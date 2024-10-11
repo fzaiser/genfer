@@ -5,10 +5,7 @@ use crate::{
     sym_expr::{SymConstraint, SymExpr},
 };
 
-use super::{
-    optimizer::Optimizer,
-    solver::{ConstraintProblem, Solver, SolverError},
-};
+use super::{problem::ConstraintProblem, Optimizer, Solver, SolverError};
 
 use descent::{
     expr::{dynam::Expr, Var},

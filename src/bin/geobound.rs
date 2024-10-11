@@ -17,14 +17,14 @@ use tool::semantics::support::VarSupport;
 use tool::semantics::Transformer;
 use tool::solvers::adam::AdamBarrier;
 use tool::solvers::ipopt::Ipopt;
-use tool::solvers::optimizer::{
-    optimize_linear_parts, LinearProgrammingOptimizer, Optimizer as _, Z3Optimizer,
-};
-use tool::solvers::solver::{ConstraintProblem, Solver as _, SolverError, Z3Solver};
 
 use clap::{Parser, ValueEnum};
 use ndarray::Axis;
 use num_traits::{One, Zero};
+use tool::solvers::linear::{optimize_linear_parts, LinearProgrammingOptimizer};
+use tool::solvers::problem::ConstraintProblem;
+use tool::solvers::z3::Z3Solver;
+use tool::solvers::{Optimizer as _, Solver as _, SolverError};
 use tool::sym_expr::SymExpr;
 
 #[derive(Clone, ValueEnum)]
@@ -36,7 +36,6 @@ enum Solver {
 
 #[derive(Clone, ValueEnum)]
 enum Optimizer {
-    Z3,
     AdamBarrier,
     Ipopt,
     Linear,
@@ -45,7 +44,6 @@ enum Optimizer {
 impl std::fmt::Display for Optimizer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Optimizer::Z3 => write!(f, "Z3"),
             Optimizer::AdamBarrier => write!(f, "ADAM with Barrier Method"),
             Optimizer::Ipopt => write!(f, "IPOPT"),
             Optimizer::Linear => write!(f, "Linear Optimization"),
@@ -331,7 +329,6 @@ fn optimize_solution(
         let cur_sol = solution.clone();
         let start = Instant::now();
         let optimized_solution = match optimizer {
-            Optimizer::Z3 => Z3Optimizer.optimize(problem, cur_sol, timeout),
             Optimizer::AdamBarrier => AdamBarrier::default()
                 .with_verbose(args.verbose)
                 .optimize(problem, cur_sol, timeout),

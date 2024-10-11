@@ -1,8 +1,158 @@
-use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::{
+    ops::{Add, Div, Mul, Neg, Sub},
+    time::{Duration, Instant},
+};
 
+use good_lp::{
+    solvers::coin_cbc::CoinCbcProblem, variable, ProblemVariables, Solution, SolverModel, Variable,
+};
 use num_traits::{One, Zero};
+use rustc_hash::FxHashMap;
 
-use crate::{numbers::FloatRat, sym_expr::SymExpr};
+use crate::{
+    numbers::{FloatNumber, FloatRat, Rational},
+    sym_expr::{SymConstraint, SymExpr, SymExprKind},
+};
+
+use super::{problem::ConstraintProblem, Optimizer};
+
+const TOL: f64 = 1e-9;
+
+pub struct LinearProgrammingOptimizer;
+
+impl Optimizer for LinearProgrammingOptimizer {
+    fn optimize(
+        &mut self,
+        problem: &ConstraintProblem,
+        init: Vec<Rational>,
+        _timeout: Duration,
+    ) -> Vec<Rational> {
+        if let Some(solution) = optimize_linear_parts(problem, init.clone()) {
+            let init_obj = problem
+                .objective
+                .eval_exact(&init, &mut FxHashMap::default());
+            let objective_value = problem
+                .objective
+                .eval_exact(&solution, &mut FxHashMap::default());
+            if init_obj < objective_value {
+                println!(
+            "LP solver found a solution with a worse objective value than the initial solution."
+        );
+                return init;
+            }
+            println!(
+                "Best objective: {} at {:?}",
+                objective_value.round(),
+                solution.iter().map(Rational::round).collect::<Vec<_>>()
+            );
+            solution
+        } else {
+            println!("LP solver failed; returning previous solution.");
+            init
+        }
+    }
+}
+
+fn construct_model(
+    problem: &ConstraintProblem,
+    init: &[Rational],
+) -> (Vec<Variable>, CoinCbcProblem) {
+    let mut replacements = (0..problem.var_count).map(SymExpr::var).collect::<Vec<_>>();
+    for v in problem.decay_vars.iter().chain(problem.factor_vars.iter()) {
+        replacements[*v] = SymExpr::from(init[*v].clone());
+    }
+    let problem = problem.substitute(&replacements);
+    let cache = &mut FxHashMap::default();
+    let linear_constraints = problem
+        .constraints
+        .iter()
+        .filter(|constraint| !matches!(constraint, SymConstraint::Or(..)))
+        .map(|constraint| {
+            constraint
+                .extract_linear(cache)
+                .unwrap_or_else(|| {
+                    panic!("Constraint is not linear in the program variables: {constraint}")
+                })
+                .tighten(TOL)
+        })
+        .collect::<Vec<_>>();
+    let mut lp = ProblemVariables::new();
+    let mut var_list = Vec::new();
+    for (replacement, (lo, hi)) in replacements.iter().zip(&problem.var_bounds) {
+        match replacement.kind() {
+            SymExprKind::Variable(_) => {
+                let var = variable().min(lo.round());
+                let var = if hi.is_finite() {
+                    var.max(hi.round())
+                } else {
+                    var
+                };
+                var_list.push(lp.add(var));
+            }
+            SymExprKind::Constant(c) => {
+                var_list.push(lp.add(variable().min(c.float()).max(c.float())));
+            }
+            _ => unreachable!(),
+        }
+    }
+    let linear_objective = problem
+        .objective
+        .extract_linear(cache)
+        .unwrap_or_else(|| {
+            panic!(
+                "Objective is not linear in the program variables: {}",
+                problem.objective
+            )
+        })
+        .to_lp_expr(&var_list, &FloatRat::float);
+    let mut lp = lp.minimise(linear_objective).using(good_lp::default_solver);
+    for constraint in &linear_constraints {
+        lp.add_constraint(constraint.to_lp_constraint(&var_list, &FloatRat::float));
+    }
+    (var_list, lp)
+}
+
+pub fn optimize_linear_parts(
+    problem: &ConstraintProblem,
+    init: Vec<Rational>,
+) -> Option<Vec<Rational>> {
+    let start = Instant::now();
+    println!("Running LP solver...");
+    let (var_list, mut lp) = construct_model(problem, &init);
+    // For a feasible solution no primal infeasibility, i.e., constraint violation, may exceed this value:
+    lp.set_parameter("primalT", &TOL.to_string());
+    // For an optimal solution no dual infeasibility may exceed this value:
+    lp.set_parameter("dualT", &TOL.to_string());
+    let solution = match lp.solve() {
+        Ok(solution) => solution,
+        Err(good_lp::ResolutionError::Unbounded) => {
+            println!("Optimal solution is unbounded.");
+            return None;
+        }
+        Err(good_lp::ResolutionError::Infeasible) => {
+            println!("LP solver found the problem infeasible.");
+            return None;
+        }
+        Err(good_lp::ResolutionError::Other(msg)) => {
+            todo!("Other error: {msg}");
+        }
+        Err(good_lp::ResolutionError::Str(msg)) => {
+            todo!("Error: {msg}");
+        }
+    };
+    println!("LP solver time: {} s", start.elapsed().as_secs_f64());
+    let solution = var_list
+        .iter()
+        .map(|v| Rational::from(solution.value(*v)))
+        .collect::<Vec<_>>();
+    let solution = if problem.holds_exact(&solution) {
+        solution
+    } else {
+        println!("Solution by LP solver does not satisfy the constraints.");
+        return None;
+    };
+    Some(solution)
+}
 
 #[derive(Clone, Debug)]
 pub struct LinearExpr {

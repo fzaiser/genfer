@@ -10,10 +10,7 @@ use crate::{
     util::{max, normalize},
 };
 
-use super::{
-    optimizer::Optimizer,
-    solver::{ConstraintProblem, Solver, SolverError},
-};
+use super::{problem::ConstraintProblem, Optimizer, Solver, SolverError};
 
 // Adam optimizer in comparison with the barrier method for constraints.
 // The barrier is raised with each iteration of the optimization loop.
