@@ -5,6 +5,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import time
 
 blue = "\033[94m"
 green = "\033[92m"
@@ -13,7 +14,7 @@ bold = "\033[1m"
 reset = "\033[0m"
 
 timeout = 10 # seconds
-default_unroll = 10
+default_unroll = 30
 
 total_time_re = re.compile(r"(?:Total|Elapsed) time: ([0-9.]*) *s")
 tail_bound_zero_re = re.compile(r"Asymptotics: p\(n\) = 0")
@@ -33,17 +34,17 @@ def bench(benchmark, unroll=None, inv_size=None, flags=None):
 
 benchmarks = [
     "ours/1d-asym-rw",
-    "ours/2d-asym-rw",
+    bench("ours/2d-asym-rw", unroll=20, inv_size=2),
     # "ours/3d-asym-rw",
     "ours/asym-rw-conditioning",
     bench("ours/coupon-collector5", unroll=5, flags=["--optimizer", "ipopt"]),
     "ours/double-geo",
     "ours/geometric",
-    bench("ours/grid", inv_size=2),
+    bench("ours/grid", unroll=20, inv_size=2),
     # "ours/herman5",
-    bench("ours/imprecise_tails", inv_size=2),
+    bench("ours/imprecise_tails", unroll=20, inv_size=2),
     # "ours/israeli-jalfon4",
-    bench("ours/nested", unroll=3),
+    bench("ours/nested", unroll=3, inv_size=2),
     "ours/sub-geom",
     "ours/sum-geos",
 ]
@@ -82,6 +83,7 @@ def run_benchmark(benchmark, flags):
 
 def run_benchmarks():
     compile()
+    start = time.time()
     results = {}
     for benchmark in benchmarks:
         if isinstance(benchmark, str):
@@ -120,6 +122,8 @@ def run_benchmarks():
             if m:
                 result["time_tail"] = float(m.group(1))
         results[name] = result
+    end = time.time()
+    print(f"{blue}Total time: {bold}{end - start:.2f} s{reset}\n")
     return results
 
 def compare_measurements(key, base, test, eq_tol=1.05, small_tol=1.25):
