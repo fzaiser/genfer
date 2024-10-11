@@ -4,7 +4,11 @@ use ndarray::Array1;
 use num_traits::Zero;
 use rustc_hash::FxHashMap;
 
-use crate::{numbers::Rational, sym_expr::SymExpr, util::normalize};
+use crate::{
+    numbers::Rational,
+    sym_expr::SymExpr,
+    util::{norm, normalize},
+};
 
 use super::{
     optimizer::Optimizer,
@@ -18,6 +22,8 @@ pub struct AdamBarrier {
     beta1: f64,
     beta2: f64,
     epsilon: f64,
+    max_iter: usize,
+    stopping_eps: f64,
     verbose: bool,
 }
 
@@ -35,6 +41,8 @@ impl Default for AdamBarrier {
             beta1: 0.9,
             beta2: 0.999,
             epsilon: 1e-8,
+            max_iter: 5000,
+            stopping_eps: 1e-6,
             verbose: false,
         }
     }
@@ -76,7 +84,7 @@ impl Optimizer for AdamBarrier {
         let mut v = Array1::zeros(problem.var_count);
         let mut t = 1;
         let constraints = problem.all_constraints().collect::<Vec<_>>();
-        for _ in 0..5000 {
+        for _ in 0..self.max_iter {
             let cache = &mut FxHashMap::default();
             let grad_cache = &mut vec![FxHashMap::default(); point.len()];
             let obj = objective.eval_float(point.as_slice().unwrap(), &mut FxHashMap::default());
@@ -109,6 +117,9 @@ impl Optimizer for AdamBarrier {
                 best_point = point.clone();
             }
             trajectory.push(point.clone());
+            if norm(&update_dir.view()) < self.stopping_eps {
+                break;
+            }
             t += 1;
         }
         if self.verbose {
