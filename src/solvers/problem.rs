@@ -35,8 +35,14 @@ impl ConstraintProblem {
         assignment: &[Rational],
         cache: &mut FxHashMap<usize, Rational>,
     ) -> bool {
-        self.all_constraints()
-            .all(|c| c.holds_exact(assignment, cache))
+        let var_bounds_hold = assignment
+            .iter()
+            .zip(&self.var_bounds)
+            .all(|(val, (lo, hi))| lo <= val && val < hi);
+        let constraints_hold = self
+            .all_constraints()
+            .all(|c| c.holds_exact(assignment, cache));
+        var_bounds_hold && constraints_hold
     }
 
     pub fn objective_if_holds_exactly(&self, assignment: &[Rational]) -> Option<Rational> {

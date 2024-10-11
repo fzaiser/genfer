@@ -11,7 +11,7 @@ use rustc_hash::FxHashMap;
 
 use crate::{
     numbers::{FloatNumber, FloatRat, Rational},
-    sym_expr::{SymConstraint, SymExpr, SymExprKind},
+    sym_expr::{SymConstraint, SymExpr},
 };
 
 use super::{problem::ConstraintProblem, Optimizer};
@@ -53,61 +53,54 @@ impl Optimizer for LinearProgrammingOptimizer {
     }
 }
 
-fn construct_model(
-    problem: &ConstraintProblem,
-    init: &[Rational],
-) -> (Vec<Variable>, CoinCbcProblem) {
+fn extract_lp(problem: &ConstraintProblem, init: &[Rational]) -> LinearProblem {
     let mut replacements = (0..problem.var_count).map(SymExpr::var).collect::<Vec<_>>();
     for v in problem.decay_vars.iter().chain(problem.factor_vars.iter()) {
         replacements[*v] = SymExpr::from(init[*v].clone());
     }
     let problem = problem.substitute(&replacements);
     let cache = &mut FxHashMap::default();
-    let linear_constraints = problem
+    let constraints = problem
         .constraints
         .iter()
         .filter(|constraint| !matches!(constraint, SymConstraint::Or(..)))
-        .map(|constraint| {
-            constraint
-                .extract_linear(cache)
-                .unwrap_or_else(|| {
-                    panic!("Constraint is not linear in the program variables: {constraint}")
-                })
-                .tighten(TOL)
+        .map(|constraint| constraint.extract_linear(cache).unwrap())
+        .collect::<Vec<_>>();
+    let objective = problem.objective.extract_linear(cache).unwrap();
+    let mut var_bounds = problem.var_bounds.clone();
+    for v in problem.decay_vars.iter().chain(problem.factor_vars.iter()) {
+        var_bounds[*v] = (init[*v].clone(), init[*v].clone());
+    }
+    LinearProblem {
+        objective,
+        constraints,
+        var_bounds,
+    }
+}
+
+fn create_cbc_model(problem: &LinearProblem, tighten: f64) -> (Vec<Variable>, CoinCbcProblem) {
+    let mut lp = ProblemVariables::new();
+    let var_list = problem
+        .var_bounds
+        .iter()
+        .map(|(lo, hi)| {
+            let var = variable().min(lo.round());
+            let var = if hi.is_finite() {
+                var.max(hi.round())
+            } else {
+                var
+            };
+            lp.add(var)
         })
         .collect::<Vec<_>>();
-    let mut lp = ProblemVariables::new();
-    let mut var_list = Vec::new();
-    for (replacement, (lo, hi)) in replacements.iter().zip(&problem.var_bounds) {
-        match replacement.kind() {
-            SymExprKind::Variable(_) => {
-                let var = variable().min(lo.round());
-                let var = if hi.is_finite() {
-                    var.max(hi.round())
-                } else {
-                    var
-                };
-                var_list.push(lp.add(var));
-            }
-            SymExprKind::Constant(c) => {
-                var_list.push(lp.add(variable().min(c.float()).max(c.float())));
-            }
-            _ => unreachable!(),
-        }
-    }
-    let linear_objective = problem
-        .objective
-        .extract_linear(cache)
-        .unwrap_or_else(|| {
-            panic!(
-                "Objective is not linear in the program variables: {}",
-                problem.objective
-            )
-        })
-        .to_lp_expr(&var_list, &FloatRat::float);
-    let mut lp = lp.minimise(linear_objective).using(good_lp::default_solver);
-    for constraint in &linear_constraints {
-        lp.add_constraint(constraint.to_lp_constraint(&var_list, &FloatRat::float));
+    let objective = problem.objective.to_lp_expr(&var_list, &FloatRat::float);
+    let mut lp = lp.minimise(objective).using(good_lp::default_solver);
+    for constraint in &problem.constraints {
+        lp.add_constraint(
+            constraint
+                .tighten(tighten)
+                .to_lp_constraint(&var_list, &FloatRat::float),
+        );
     }
     (var_list, lp)
 }
@@ -118,12 +111,13 @@ pub fn optimize_linear_parts(
 ) -> Option<Vec<Rational>> {
     let start = Instant::now();
     println!("Running LP solver...");
-    let (var_list, mut lp) = construct_model(problem, &init);
+    let lp = extract_lp(problem, &init);
+    let (vars, mut model) = create_cbc_model(&lp, TOL);
     // For a feasible solution no primal infeasibility, i.e., constraint violation, may exceed this value:
-    lp.set_parameter("primalT", &TOL.to_string());
+    model.set_parameter("primalT", &TOL.to_string());
     // For an optimal solution no dual infeasibility may exceed this value:
-    lp.set_parameter("dualT", &TOL.to_string());
-    let solution = match lp.solve() {
+    model.set_parameter("dualT", &TOL.to_string());
+    let solution = match model.solve() {
         Ok(solution) => solution,
         Err(good_lp::ResolutionError::Unbounded) => {
             println!("Optimal solution is unbounded.");
@@ -141,7 +135,7 @@ pub fn optimize_linear_parts(
         }
     };
     println!("LP solver time: {} s", start.elapsed().as_secs_f64());
-    let solution = var_list
+    let solution = vars
         .iter()
         .map(|v| Rational::from(solution.value(*v)))
         .collect::<Vec<_>>();
@@ -152,6 +146,12 @@ pub fn optimize_linear_parts(
         return None;
     };
     Some(solution)
+}
+
+pub struct LinearProblem {
+    pub objective: LinearExpr,
+    pub constraints: Vec<LinearConstraint>,
+    pub var_bounds: Vec<(Rational, Rational)>,
 }
 
 #[derive(Clone, Debug)]
