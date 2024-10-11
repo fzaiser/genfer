@@ -47,6 +47,35 @@ benchmarks = [
     bench("ours/nested", unroll=3, inv_size=2),
     "ours/sub-geom",
     "ours/sum-geos",
+    bench("polar/c4B_t303", inv_size=2),
+    "polar/coupon_collector2",
+    "polar/fair_biased_coin",
+    # "polar/geometric",
+    "polar/las_vegas_search",
+    "polar/linear01",
+    # "polar/rabin",
+    # "polar/random_walk_2d",
+    "polar/simple_loop",
+    "prodigy/bit_flip_conditioning",
+    "prodigy/brp_obs",
+    "prodigy/condand",
+    "prodigy/dep_bern",
+    bench("prodigy/endless_conditioning", flags=["--no-normalize"]),
+    "prodigy/geometric",
+    "prodigy/ky_die",
+    "prodigy/n_geometric",
+    # "prodigy/nested_while",
+    # "prodigy/random_walk",
+    "prodigy/trivial_iid",
+    "psi/beauquier-etal3",
+    "psi/cav-example7",
+    "psi/dieCond",
+    "psi/ex3",
+    "psi/ex4",
+    "psi/fourcards",
+    "psi/herman3",
+    "psi/israeli-jalfon3",
+    # "psi/israeli-jalfon5",
 ]
 
 def compile():
@@ -135,11 +164,11 @@ def compare_measurements(key, base, test, eq_tol=1.05, small_tol=1.25):
         else:
             format = green + bold
             comment = "fixed"
-            result = 2
+            result = 5
     elif isinstance(test, str):
         format = red + bold
         comment = "regressed"
-        result = -2
+        result = -5
     elif base <= test * eq_tol and test <= base * eq_tol:
         format = ""
         comment = "similar"
