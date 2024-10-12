@@ -151,7 +151,7 @@ impl SymExpr {
             }
         }
         let result = match self.kind() {
-            SymExprKind::Constant(c) => Some(LinearExpr::constant(c.clone())),
+            SymExprKind::Constant(c) => Some(LinearExpr::constant(c.rat().clone())),
             SymExprKind::Variable(i) => Some(LinearExpr::var(*i)),
             SymExprKind::Add(lhs, rhs) => {
                 let lhs = lhs.extract_linear(cache)?;
@@ -588,6 +588,7 @@ pub enum SymConstraint {
     Eq(SymExpr, SymExpr),
     Lt(SymExpr, SymExpr),
     Le(SymExpr, SymExpr),
+    // TODO: remove these
     Or(Vec<SymConstraint>),
 }
 impl SymConstraint {
@@ -732,19 +733,12 @@ impl SymConstraint {
                 e1.extract_linear(cache)?,
                 e2.extract_linear(cache)?,
             )),
-            SymConstraint::Or(constraints) => {
+            SymConstraint::Or(_) => {
                 // Here we only support constraints without variables
-                for constraint in constraints {
-                    if let Some(linear_constraint) = constraint.extract_linear(cache) {
-                        if linear_constraint.eval_constant() == Some(true) {
-                            return Some(LinearConstraint::eq(
-                                LinearExpr::constant(FloatRat::zero()),
-                                LinearExpr::constant(FloatRat::zero()),
-                            ));
-                        }
-                    }
-                }
-                None
+                return Some(LinearConstraint::eq(
+                    LinearExpr::constant(Rational::zero()),
+                    LinearExpr::constant(Rational::zero()),
+                ));
             }
         }
     }

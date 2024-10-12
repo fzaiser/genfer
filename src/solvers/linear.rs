@@ -10,13 +10,11 @@ use num_traits::{One, Zero};
 use rustc_hash::FxHashMap;
 
 use crate::{
-    numbers::{FloatNumber, FloatRat, Rational},
+    numbers::{FloatNumber, Rational},
     sym_expr::{SymConstraint, SymExpr},
 };
 
 use super::{problem::ConstraintProblem, Optimizer};
-
-const TOL: f64 = 1e-9;
 
 pub struct LinearProgrammingOptimizer;
 
@@ -93,13 +91,17 @@ fn create_cbc_model(problem: &LinearProblem, tighten: f64) -> (Vec<Variable>, Co
             lp.add(var)
         })
         .collect::<Vec<_>>();
-    let objective = problem.objective.to_lp_expr(&var_list, &FloatRat::float);
+    let objective = problem
+        .objective
+        .normalize()
+        .to_lp_expr(&var_list, &Rational::round_up);
     let mut lp = lp.minimise(objective).using(good_lp::default_solver);
     for constraint in &problem.constraints {
         lp.add_constraint(
             constraint
+                .normalize()
                 .tighten(tighten)
-                .to_lp_constraint(&var_list, &FloatRat::float),
+                .to_lp_constraint(&var_list),
         );
     }
     (var_list, lp)
@@ -112,40 +114,52 @@ pub fn optimize_linear_parts(
     let start = Instant::now();
     println!("Running LP solver...");
     let lp = extract_lp(problem, &init);
-    let (vars, mut model) = create_cbc_model(&lp, TOL);
-    // For a feasible solution no primal infeasibility, i.e., constraint violation, may exceed this value:
-    model.set_parameter("primalT", &TOL.to_string());
-    // For an optimal solution no dual infeasibility may exceed this value:
-    model.set_parameter("dualT", &TOL.to_string());
-    let solution = match model.solve() {
-        Ok(solution) => solution,
-        Err(good_lp::ResolutionError::Unbounded) => {
-            println!("Optimal solution is unbounded.");
-            return None;
+    let mut tol = 1e-9;
+    let mut tighten = 1e-9;
+    let retries = 1;
+    for retry in 0..retries {
+        if retry > 0 {
+            println!("Retrying with higher tolerance...");
         }
-        Err(good_lp::ResolutionError::Infeasible) => {
-            println!("LP solver found the problem infeasible.");
-            return None;
-        }
-        Err(good_lp::ResolutionError::Other(msg)) => {
-            todo!("Other error: {msg}");
-        }
-        Err(good_lp::ResolutionError::Str(msg)) => {
-            todo!("Error: {msg}");
-        }
-    };
-    println!("LP solver time: {} s", start.elapsed().as_secs_f64());
-    let solution = vars
-        .iter()
-        .map(|v| Rational::from(solution.value(*v)))
-        .collect::<Vec<_>>();
-    let solution = if problem.holds_exact(&solution) {
-        solution
-    } else {
-        println!("Solution by LP solver does not satisfy the constraints.");
-        return None;
-    };
-    Some(solution)
+        let (vars, mut model) = create_cbc_model(&lp, tighten);
+        // For a feasible solution no primal infeasibility, i.e., constraint violation, may exceed this value:
+        model.set_parameter("primalT", &tol.to_string());
+        // For an optimal solution no dual infeasibility may exceed this value:
+        model.set_parameter("dualT", &tol.to_string());
+        let solution = match model.solve() {
+            Ok(solution) => solution,
+            Err(good_lp::ResolutionError::Unbounded) => {
+                println!("Optimal solution is unbounded.");
+                return None;
+            }
+            Err(good_lp::ResolutionError::Infeasible) => {
+                println!("LP solver found the problem infeasible.");
+                return None;
+            }
+            Err(good_lp::ResolutionError::Other(msg)) => {
+                todo!("Other error: {msg}");
+            }
+            Err(good_lp::ResolutionError::Str(msg)) => {
+                todo!("Error: {msg}");
+            }
+        };
+        println!("LP solver time: {} s", start.elapsed().as_secs_f64());
+        let solution = vars
+            .iter()
+            .map(|v| Rational::from(solution.value(*v)))
+            .collect::<Vec<_>>();
+        if problem.holds_exact(&solution) {
+            if retry > 0 {
+                println!("LP solver succeeded after {} retries.", retry);
+            }
+            return Some(solution);
+        } else {
+            println!("Solution by LP solver does not satisfy the constraints.");
+            tol *= 2.0;
+            tighten *= 4.0;
+        };
+    }
+    None
 }
 
 pub struct LinearProblem {
@@ -156,35 +170,35 @@ pub struct LinearProblem {
 
 #[derive(Clone, Debug)]
 pub struct LinearExpr {
-    pub coeffs: Vec<FloatRat>,
-    pub constant: FloatRat,
+    pub coeffs: Vec<Rational>,
+    pub constant: Rational,
 }
 
 impl LinearExpr {
-    pub fn new(coeffs: Vec<FloatRat>, constant: FloatRat) -> Self {
+    pub fn new(coeffs: Vec<Rational>, constant: Rational) -> Self {
         Self { coeffs, constant }
     }
 
     pub fn zero() -> Self {
-        Self::new(vec![], FloatRat::zero())
+        Self::new(vec![], Rational::zero())
     }
 
     pub fn one() -> Self {
-        Self::new(vec![FloatRat::one()], FloatRat::zero())
+        Self::new(vec![Rational::one()], Rational::zero())
     }
 
-    pub fn constant(constant: FloatRat) -> Self {
+    pub fn constant(constant: Rational) -> Self {
         Self::new(vec![], constant)
     }
 
     pub fn var(var: usize) -> Self {
-        let mut coeffs = vec![FloatRat::zero(); var + 1];
-        coeffs[var] = FloatRat::one();
-        Self::new(coeffs, FloatRat::zero())
+        let mut coeffs = vec![Rational::zero(); var + 1];
+        coeffs[var] = Rational::one();
+        Self::new(coeffs, Rational::zero())
     }
 
-    pub fn as_constant(&self) -> Option<&FloatRat> {
-        if self.coeffs.iter().all(Zero::is_zero) {
+    pub fn as_constant(&self) -> Option<&Rational> {
+        if self.coeffs.iter().all(Rational::is_zero) {
             Some(&self.constant)
         } else {
             None
@@ -194,7 +208,7 @@ impl LinearExpr {
     pub fn to_lp_expr(
         &self,
         vars: &[good_lp::Variable],
-        conv: &impl Fn(&FloatRat) -> f64,
+        conv: &impl Fn(&Rational) -> f64,
     ) -> good_lp::Expression {
         let mut result = good_lp::Expression::from(conv(&self.constant));
         for (coeff, var) in self.coeffs.iter().zip(vars) {
@@ -203,26 +217,29 @@ impl LinearExpr {
         result
     }
 
-    pub fn grad_norm(&self) -> f64 {
-        self.coeffs
-            .iter()
-            .map(|c| c.float() * c.float())
-            .sum::<f64>()
-            .sqrt()
+    pub fn max_coeff(&self) -> Rational {
+        self.coeffs.iter().fold(self.constant.clone(), |max, c| {
+            if c > &max {
+                c.clone()
+            } else {
+                max
+            }
+        })
     }
 
     pub fn normalize(&self) -> Self {
-        let grad_len = self.grad_norm();
-        if grad_len == 0.0 {
-            return self.clone();
-        }
-        let grad_len = FloatRat::from_f64(grad_len);
+        let max = self.max_coeff();
+        let scale = if max.is_zero() {
+            Rational::one()
+        } else {
+            Rational::one() / max
+        };
         let coeffs = self
             .coeffs
             .iter()
-            .map(|c| c.clone() / grad_len.clone())
+            .map(|c| c.clone() * Rational::from(scale.clone()))
             .collect();
-        let constant = self.constant.clone() / grad_len;
+        let constant = self.constant.clone() * Rational::from(scale);
         Self::new(coeffs, constant)
     }
 }
@@ -241,10 +258,10 @@ impl std::fmt::Display for LinearExpr {
             }
             if coeff.is_one() {
                 write!(f, "{}", SymExpr::var(i))?;
-            } else if *coeff == -FloatRat::one() {
+            } else if *coeff == -Rational::one() {
                 write!(f, "-{}", SymExpr::var(i))?;
             } else {
-                write!(f, "{}{}", coeff, SymExpr::var(i))?;
+                write!(f, "{}*{}", coeff, SymExpr::var(i))?;
             }
         }
         if !self.constant.is_zero() {
@@ -303,11 +320,11 @@ impl Sub for LinearExpr {
     }
 }
 
-impl Mul<FloatRat> for LinearExpr {
+impl Mul<Rational> for LinearExpr {
     type Output = Self;
 
     #[inline]
-    fn mul(self, other: FloatRat) -> Self::Output {
+    fn mul(self, other: Rational) -> Self::Output {
         Self::new(
             self.coeffs.into_iter().map(|c| c * other.clone()).collect(),
             self.constant * other.clone(),
@@ -315,11 +332,11 @@ impl Mul<FloatRat> for LinearExpr {
     }
 }
 
-impl Div<FloatRat> for LinearExpr {
+impl Div<Rational> for LinearExpr {
     type Output = Self;
 
     #[inline]
-    fn div(self, other: FloatRat) -> Self::Output {
+    fn div(self, other: Rational) -> Self::Output {
         Self::new(
             self.coeffs.into_iter().map(|c| c / other.clone()).collect(),
             self.constant / other.clone(),
@@ -355,25 +372,12 @@ impl LinearConstraint {
         }
     }
 
-    pub fn to_lp_constraint(
-        &self,
-        var_list: &[good_lp::Variable],
-        conv: &impl Fn(&FloatRat) -> f64,
-    ) -> good_lp::Constraint {
-        let result = self.expr.to_lp_expr(var_list, conv);
+    pub fn to_lp_constraint(&self, var_list: &[good_lp::Variable]) -> good_lp::Constraint {
+        let result = self.expr.to_lp_expr(var_list, &Rational::round_down);
         if self.eq_zero {
             result.eq(0.0)
         } else {
             result.geq(0.0)
-        }
-    }
-
-    pub fn eval_constant(&self) -> Option<bool> {
-        let constant = self.expr.as_constant()?;
-        if self.eq_zero {
-            Some(constant.is_zero())
-        } else {
-            Some(constant >= &FloatRat::zero())
         }
     }
 
@@ -385,10 +389,10 @@ impl LinearConstraint {
     }
 
     pub fn tighten(&self, eps: f64) -> Self {
-        let constant = if self.expr.grad_norm() == 0.0 {
+        let constant = if self.expr.max_coeff().is_zero() {
             self.expr.constant.clone()
         } else {
-            self.expr.constant.clone() - FloatRat::from_f64(eps)
+            self.expr.constant.clone() - Rational::from(eps)
         };
         Self {
             expr: LinearExpr::new(self.expr.coeffs.clone(), constant),
