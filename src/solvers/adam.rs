@@ -5,7 +5,7 @@ use num_traits::Zero;
 use rustc_hash::FxHashMap;
 
 use crate::{
-    numbers::Rational,
+    numbers::{FloatNumber, Rational},
     sym_expr::SymExpr,
     util::{max, normalize},
 };
@@ -82,7 +82,6 @@ impl Optimizer for AdamBarrier {
         let mut m = Array1::zeros(problem.var_count);
         let mut v = Array1::zeros(problem.var_count);
         let mut t = 1;
-        let constraints = problem.all_constraints().collect::<Vec<_>>();
         for _ in 0..self.max_iter {
             let cache = &mut FxHashMap::default();
             let grad_cache = &mut vec![FxHashMap::default(); point.len()];
@@ -91,7 +90,20 @@ impl Optimizer for AdamBarrier {
                 -Array1::from_vec(objective.gradient_at(point.as_slice().unwrap(), grad_cache))
                     / obj;
             // let mut barrier_penalty = 0.0;
-            for c in &constraints {
+            for (v, (lo, hi)) in problem.var_bounds.iter().enumerate() {
+                let dist = lo.to_f64() - point[v];
+                let concentration = f64::from(t);
+                let barrier_grad = (concentration * dist).exp() * concentration;
+                objective_grad[v] += &barrier_grad;
+                // barrier_penalty += (concentration * dist).exp();
+                if hi.is_finite() {
+                    let dist = point[v] - hi.to_f64();
+                    let barrier_grad = -(concentration * dist).exp() * concentration;
+                    objective_grad[v] += &barrier_grad;
+                    // barrier_penalty += (concentration * dist).exp();
+                }
+            }
+            for c in &problem.constraints {
                 let constraint_grad =
                     Array1::from_vec(c.gradient_at(point.as_slice().unwrap(), grad_cache));
                 let dist = c.estimate_signed_dist(point.as_slice().unwrap(), cache, grad_cache);

@@ -1,7 +1,7 @@
 use rustc_hash::FxHashMap;
 
 use crate::{
-    numbers::{FloatNumber, Rational},
+    numbers::Rational,
     sym_expr::{SymConstraint, SymExpr, SymExprKind},
 };
 
@@ -53,22 +53,6 @@ impl ConstraintProblem {
         } else {
             None
         }
-    }
-
-    pub fn all_constraints(&self) -> impl Iterator<Item = SymConstraint> + '_ {
-        self.var_bounds
-            .iter()
-            .enumerate()
-            .flat_map(move |(var, (lo, hi))| {
-                let first = SymExpr::var(var).must_ge(lo.clone().into());
-                if hi.is_finite() {
-                    let second = SymExpr::var(var).must_le(hi.clone().into());
-                    vec![first, second]
-                } else {
-                    vec![first]
-                }
-            })
-            .chain(self.constraints.iter().cloned())
     }
 
     pub fn substitute(&self, replacements: &[SymExpr]) -> Self {
