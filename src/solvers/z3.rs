@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use super::{problem::ConstraintProblem, Solver, SolverError};
 use crate::{
-    numbers::Rational,
+    numbers::{FloatNumber, Rational},
     util::{rational_to_z3, z3_real_to_rational},
 };
 
@@ -19,7 +19,16 @@ impl Solver for Z3Solver {
         cfg.set_timeout_msec(timeout.as_millis() as u64);
         let ctx = z3::Context::new(&cfg);
         let solver = z3::Solver::new(&ctx);
-        for constraint in problem.all_constraints() {
+        for (v, (lo, hi)) in problem.var_bounds.iter().enumerate() {
+            let var = z3::ast::Real::new_const(&ctx, v as u32);
+            let lo = rational_to_z3(&ctx, &lo);
+            solver.assert(&lo.le(&var));
+            if hi.is_finite() {
+                let hi = rational_to_z3(&ctx, &hi);
+                solver.assert(&var.lt(&hi));
+            }
+        }
+        for constraint in &problem.constraints {
             solver.assert(&constraint.to_z3(&ctx, &rational_to_z3));
         }
         solver.push();

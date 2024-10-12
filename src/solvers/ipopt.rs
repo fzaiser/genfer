@@ -188,15 +188,7 @@ fn to_ipopt_constraint(
     tol: f64,
     cache: &mut FxHashMap<usize, Expr>,
 ) -> Option<(Expr, f64, f64)> {
-    match constraint {
-        SymConstraint::Eq(lhs, rhs) => {
-            let expr = lhs.to_ipopt_expr(vars, cache) - rhs.to_ipopt_expr(vars, cache);
-            Some((expr, 0.0, 0.0))
-        }
-        SymConstraint::Lt(lhs, rhs) | SymConstraint::Le(lhs, rhs) => {
-            let expr = lhs.to_ipopt_expr(vars, cache) - rhs.to_ipopt_expr(vars, cache);
-            Some((expr, f64::NEG_INFINITY, -2.0 * tol))
-        }
-        SymConstraint::Or(_) => None,
-    }
+    let expr =
+        constraint.lhs.to_ipopt_expr(vars, cache) - constraint.rhs.to_ipopt_expr(vars, cache);
+    Some((expr, f64::NEG_INFINITY, -2.0 * tol))
 }

@@ -40,7 +40,8 @@ impl ConstraintProblem {
             .zip(&self.var_bounds)
             .all(|(val, (lo, hi))| lo <= val && val < hi);
         let constraints_hold = self
-            .all_constraints()
+            .constraints
+            .iter()
             .all(|c| c.holds_exact(assignment, cache));
         var_bounds_hold && constraints_hold
     }
@@ -61,7 +62,7 @@ impl ConstraintProblem {
             .flat_map(move |(var, (lo, hi))| {
                 let first = SymExpr::var(var).must_ge(lo.clone().into());
                 if hi.is_finite() {
-                    let second = SymExpr::var(var).must_lt(hi.clone().into());
+                    let second = SymExpr::var(var).must_le(hi.clone().into());
                     vec![first, second]
                 } else {
                     vec![first]
@@ -102,23 +103,10 @@ impl ConstraintProblem {
         // Create a graph of `<=`-relations of variables
         let mut edges = vec![vec![]; self.var_count];
         for constraint in &self.constraints {
-            match constraint {
-                SymConstraint::Eq(a, b) => {
-                    if let (SymExprKind::Variable(a), SymExprKind::Variable(b)) =
-                        (a.kind(), b.kind())
-                    {
-                        edges[*a].push(*b);
-                        edges[*b].push(*a);
-                    }
-                }
-                SymConstraint::Le(a, b) => {
-                    if let (SymExprKind::Variable(a), SymExprKind::Variable(b)) =
-                        (a.kind(), b.kind())
-                    {
-                        edges[*a].push(*b);
-                    }
-                }
-                _ => {}
+            if let (SymExprKind::Variable(a), SymExprKind::Variable(b)) =
+                (constraint.lhs.kind(), constraint.rhs.kind())
+            {
+                edges[*a].push(*b);
             }
         }
         // The strongly-connected components are sets of variables that must be equal.

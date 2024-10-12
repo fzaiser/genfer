@@ -11,7 +11,7 @@ use rustc_hash::FxHashMap;
 
 use crate::{
     numbers::{FloatNumber, Rational},
-    sym_expr::{SymConstraint, SymExpr},
+    sym_expr::SymExpr,
 };
 
 use super::{problem::ConstraintProblem, Optimizer};
@@ -61,7 +61,6 @@ fn extract_lp(problem: &ConstraintProblem, init: &[Rational]) -> LinearProblem {
     let constraints = problem
         .constraints
         .iter()
-        .filter(|constraint| !matches!(constraint, SymConstraint::Or(..)))
         .map(|constraint| constraint.extract_linear(cache).unwrap())
         .collect::<Vec<_>>();
     let objective = problem.objective.extract_linear(cache).unwrap();

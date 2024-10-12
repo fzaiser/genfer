@@ -401,43 +401,20 @@ impl GeometricBoundSemantics {
         &self.constraints
     }
 
-    fn fresh_sym_var_idx(&mut self) -> usize {
+    fn fresh_sym_var_idx(&mut self, lo: Rational, hi: Rational) -> usize {
         let var = self.sym_var_count();
-        self.sym_var_bounds
-            .push((Rational::zero(), Rational::infinity()));
+        self.sym_var_bounds.push((lo, hi));
         var
     }
 
     pub fn add_constraint(&mut self, constraint: SymConstraint) {
-        // Remove 0 <= ... constraints (trivially true because everything is nonnegative)
-        if let SymConstraint::Le(lhs, _) = &constraint {
-            if let SymExprKind::Constant(c) = lhs.kind() {
-                if c.is_zero() {
-                    return;
-                }
-            }
-        }
-        // Recognize variable bounds (lo <= v and v < hi) constraints
-        match &constraint {
-            SymConstraint::Le(lhs, rhs) => {
-                if let (SymExprKind::Constant(lo), SymExprKind::Variable(v)) =
-                    (lhs.kind(), rhs.kind())
-                {
-                    let bound = &mut self.sym_var_bounds[*v];
-                    bound.0 = bound.0.max(&lo.rat());
-                    return;
-                }
-            }
-            SymConstraint::Lt(lhs, rhs) => {
-                if let (SymExprKind::Variable(v), SymExprKind::Constant(hi)) =
-                    (lhs.kind(), rhs.kind())
-                {
-                    let bound = &mut self.sym_var_bounds[*v];
-                    bound.1 = bound.1.min(&hi.rat());
-                    return;
-                }
-            }
-            _ => {}
+        // Recognize variable bounds (lo <= v) constraints
+        if let (SymExprKind::Constant(lo), SymExprKind::Variable(v)) =
+            (constraint.lhs.kind(), constraint.rhs.kind())
+        {
+            let bound = &mut self.sym_var_bounds[*v];
+            bound.0 = bound.0.max(&lo.rat());
+            return;
         }
         if constraint.is_trivial() {
             return;
@@ -446,27 +423,23 @@ impl GeometricBoundSemantics {
     }
 
     pub fn new_decay_var(&mut self) -> SymExpr {
-        let idx = self.fresh_sym_var_idx();
+        let idx = self.fresh_sym_var_idx(Rational::zero(), Rational::one());
         let var = SymExpr::var(idx);
         self.nonlinear_vars.push(idx);
         self.decay_vars.push(idx);
-        self.add_constraint(var.clone().must_ge(SymExpr::zero()));
-        self.add_constraint(var.clone().must_lt(SymExpr::one()));
         var
     }
 
     pub fn new_contraction_factor_var(&mut self) -> SymExpr {
-        let idx = self.fresh_sym_var_idx();
+        let idx = self.fresh_sym_var_idx(Rational::zero(), Rational::one());
         let var = SymExpr::var(idx);
         self.nonlinear_vars.push(idx);
         self.factor_vars.push(idx);
-        self.add_constraint(var.clone().must_ge(SymExpr::zero()));
-        self.add_constraint(var.clone().must_lt(SymExpr::one()));
         var
     }
 
     pub fn new_block_var(&mut self) -> SymExpr {
-        let idx = self.fresh_sym_var_idx();
+        let idx = self.fresh_sym_var_idx(Rational::zero(), Rational::infinity());
         let var = SymExpr::var(idx);
         self.block_vars.push(idx);
         var
@@ -489,12 +462,6 @@ impl GeometricBoundSemantics {
                 decays.push(new_decay_var.clone());
                 self.add_constraint(a.clone().must_le(new_decay_var.clone()));
                 self.add_constraint(b.clone().must_le(new_decay_var.clone()));
-                // The following constraint is not necessary, but it helps the solver:
-                // We require the new variable to be the maximum of the other two.
-                self.add_constraint(SymConstraint::or(vec![
-                    new_decay_var.clone().must_eq(a),
-                    new_decay_var.must_eq(b),
-                ]));
             }
         }
         for i in 0..count {
@@ -616,8 +583,6 @@ impl GeometricBoundSemantics {
             if self.verbose {
                 println!("Invariant-c: {c}");
             }
-            self.add_constraint(c.clone().must_ge(SymExpr::zero()));
-            self.add_constraint(c.clone().must_lt(SymExpr::one()));
             self.assert_le(&post_loop.upper, &(invariant.upper.clone() * c.clone()));
             exit.upper /= SymExpr::one() - c.clone();
             let result = self.add_bounds(exit, rest);

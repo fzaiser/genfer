@@ -79,29 +79,14 @@ impl SymExpr {
         }
     }
 
-    /// Must equal `rhs`.
-    pub fn must_eq(self, rhs: Self) -> SymConstraint {
-        SymConstraint::Eq(self, rhs)
-    }
-
-    /// Must be less than `rhs`.
-    pub fn must_lt(self, rhs: Self) -> SymConstraint {
-        SymConstraint::Lt(self, rhs)
-    }
-
     /// Must be less than or equal to `rhs`.
     pub fn must_le(self, rhs: Self) -> SymConstraint {
-        SymConstraint::Le(self, rhs)
-    }
-
-    /// Must be greater than `rhs`.
-    pub fn must_gt(self, rhs: Self) -> SymConstraint {
-        SymConstraint::Lt(rhs, self)
+        SymConstraint { lhs: self, rhs }
     }
 
     /// Must be greater than or equal to `rhs`.
     pub fn must_ge(self, rhs: Self) -> SymConstraint {
-        SymConstraint::Le(rhs, self)
+        rhs.must_le(self)
     }
 
     pub fn substitute_with(
@@ -584,24 +569,13 @@ impl std::fmt::Display for SymExpr {
 }
 
 #[derive(Clone, Debug)]
-pub enum SymConstraint {
-    Eq(SymExpr, SymExpr),
-    Lt(SymExpr, SymExpr),
-    Le(SymExpr, SymExpr),
-    // TODO: remove these
-    Or(Vec<SymConstraint>),
+pub struct SymConstraint {
+    pub lhs: SymExpr,
+    pub rhs: SymExpr,
 }
 impl SymConstraint {
-    pub fn or(constraints: Vec<SymConstraint>) -> Self {
-        Self::Or(constraints)
-    }
-
     pub fn is_trivial(&self) -> bool {
-        match self {
-            SymConstraint::Eq(lhs, rhs) | SymConstraint::Le(lhs, rhs) => lhs == rhs,
-            SymConstraint::Lt(..) => false,
-            SymConstraint::Or(constraints) => constraints.iter().any(SymConstraint::is_trivial),
-        }
+        self.lhs.is_zero() || self.lhs == self.rhs
     }
 
     pub fn to_z3<'a>(
@@ -609,74 +583,19 @@ impl SymConstraint {
         ctx: &'a z3::Context,
         conv: &impl Fn(&'a z3::Context, &Rational) -> z3::ast::Real<'a>,
     ) -> z3::ast::Bool<'a> {
-        match self {
-            SymConstraint::Eq(e1, e2) => {
-                z3::ast::Ast::_eq(&e1.to_z3(ctx, conv), &e2.to_z3(ctx, conv))
-            }
-            SymConstraint::Lt(e1, e2) => e1.to_z3(ctx, conv).lt(&e2.to_z3(ctx, conv)),
-            SymConstraint::Le(e1, e2) => e1.to_z3(ctx, conv).le(&e2.to_z3(ctx, conv)),
-            SymConstraint::Or(constraints) => {
-                let disjuncts = constraints
-                    .iter()
-                    .map(|c| c.to_z3(ctx, conv))
-                    .collect::<Vec<_>>();
-                z3::ast::Bool::or(ctx, &disjuncts.iter().collect::<Vec<_>>())
-            }
-        }
+        self.lhs.to_z3(ctx, conv).le(&self.rhs.to_z3(ctx, conv))
     }
 
     pub fn to_qepcad(&self, conv: &impl Fn(&Rational) -> String) -> String {
-        match self {
-            SymConstraint::Eq(lhs, rhs) => {
-                format!("{} = {}", lhs.to_qepcad(conv), rhs.to_qepcad(conv))
-            }
-            SymConstraint::Lt(lhs, rhs) => {
-                format!("{} < {}", lhs.to_qepcad(conv), rhs.to_qepcad(conv))
-            }
-            SymConstraint::Le(lhs, rhs) => {
-                format!("{} <= {}", lhs.to_qepcad(conv), rhs.to_qepcad(conv))
-            }
-            SymConstraint::Or(cs) => {
-                let mut res = "[".to_owned();
-                let mut first = true;
-                for c in cs {
-                    if first {
-                        first = false;
-                    } else {
-                        res += r" \/ ";
-                    }
-                    res += &c.to_qepcad(conv);
-                }
-                res + "]"
-            }
-        }
+        format!(
+            "{} <= {}",
+            self.lhs.to_qepcad(conv),
+            self.rhs.to_qepcad(conv)
+        )
     }
 
     pub fn to_python_z3(&self) -> String {
-        match self {
-            SymConstraint::Eq(lhs, rhs) => {
-                format!("{} == {}", lhs.to_python_z3(), rhs.to_python_z3())
-            }
-            SymConstraint::Lt(lhs, rhs) => {
-                format!("{} < {}", lhs.to_python_z3(), rhs.to_python_z3())
-            }
-            SymConstraint::Le(lhs, rhs) => {
-                format!("{} <= {}", lhs.to_python_z3(), rhs.to_python_z3())
-            }
-            SymConstraint::Or(cs) => {
-                let mut res = "Or(".to_owned();
-                let mut first = true;
-                for c in cs {
-                    if first {
-                        first = false;
-                    } else {
-                        res += ", ";
-                    }
-                    res += &c.to_python_z3();
-                }
-                res + ")"
-            }
-        }
+        format!("{} <= {}", self.lhs.to_python_z3(), self.rhs.to_python_z3())
     }
 
     pub fn substitute_with(
@@ -684,26 +603,9 @@ impl SymConstraint {
         replacements: &[SymExpr],
         cache: &mut FxHashMap<usize, SymExpr>,
     ) -> SymConstraint {
-        match self {
-            SymConstraint::Eq(e1, e2) => SymConstraint::Eq(
-                e1.substitute_with(replacements, cache),
-                e2.substitute_with(replacements, cache),
-            ),
-            SymConstraint::Lt(e1, e2) => SymConstraint::Lt(
-                e1.substitute_with(replacements, cache),
-                e2.substitute_with(replacements, cache),
-            ),
-            SymConstraint::Le(e1, e2) => SymConstraint::Le(
-                e1.substitute_with(replacements, cache),
-                e2.substitute_with(replacements, cache),
-            ),
-            SymConstraint::Or(constraints) => SymConstraint::Or(
-                constraints
-                    .iter()
-                    .map(|c| c.substitute_with(replacements, cache))
-                    .collect(),
-            ),
-        }
+        self.lhs
+            .substitute_with(replacements, cache)
+            .must_le(self.rhs.substitute_with(replacements, cache))
     }
 
     pub fn gradient_at(
@@ -711,36 +613,18 @@ impl SymConstraint {
         values: &[f64],
         cache: &mut [FxHashMap<usize, (f64, f64)>],
     ) -> Vec<f64> {
-        match self {
-            SymConstraint::Lt(lhs, rhs) | SymConstraint::Le(lhs, rhs) => {
-                let term = rhs.clone() - lhs.clone();
-                term.gradient_at(values, cache)
-            }
-            _ => vec![0.0; values.len()],
-        }
+        let term = self.rhs.clone() - self.lhs.clone();
+        term.gradient_at(values, cache)
     }
 
     pub fn extract_linear(
         &self,
         cache: &mut FxHashMap<usize, Option<LinearExpr>>,
     ) -> Option<LinearConstraint> {
-        match self {
-            SymConstraint::Eq(e1, e2) => Some(LinearConstraint::eq(
-                e1.extract_linear(cache)?,
-                e2.extract_linear(cache)?,
-            )),
-            SymConstraint::Lt(e1, e2) | SymConstraint::Le(e1, e2) => Some(LinearConstraint::le(
-                e1.extract_linear(cache)?,
-                e2.extract_linear(cache)?,
-            )),
-            SymConstraint::Or(_) => {
-                // Here we only support constraints without variables
-                return Some(LinearConstraint::eq(
-                    LinearExpr::constant(Rational::zero()),
-                    LinearExpr::constant(Rational::zero()),
-                ));
-            }
-        }
+        Some(LinearConstraint::le(
+            self.lhs.extract_linear(cache)?,
+            self.rhs.extract_linear(cache)?,
+        ))
     }
 
     pub fn holds_exact_f64(&self, values: &[f64], cache: &mut FxHashMap<usize, Rational>) -> bool {
@@ -752,15 +636,7 @@ impl SymConstraint {
     }
 
     pub fn holds_exact(&self, values: &[Rational], cache: &mut FxHashMap<usize, Rational>) -> bool {
-        match self {
-            SymConstraint::Lt(lhs, rhs) => {
-                lhs.eval_exact(values, cache) < rhs.eval_exact(values, cache)
-            }
-            SymConstraint::Le(lhs, rhs) => {
-                lhs.eval_exact(values, cache) <= rhs.eval_exact(values, cache)
-            }
-            _ => true,
-        }
+        self.lhs.eval_exact(values, cache) <= self.rhs.eval_exact(values, cache)
     }
 
     pub fn is_close(
@@ -770,20 +646,15 @@ impl SymConstraint {
         cache: &mut FxHashMap<usize, f64>,
         grad_cache: &mut [FxHashMap<usize, (f64, f64)>],
     ) -> bool {
-        match self {
-            SymConstraint::Lt(lhs, rhs) | SymConstraint::Le(lhs, rhs) => {
-                let term = lhs.clone() - rhs.clone();
-                let val = term.eval_float(point, cache);
-                let grad = term.gradient_at(point, grad_cache);
-                let grad_len_sq = grad.iter().map(|g| g * g).fold(0.0, |acc, f| acc + f);
-                if grad_len_sq.is_zero() {
-                    return false;
-                }
-                let dist = -val / grad_len_sq.sqrt();
-                dist < min_dist
-            }
-            _ => false,
+        let term = self.lhs.clone() - self.rhs.clone();
+        let val = term.eval_float(point, cache);
+        let grad = term.gradient_at(point, grad_cache);
+        let grad_len_sq = grad.iter().map(|g| g * g).fold(0.0, |acc, f| acc + f);
+        if grad_len_sq.is_zero() {
+            return false;
         }
+        let dist = -val / grad_len_sq.sqrt();
+        dist < min_dist
     }
     pub fn estimate_signed_dist(
         &self,
@@ -791,37 +662,18 @@ impl SymConstraint {
         cache: &mut FxHashMap<usize, f64>,
         grad_cache: &mut [FxHashMap<usize, (f64, f64)>],
     ) -> f64 {
-        match self {
-            SymConstraint::Lt(lhs, rhs) | SymConstraint::Le(lhs, rhs) => {
-                let term = lhs.clone() - rhs.clone();
-                let val = term.eval_float(point, cache);
-                let grad = term.gradient_at(point, grad_cache);
-                if val == 0.0 {
-                    return 0.0;
-                }
-                val / norm(&ArrayView1::from(&grad))
-            }
-            _ => -1.0,
+        let term = self.lhs.clone() - self.rhs.clone();
+        let val = term.eval_float(point, cache);
+        let grad = term.gradient_at(point, grad_cache);
+        if val == 0.0 {
+            return 0.0;
         }
+        val / norm(&ArrayView1::from(&grad))
     }
 }
 
 impl std::fmt::Display for SymConstraint {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Eq(e1, e2) => write!(f, "{e1} = {e2}"),
-            Self::Lt(e1, e2) => write!(f, "{e1} < {e2}"),
-            Self::Le(e1, e2) => write!(f, "{e1} <= {e2}"),
-            Self::Or(constraints) => {
-                write!(f, "(")?;
-                for (i, c) in constraints.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, " OR ")?;
-                    }
-                    write!(f, "{c}")?;
-                }
-                write!(f, ")")
-            }
-        }
+        write!(f, "{} <= {}", self.lhs, self.rhs)
     }
 }
