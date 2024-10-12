@@ -115,12 +115,14 @@ pub fn optimize_linear_parts(
     let lp = extract_lp(problem, &init);
     let mut tol = 1e-9;
     let mut tighten = 1e-9;
-    let retries = 1;
+    let retries = 8;
     for retry in 0..retries {
         if retry > 0 {
-            println!("Retrying with higher tolerance...");
+            println!("Retrying with modified numerical tolerances...");
         }
         let (vars, mut model) = create_cbc_model(&lp, tighten);
+        // Tolerance during pre-solve phase:
+        model.set_parameter("preT", &tol.to_string());
         // For a feasible solution no primal infeasibility, i.e., constraint violation, may exceed this value:
         model.set_parameter("primalT", &tol.to_string());
         // For an optimal solution no dual infeasibility may exceed this value:
@@ -128,12 +130,14 @@ pub fn optimize_linear_parts(
         let solution = match model.solve() {
             Ok(solution) => solution,
             Err(good_lp::ResolutionError::Unbounded) => {
-                println!("Optimal solution is unbounded.");
+                println!("LP solver found the problem unbounded.");
                 return None;
             }
             Err(good_lp::ResolutionError::Infeasible) => {
                 println!("LP solver found the problem infeasible.");
-                return None;
+                tol *= 1.5;
+                tighten /= 2.0;
+                continue;
             }
             Err(good_lp::ResolutionError::Other(msg)) => {
                 todo!("Other error: {msg}");
@@ -149,15 +153,16 @@ pub fn optimize_linear_parts(
             .collect::<Vec<_>>();
         if problem.holds_exact(&solution) {
             if retry > 0 {
-                println!("LP solver succeeded after {} retries.", retry);
+                println!("LP solver succeeded after {retry} retries (due to numerical issues).");
             }
             return Some(solution);
         } else {
-            println!("Solution by LP solver does not satisfy the constraints.");
+            println!("Solution by LP solver does not satisfy the constraints (rounding issues).");
             tol *= 2.0;
-            tighten *= 4.0;
+            tighten *= 3.0;
         };
     }
+    println!("LP solver failed after {retries} retries (probably numerical issues).");
     None
 }
 
