@@ -40,8 +40,8 @@ impl Optimizer for LinearProgrammingOptimizer {
             }
             println!(
                 "Best objective: {} at {:?}",
-                objective_value.round(),
-                solution.iter().map(Rational::round).collect::<Vec<_>>()
+                objective_value.to_f64(),
+                solution.iter().map(Rational::to_f64).collect::<Vec<_>>()
             );
             solution
         } else {
@@ -81,9 +81,9 @@ fn create_cbc_model(problem: &LinearProblem, tighten: f64) -> (Vec<Variable>, Co
         .var_bounds
         .iter()
         .map(|(lo, hi)| {
-            let var = variable().min(lo.round());
+            let var = variable().min(lo.to_f64());
             let var = if hi.is_finite() {
-                var.max(hi.round())
+                var.max(hi.to_f64())
             } else {
                 var
             };
@@ -93,7 +93,7 @@ fn create_cbc_model(problem: &LinearProblem, tighten: f64) -> (Vec<Variable>, Co
     let objective = problem
         .objective
         .normalize()
-        .to_lp_expr(&var_list, &Rational::round_up);
+        .to_lp_expr(&var_list, &Rational::to_f64_up);
     let mut lp = lp.minimise(objective).using(good_lp::default_solver);
     for constraint in &problem.constraints {
         lp.add_constraint(
@@ -372,7 +372,7 @@ impl LinearConstraint {
     }
 
     pub fn to_lp_constraint(&self, var_list: &[good_lp::Variable]) -> good_lp::Constraint {
-        let result = self.expr.to_lp_expr(var_list, &Rational::round_down);
+        let result = self.expr.to_lp_expr(var_list, &Rational::to_f64_down);
         if self.eq_zero {
             result.eq(0.0)
         } else {

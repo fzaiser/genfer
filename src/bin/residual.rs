@@ -142,12 +142,12 @@ fn run_program(program: &Program, args: &CliArgs) {
 
 fn in_iv(iv: &Interval<Rational>) -> String {
     if iv.lo == iv.hi {
-        format!("= {}", iv.lo.round())
+        format!("= {}", iv.lo.to_f64())
     } else {
         format!(
             "∈ [{}, {}]",
-            F64::from(iv.lo.round_down()),
-            F64::from(iv.hi.round_up())
+            F64::from(iv.lo.to_f64_down()),
+            F64::from(iv.hi.to_f64_up())
         )
     }
 }

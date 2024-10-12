@@ -36,9 +36,9 @@ impl Ipopt {
         model.set_num_option("constr_viol_tol", self.tol);
         let mut vars = Vec::new();
         for (v, (lo, hi)) in problem.var_bounds.iter().enumerate() {
-            let (lo, hi) = (lo.round(), hi.round());
+            let (lo, hi) = (lo.to_f64(), hi.to_f64());
             let start = if let Some(init) = init {
-                init[v].round()
+                init[v].to_f64()
             } else if hi.is_finite() {
                 (lo + hi) / 2.0
             } else {
@@ -94,7 +94,7 @@ impl Solver for Ipopt {
                     if self.verbose {
                         println!(
                             "IPOPT found the following solution: {:?}",
-                            solution.iter().map(Rational::round).collect::<Vec<_>>()
+                            solution.iter().map(Rational::to_f64).collect::<Vec<_>>()
                         );
                     }
                     if problem.holds_exact(&solution) {
@@ -146,8 +146,8 @@ impl Optimizer for Ipopt {
                         println!("IPOPT found the following solution:");
                         println!(
                             "Objective: {} at {:?}",
-                            obj_value.round(),
-                            solution.iter().map(Rational::round).collect::<Vec<_>>()
+                            obj_value.to_f64(),
+                            solution.iter().map(Rational::to_f64).collect::<Vec<_>>()
                         );
                         if holds_exact {
                             println!("The solution satisfies all constraints.");

@@ -444,8 +444,8 @@ fn output_tail_asymptotics(
             thresh_hi.clone() / norm_lo.clone() * decay.pow(-(i32::try_from(thresh).unwrap()));
         println!(
             "\nAsymptotics: {p}(n) <= {} * {}^n for n >= {}",
-            F64::from(factor.round_up()),
-            F64::from(decay.round_up()),
+            F64::from(factor.to_f64_up()),
+            F64::from(decay.to_f64_up()),
             thresh
         );
     }
@@ -467,12 +467,12 @@ fn output_moments(result: &GeometricBound, var: Var, norm: &Interval<Rational>) 
 
 fn in_iv(iv: &Interval<Rational>) -> String {
     if iv.lo == iv.hi {
-        format!("= {}", F64::from(iv.lo.round()))
+        format!("= {}", F64::from(iv.lo.to_f64()))
     } else {
         format!(
             "∈ [{}, {}]",
-            F64::from(iv.lo.round_down()),
-            F64::from(iv.hi.round_up())
+            F64::from(iv.lo.to_f64_down()),
+            F64::from(iv.hi.to_f64_up())
         )
     }
 }

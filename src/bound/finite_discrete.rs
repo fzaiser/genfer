@@ -100,7 +100,7 @@ impl FiniteDiscrete {
 
 impl std::fmt::Display for FiniteDiscrete {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.masses.map(Rational::round).fmt(f)
+        self.masses.map(Rational::to_f64).fmt(f)
     }
 }
 

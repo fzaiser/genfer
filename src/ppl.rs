@@ -62,7 +62,7 @@ impl PosRatio {
         }
     }
 
-    pub fn round(&self) -> f64 {
+    pub fn to_f64(&self) -> f64 {
         (self.numer as f64) / (self.denom as f64)
     }
 }

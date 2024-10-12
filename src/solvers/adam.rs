@@ -74,7 +74,7 @@ impl Optimizer for AdamBarrier {
         _timeout: Duration,
     ) -> Vec<Rational> {
         let objective = &problem.objective;
-        let mut best_point = Array1::from_vec(init).map(Rational::round);
+        let mut best_point = Array1::from_vec(init).map(Rational::to_f64);
         let mut point: Array1<f64> = best_point.clone();
         let mut best_objective =
             objective.eval_float(point.as_slice().unwrap(), &mut FxHashMap::default());
