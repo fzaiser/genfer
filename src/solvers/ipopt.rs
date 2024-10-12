@@ -85,6 +85,9 @@ impl Solver for Ipopt {
         let (vars, mut model) = self.construct_model(problem, None);
         // Set objective to zero because we're just solving, not optimizing
         model.set_obj(SymExpr::zero().to_ipopt_expr(&vars, &mut FxHashMap::default()));
+        if !self.verbose {
+            model.silence();
+        }
         match Self::solve(&vars, &mut model) {
             Ok((status, solution)) => match status {
                 SolutionStatus::Solved => {
@@ -130,6 +133,9 @@ impl Optimizer for Ipopt {
             .objective
             .eval_exact(&init, &mut FxHashMap::default());
         let (vars, mut model) = self.construct_model(problem, Some(&init));
+        if !self.verbose {
+            model.silence();
+        }
         match Self::solve(&vars, &mut model) {
             Ok((status, solution)) => {
                 let cache = &mut FxHashMap::default();

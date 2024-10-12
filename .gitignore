@@ -1,3 +1,4 @@
+*.out
 *.json
 target/
 .vscode/

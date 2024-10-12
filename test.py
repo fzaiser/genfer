@@ -79,6 +79,15 @@ benchmarks = [
     # "psi/israeli-jalfon5",
 ]
 
+class BenchRun:
+    def __init__(self, command, stdout, stderr, exitcode, timeout, error=None):
+        self.command = command
+        self.stdout = stdout
+        self.stderr = stderr
+        self.exitcode = exitcode
+        self.timeout = timeout
+        self.error = error
+
 def compile():
     cargo_command = "cargo build --release --bin residual --bin geobound"
     print(f"Running `{cargo_command}`...")
@@ -90,6 +99,7 @@ def compile():
 
 def run_benchmark(benchmark, flags):
     command = ["target/release/geobound", f"benchmarks/{benchmark}.sgcl"] + flags
+    print(f"$ {' '.join(command)}")
     try:
         env = os.environ.copy()
         env["RUST_BACKTRACE"] = "1"
@@ -100,18 +110,20 @@ def run_benchmark(benchmark, flags):
         stderr = (completed.stderr or b"").decode("utf-8")
         exitcode = completed.returncode
         if exitcode != 0:
-            print(f"Error running {benchmark}. Exit code: {exitcode}")
-            print("Command: ", " ".join(command))
-            print("Error:")
-            print(stderr)
-            return "crash"
-        return stdout
-    except subprocess.TimeoutExpired:
-        print(f"Timeout for {benchmark}")
-        print("Command: ", " ".join(command))
-        return "timeout"
+            print(f"  {red}crashed (exitcode {exitcode}){reset}")
+            print(f"  STDERR:")
+            print("  " + stderr.replace("\n", "\n  "))
+            result = BenchRun(command, stdout, stderr, exitcode, timeout, "crash")
+        else:
+            result = BenchRun(command, stdout, stderr, exitcode, timeout)
+    except subprocess.TimeoutExpired as e:
+        print(f"  {red}timeout{reset}")
+        stdout = (e.stdout or b"").decode("utf-8")
+        stderr = (e.stderr or b"").decode("utf-8")
+        result = BenchRun(command, stdout, stderr, None, timeout, "timeout")
+    return result
 
-def run_benchmarks(run_slow=False):
+def run_benchmarks(run_slow=False, out_file=None):
     compile()
     start = time.time()
     results = {}
@@ -126,41 +138,52 @@ def run_benchmarks(run_slow=False):
         if slow and not run_slow:
             print(f"Skipping slow benchmark {name}")
             continue
-        print(f"Running benchmark {name}...")
         result = {}
-        out = run_benchmark(name, ["--objective", "ev", "-u", f"{unroll}", "-d", f"{inv_size}"] + flags)
-        if out == "crash" or out == "timeout":
-            result["ev"] = out
+        run = run_benchmark(name, ["--objective", "ev", "-u", f"{unroll}", "-d", f"{inv_size}"] + flags)
+        if run.error == "crash" or run.error == "timeout":
+            result["ev"] = run.error
             result["time_ev"] = timeout
         else:
-            m = exact_ev_re.search(out)
+            m = exact_ev_re.search(run.stdout)
             if m:
                 result["ev"] = float(m.group(1))
-            m = ev_bound_re.search(out)
+            m = ev_bound_re.search(run.stdout)
             if m:
                 result["ev"] = float(m.group(2))
-            m = total_time_re.search(out)
+            m = total_time_re.search(run.stdout)
             if m:
                 result["time_ev"] = float(m.group(1))
-        out = run_benchmark(name, ["--objective", "tail", "-u", "0", "-d", f"{inv_size}"] + flags)
-        if out == "crash" or out == "timeout":
-            result["tail"] = out
+        if out_file:
+            out_file.write(f"$ {' '.join(run.command)}\n")
+            out_file.write(run.stdout)
+            out_file.write("\n\n")
+            out_file.write(run.stderr)
+            out_file.write("\n\n\n\n")
+        run = run_benchmark(name, ["--objective", "tail", "-u", "0", "-d", f"{inv_size}"] + flags)
+        if run.error == "crash" or run.error == "timeout":
+            result["tail"] = run.error
             result["time_tail"] = timeout
         else:
-            m = tail_bound_re.search(out)
+            m = tail_bound_re.search(run.stdout)
             if m:
                 result["tail"] = float(m.group(1))
-            elif tail_bound_zero_re.search(out):
+            elif tail_bound_zero_re.search(run.stdout):
                 result["tail"] = 0
-            m = total_time_re.search(out)
+            m = total_time_re.search(run.stdout)
             if m:
                 result["time_tail"] = float(m.group(1))
+        if out_file:
+            out_file.write(f"$ {' '.join(run.command)}\n")
+            out_file.write(run.stdout)
+            out_file.write("\n\n")
+            out_file.write(run.stderr)
+            out_file.write("\n\n\n\n")
         results[name] = result
     end = time.time()
     print(f"{blue}Total time: {bold}{end - start:.2f} s{reset}\n")
     return results
 
-def compare_measurements(key, base, test, eq_tol=1.05, small_tol=1.25):
+def compare_measurements(key, base, test, eq_tol=1.001, small_tol=1.25):
     if isinstance(base, str):
         if isinstance(test, str):
             format = ""
@@ -204,7 +227,7 @@ def compare_measurements(key, base, test, eq_tol=1.05, small_tol=1.25):
 def compare_time(key, baseline, test):
     base = baseline[key]
     test = test[key]
-    return compare_measurements(key, base, test)
+    return compare_measurements(key, base, test, eq_tol=1.1)
 
 def compare_metric(key, baseline, test):
     base = baseline[key]
@@ -252,11 +275,13 @@ if __name__ == '__main__':
         sys.exit(1)
     run_slow = len(sys.argv) > 2 and sys.argv[2] == "slow"
     if sys.argv[1] == "baseline":
-        results = run_benchmarks(run_slow=run_slow)
+        with open("baseline.out", "w") as out_file:
+            results = run_benchmarks(run_slow=run_slow, out_file=out_file)
         with open("baseline.json", "w") as f:
             json.dump(results, f, indent=2)
     elif sys.argv[1] == "test":
-        results = run_benchmarks(run_slow=run_slow)
+        with open("test.out", "w") as out_file:
+            results = run_benchmarks(run_slow=run_slow, out_file=out_file)
         with open("test.json", "w") as f:
             json.dump(results, f, indent=2)
         compare()
