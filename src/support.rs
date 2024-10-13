@@ -1,18 +1,12 @@
 use std::ops::{Range, RangeFrom, RangeInclusive};
 
-use num_traits::Zero;
-
-use crate::{
-    interval::Interval,
-    numbers::{Number, Rational},
-};
+use crate::{interval::Interval, numbers::Rational};
 
 /// Support set of a random variable (overapproximated as a range)
 #[derive(Clone, Debug, PartialEq)]
 pub enum SupportSet {
     Empty,
-    Range { start: u64, end: Option<u64> }, // TODO: should be ExtendedNat
-    Interval { start: Rational, end: Rational }, // TODO: remove
+    Range { start: u64, end: Option<u64> },
 }
 impl SupportSet {
     pub(crate) fn empty() -> Self {
@@ -70,44 +64,6 @@ impl SupportSet {
                     _ => None,
                 },
             },
-            (
-                Self::Interval { start, end },
-                Self::Interval {
-                    start: start2,
-                    end: end2,
-                },
-            ) => Self::Interval {
-                start: start.min(start2),
-                end: end.max(end2),
-            },
-            (
-                Self::Range { start, end },
-                Self::Interval {
-                    start: start2,
-                    end: end2,
-                },
-            ) => Self::Interval {
-                start: Rational::from(*start).min(start2),
-                end: if let Some(end) = end {
-                    Rational::from(*end).max(end2)
-                } else {
-                    Rational::infinity()
-                },
-            },
-            (
-                Self::Interval { start, end },
-                Self::Range {
-                    start: start2,
-                    end: end2,
-                },
-            ) => Self::Interval {
-                start: start.min(&Rational::from(*start2)),
-                end: if let Some(end2) = end2 {
-                    end.max(&Rational::from(*end2))
-                } else {
-                    Rational::infinity()
-                },
-            },
         }
     }
 
@@ -118,16 +74,12 @@ impl SupportSet {
                 start: start.saturating_sub(other),
                 end: end.map(|x| x.saturating_sub(other)),
             },
-            Self::Interval { start, end } => Self::Interval {
-                start: (start.clone() - other.into()).max(&Rational::zero()),
-                end: (end.clone() - other.into()).max(&Rational::zero()),
-            },
         }
     }
 
     pub fn finite_nonempty_range(&self) -> Option<std::ops::RangeInclusive<u64>> {
         match self {
-            Self::Empty | Self::Interval { .. } => None,
+            Self::Empty => None,
             Self::Range { start, end } => Some(*start..=(*end)?),
         }
     }
@@ -135,7 +87,7 @@ impl SupportSet {
     pub(crate) fn is_subset_of(&self, other: &SupportSet) -> bool {
         match (self, other) {
             (Self::Empty, _) => true,
-            (_, Self::Empty) | (Self::Interval { .. }, Self::Range { .. }) => false,
+            (_, Self::Empty) => false,
             (
                 Self::Range { start, end },
                 Self::Range {
@@ -143,24 +95,6 @@ impl SupportSet {
                     end: end2,
                 },
             ) => start >= start2 && (end2.is_none() || (end.is_some() && end <= end2)),
-            (
-                Self::Interval { start, end },
-                Self::Interval {
-                    start: start2,
-                    end: end2,
-                },
-            ) => start >= start2 && end <= end2,
-            (
-                Self::Range { start, end },
-                Self::Interval {
-                    start: start2,
-                    end: end2,
-                },
-            ) => {
-                &Rational::from(*start) >= start2
-                    && end.is_some()
-                    && &Rational::from(end.unwrap()) <= end2
-            }
         }
     }
 
@@ -191,7 +125,6 @@ impl SupportSet {
                     Self::empty()
                 }
             }
-            Self::Interval { .. } => self.clone(),
         }
     }
 
@@ -204,7 +137,7 @@ impl SupportSet {
 
     fn remove_all_impl(&mut self, set: &[u64]) {
         match self {
-            Self::Empty | Self::Interval { .. } => {}
+            Self::Empty => {}
             Self::Range { start, end } => {
                 if set.is_empty() {
                     return;
@@ -240,7 +173,6 @@ impl SupportSet {
                 Rational::from(*start),
                 end.map_or(Rational::infinity(), Rational::from),
             )),
-            Self::Interval { start, end } => Some(Interval::exact(start.clone(), end.clone())),
         }
     }
 
@@ -248,10 +180,6 @@ impl SupportSet {
         match self {
             Self::Empty => false,
             Self::Range { start, end } => i >= *start && end.map_or(true, |end| i <= end),
-            Self::Interval { start, end } => {
-                let i = Rational::from_int(i);
-                &i >= start && &i <= end
-            }
         }
     }
 }
@@ -273,18 +201,6 @@ impl From<Range<u64>> for SupportSet {
         Self::Range {
             start: range.start,
             end: Some(range.end - 1),
-        }
-    }
-}
-
-impl From<Range<Rational>> for SupportSet {
-    fn from(range: Range<Rational>) -> Self {
-        if range.end <= range.start {
-            return Self::empty();
-        }
-        Self::Interval {
-            start: range.start,
-            end: range.end,
         }
     }
 }
@@ -325,13 +241,6 @@ impl std::fmt::Display for SupportSet {
                     write!(f, "{{{start}, ...}}")
                 }
             }
-            Self::Interval { start, end } => {
-                if end == &Rational::infinity() {
-                    write!(f, "[{start}, ∞)")
-                } else {
-                    write!(f, "[{start}, {end}]")
-                }
-            }
         }
     }
 }
@@ -355,44 +264,6 @@ impl std::ops::Add for SupportSet {
                     _ => None,
                 },
             },
-            (
-                Self::Interval { start, end },
-                Self::Interval {
-                    start: start2,
-                    end: end2,
-                },
-            ) => Self::Interval {
-                start: start + start2,
-                end: end + end2,
-            },
-            (
-                Self::Range { start, end },
-                Self::Interval {
-                    start: start2,
-                    end: end2,
-                },
-            ) => Self::Interval {
-                start: Rational::from(start) + start2,
-                end: if let Some(end) = end {
-                    Rational::from(end) + end2
-                } else {
-                    Rational::infinity()
-                },
-            },
-            (
-                Self::Interval { start, end },
-                Self::Range {
-                    start: start2,
-                    end: end2,
-                },
-            ) => Self::Interval {
-                start: start + Rational::from(start2),
-                end: if let Some(end2) = end2 {
-                    end + Rational::from(end2)
-                } else {
-                    Rational::infinity()
-                },
-            },
         }
     }
 }
@@ -412,10 +283,6 @@ impl std::ops::Mul<u64> for SupportSet {
             Self::Range { start, end } => Self::Range {
                 start: start * rhs,
                 end: end.map(|x| x * rhs),
-            },
-            Self::Interval { start, end } => Self::Interval {
-                start: start * rhs.into(),
-                end: end * rhs.into(),
             },
         }
     }
@@ -441,44 +308,6 @@ impl std::ops::Mul<SupportSet> for SupportSet {
                 end: match (end, end2) {
                     (Some(x), Some(y)) => Some(x * y),
                     _ => None,
-                },
-            },
-            (
-                Self::Interval { start, end },
-                Self::Interval {
-                    start: start2,
-                    end: end2,
-                },
-            ) => Self::Interval {
-                start: start * start2,
-                end: end * end2,
-            },
-            (
-                Self::Range { start, end },
-                Self::Interval {
-                    start: start2,
-                    end: end2,
-                },
-            ) => Self::Interval {
-                start: Rational::from(start) * start2,
-                end: if let Some(end) = end {
-                    Rational::from(end) * end2
-                } else {
-                    Rational::infinity()
-                },
-            },
-            (
-                Self::Interval { start, end },
-                Self::Range {
-                    start: start2,
-                    end: end2,
-                },
-            ) => Self::Interval {
-                start: start * start2.into(),
-                end: if let Some(end2) = end2 {
-                    end * end2.into()
-                } else {
-                    Rational::infinity()
                 },
             },
         }

@@ -537,7 +537,6 @@ impl GeometricBoundSemantics {
                     SupportSet::Range { start, end } => {
                         (*start as usize, end.map(|x| x as usize + 1))
                     }
-                    SupportSet::Interval { .. } => todo!(),
                 })
                 .collect::<Vec<_>>(),
         };
