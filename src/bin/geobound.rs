@@ -100,7 +100,7 @@ struct CliArgs {
     keep_while: bool,
     /// Optionally output an SMT-LIB file at this path
     #[arg(long)]
-    smt: Option<PathBuf>,
+    smtlib: Option<PathBuf>,
     /// Optionally output a QEPCAD file (to feed to qepcad via stdin) at this path
     #[arg(long)]
     qepcad: Option<PathBuf>,
@@ -155,6 +155,16 @@ fn compute_constraints_solution(
     Result<Vec<Rational>, SolverError>,
 ) {
     let (problem, bound) = generate_constraints(args, program);
+    if let Some(path) = &args.smtlib {
+        println!("Writing SMT-LIB file to {path:?}...");
+        let mut out = std::fs::File::create(path).unwrap();
+        problem.output_smtlib(&mut out).unwrap();
+    }
+    if let Some(path) = &args.qepcad {
+        println!("Writing QEPCAD commands to {path:?}...");
+        let mut out = std::fs::File::create(path).unwrap();
+        problem.output_qepcad(&mut out).unwrap();
+    }
     if args.unroll != 0 {
         println!("Solving simplified problem with unroll limit set to 0 first...");
         let modified_args = CliArgs {
@@ -226,16 +236,6 @@ fn generate_constraints(args: &CliArgs, program: &Program) -> (ConstraintProblem
         for constraint in ctx.constraints() {
             println!("  {constraint}");
         }
-    }
-    if let Some(path) = &args.smt {
-        println!("Writing SMT file to {path:?}...");
-        let mut out = std::fs::File::create(path).unwrap();
-        ctx.output_smt(&mut out).unwrap();
-    }
-    if let Some(path) = &args.qepcad {
-        println!("Writing QEPCAD commands to {path:?}...");
-        let mut out = std::fs::File::create(path).unwrap();
-        ctx.output_qepcad(&mut out).unwrap();
     }
     let objective = objective_function(&bound, program.result, args.objective);
     let mut problem = ConstraintProblem {

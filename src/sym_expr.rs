@@ -9,7 +9,7 @@ use num_traits::{One, Zero};
 use rustc_hash::FxHashMap;
 
 use crate::{
-    numbers::{FloatRat, Rational},
+    numbers::{FloatNumber, FloatRat, Rational},
     solvers::linear::{LinearConstraint, LinearExpr},
     util::{norm, pow},
 };
@@ -267,31 +267,46 @@ impl SymExpr {
         }
     }
 
-    pub fn to_z3_string(&self) -> String {
+    pub fn to_smtlib(&self) -> String {
         match self.kind() {
             SymExprKind::Constant(value) => {
-                if value.rat() < Rational::zero() {
-                    format!("(- {})", -value.clone())
+                let value = value.rat();
+                if value.is_finite() {
+                    let (numer, denom) = value.to_integer_ratio();
+                    if denom == 1 {
+                        if numer.is_negative() {
+                            format!("(- {})", -numer)
+                        } else {
+                            format!("{}", numer)
+                        }
+                    } else if numer.is_negative() {
+                        format!("(- (/ {} {}))", -numer, denom)
+                    } else {
+                        format!("(/ {} {})", numer, denom)
+                    }
                 } else {
-                    format!("{value}")
+                    panic!("Nonfinite number {value} cannot be represented in SMT-LIB");
                 }
             }
             SymExprKind::Variable(i) => format!("x{i}"),
-            SymExprKind::Add(lhs, rhs) => format!("(+ {lhs} {rhs})"),
+            SymExprKind::Add(lhs, rhs) => format!("(+ {} {})", lhs.to_smtlib(), rhs.to_smtlib()),
             SymExprKind::Mul(lhs, rhs) => {
                 if SymExpr::from(-Rational::one()) == *rhs {
-                    format!("(- {lhs})")
+                    format!("(- {})", lhs.to_smtlib())
                 } else {
-                    format!("(* {lhs} {rhs})")
+                    format!("(* {} {})", lhs.to_smtlib(), rhs.to_smtlib())
                 }
             }
             SymExprKind::Pow(expr, n) => {
                 if *n == -1 {
-                    format!("(/ 1 {expr})")
+                    format!("(/ 1 {})", expr.to_smtlib())
                 } else if *n < 0 {
-                    format!("(/ 1 (^ {expr} {}))", -n)
+                    format!(
+                        "(/ 1 (* {}))",
+                        vec![expr.to_smtlib(); (-n) as usize].join(" ")
+                    )
                 } else {
-                    format!("(^ {expr} {n})")
+                    format!("(* {})", vec![expr.to_smtlib(); *n as usize].join(" "))
                 }
             }
         }
@@ -314,7 +329,7 @@ impl SymExpr {
     pub fn to_qepcad(&self, conv: &impl Fn(&Rational) -> String) -> String {
         match self.kind() {
             SymExprKind::Constant(c) => conv(&c.rat()),
-            SymExprKind::Variable(v) => format!("{}", crate::ppl::Var(*v)),
+            SymExprKind::Variable(v) => format!("{}", SymExpr::var(*v)),
             SymExprKind::Add(lhs, rhs) => {
                 format!("({} + {})", lhs.to_qepcad(conv), rhs.to_qepcad(conv))
             }
@@ -594,8 +609,8 @@ impl SymConstraint {
         )
     }
 
-    pub fn to_python_z3(&self) -> String {
-        format!("{} <= {}", self.lhs.to_python_z3(), self.rhs.to_python_z3())
+    pub fn to_smtlib(&self) -> String {
+        format!("(<= {} {})", self.lhs.to_smtlib(), self.rhs.to_smtlib())
     }
 
     pub fn substitute_with(

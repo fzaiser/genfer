@@ -5,7 +5,7 @@ use std::ops::AddAssign;
 
 use crate::{
     bound::{Egd, FiniteDiscrete, GeometricBound},
-    numbers::{FloatNumber, Number, Rational},
+    numbers::{Number, Rational},
     ppl::{Distribution, Event, Natural, Program, Statement, Var},
     semantics::{
         support::{SupportTransformer, VarSupport},
@@ -13,7 +13,6 @@ use crate::{
     },
     support::SupportSet,
     sym_expr::{SymConstraint, SymExpr, SymExprKind},
-    util::rational_to_qepcad,
 };
 
 pub struct GeometricBoundSemantics {
@@ -591,108 +590,6 @@ impl GeometricBoundSemantics {
             }
             result
         }
-    }
-
-    pub fn output_python_z3(&self) -> String {
-        use std::fmt::Write;
-        let mut out = String::new();
-        writeln!(out, "import z3").unwrap();
-        writeln!(out, "z3.set_option(precision=5)").unwrap();
-        writeln!(out).unwrap();
-        for i in 0..self.sym_var_count() {
-            writeln!(out, "x{i} = Real('x{i}')").unwrap();
-        }
-        writeln!(out, "s = Solver()").unwrap();
-        for (v, (lo, hi)) in self.sym_var_bounds.iter().enumerate() {
-            writeln!(out, "s.add(x{v} >= {lo})").unwrap();
-            if hi.is_finite() {
-                writeln!(out, "s.add(x{v} < {hi})").unwrap();
-            }
-        }
-        for constraint in &self.constraints {
-            writeln!(out, "s.add({})", constraint.to_python_z3()).unwrap();
-        }
-        writeln!(out).unwrap();
-        out
-    }
-
-    pub fn output_smt<W: std::io::Write>(&self, out: &mut W) -> std::io::Result<()> {
-        writeln!(out, "(set-logic QF_NRA)")?;
-        writeln!(out, "(set-option :pp.decimal true)")?;
-        writeln!(out)?;
-        for i in 0..self.sym_var_count() {
-            writeln!(out, "(declare-const {} Real)", SymExpr::var(i))?;
-        }
-        writeln!(out)?;
-        for (v, (lo, hi)) in self.sym_var_bounds.iter().enumerate() {
-            writeln!(out, "(assert (<= {} {}))", lo, SymExpr::var(v))?;
-            if hi.is_finite() {
-                writeln!(out, "(assert (< {} {}))", SymExpr::var(v), hi)?;
-            }
-        }
-        for constraint in &self.constraints {
-            writeln!(out, "(assert {constraint})")?;
-        }
-        writeln!(out)?;
-        writeln!(out, "(check-sat)")?;
-        writeln!(out, "(get-model)")?;
-        Ok(())
-    }
-
-    pub fn output_qepcad<W: std::io::Write>(&self, out: &mut W) -> std::io::Result<()> {
-        // Name:
-        writeln!(out, "[Constraints]")?;
-
-        // List of variables:
-        write!(out, "(")?;
-        let mut first = true;
-        for i in 0..self.sym_var_count() {
-            if first {
-                first = false;
-            } else {
-                write!(out, ", ")?;
-            }
-            write!(out, "{}", crate::ppl::Var(i))?;
-        }
-        writeln!(out, ")")?;
-
-        // Number of free variables:
-        writeln!(out, "2")?; // two variables for plotting
-
-        // Formula:
-        for i in 2..self.sym_var_count() {
-            writeln!(out, "(E {})", crate::ppl::Var(i))?;
-        }
-        writeln!(out, "[")?;
-        let mut first = true;
-        for (v, (lo, hi)) in self.sym_var_bounds.iter().enumerate() {
-            if first {
-                first = false;
-            } else {
-                writeln!(out, r" /\")?;
-            }
-            write!(out, "  {lo} <= {v}", v = SymExpr::var(v))?;
-            if hi.is_finite() {
-                write!(out, r" /\ {v} < {hi}", v = SymExpr::var(v))?;
-            }
-        }
-        for c in self.constraints() {
-            if first {
-                first = false;
-            } else {
-                writeln!(out, r" /\")?;
-            }
-            write!(out, "  {}", c.to_qepcad(&rational_to_qepcad))?;
-        }
-        writeln!(out, "\n].")?;
-
-        // Commands for various solving stages:
-        writeln!(out, "go")?;
-        writeln!(out, "go")?;
-        writeln!(out, "go")?;
-        writeln!(out, "p-2d-cad 0 1 0 1 0.0001 plot.eps")?; // 2D plot
-        writeln!(out, "go")?;
-        Ok(())
     }
 
     fn new_block(&mut self, shape: Vec<(usize, usize)>) -> ArrayD<SymExpr> {
