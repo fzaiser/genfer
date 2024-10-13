@@ -72,9 +72,6 @@ struct CliArgs {
     /// Disable timing of the execution
     #[arg(long)]
     no_timing: bool,
-    /// Disable normalization of the distribution
-    #[arg(long)]
-    no_normalize: bool,
     #[arg(short = 'd', long, default_value = "1")]
     /// The minimum degree of the loop invariant polynomial
     min_degree: usize,
@@ -302,7 +299,7 @@ fn continue_with_solution(
     println!("\nUNNORMALIZED BOUND:");
     let (thresh, decay, thresh_hi) = output_unnormalized(&marginal, program.result);
     println!("\nNORMALIZED BOUND:");
-    let norm = bound_normalization_constant(args, program, &marginal);
+    let norm = bound_normalization_constant(program, &marginal);
     output_probabilities(&marginal, program.result, args.limit, &norm, "p");
     output_tail_asymptotics(&decay, &thresh_hi, thresh, &norm.lo, "p");
     output_moments(&marginal, program.result, &norm);
@@ -378,18 +375,8 @@ fn output_unnormalized(bound: &GeometricBound, var: Var) -> (usize, Rational, Ra
     (thresh, decay, thresh_hi)
 }
 
-fn bound_normalization_constant(
-    args: &CliArgs,
-    program: &Program,
-    bound: &GeometricBound,
-) -> Interval<Rational> {
-    if args.no_normalize {
-        println!("Normalization disabled by the flag --no-normalize.");
-        Interval::one()
-    } else if !program.uses_observe() {
-        println!("Normalizing constant: Z = 1 (no observe statements).");
-        Interval::one()
-    } else {
+fn bound_normalization_constant(program: &Program, bound: &GeometricBound) -> Interval<Rational> {
+    if program.uses_observe() {
         let total_lo = bound.lower.total_mass();
         let total_hi = bound.upper.total_mass().extract_constant().unwrap().rat();
         let total_hi = if total_hi > Rational::one() {
@@ -400,6 +387,9 @@ fn bound_normalization_constant(
         let total = Interval::exact(total_lo, total_hi);
         println!("Normalizing constant: Z {}", in_iv(&total));
         total
+    } else {
+        println!("Normalizing constant: Z = 1 (no observe statements).");
+        Interval::one()
     }
 }
 

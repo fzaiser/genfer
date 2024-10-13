@@ -16,7 +16,6 @@ use clap::Parser;
 use ndarray::Axis;
 use num_traits::{One, Zero};
 
-#[expect(clippy::struct_excessive_bools)]
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct CliArgs {
@@ -28,9 +27,6 @@ struct CliArgs {
     /// Disable timing of the execution
     #[arg(long)]
     no_timing: bool,
-    /// Disable normalization of the distribution
-    #[arg(long)]
-    no_normalize: bool,
     #[arg(short = 'u', long, default_value = "8")]
     /// The default number of loop unrollings
     unroll: usize,
@@ -93,7 +89,7 @@ fn run_program(program: &Program, args: &CliArgs) {
         }
     }
 
-    let norm = if !args.no_normalize && program.uses_observe() {
+    let norm = if program.uses_observe() {
         let total_lo = result.lower.total_mass().clone();
         let total_hi = Rational::one() - result.reject.clone();
         let total = Interval::exact(total_lo.clone(), total_hi.clone());
