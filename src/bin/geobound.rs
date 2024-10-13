@@ -146,7 +146,7 @@ fn run_program(program: &Program, args: &CliArgs) -> ExitCode {
             ExitCode::FAILURE
         }
     };
-    println!("Total time: {:.5}s", start.elapsed().as_secs_f64());
+    output_time("Total time", start, args.no_timing);
     exit_code
 }
 
@@ -158,35 +158,41 @@ fn compute_constraints_solution(
     GeometricBound,
     Result<Vec<Rational>, SolverError>,
 ) {
+    println!("\nCONSTRAINT GENERATION:");
     let (problem, bound) = generate_constraints(args, program);
     if let Some(path) = &args.smtlib {
-        println!("Writing SMT-LIB file to {path:?}...");
+        println!("\nWriting SMT-LIB file to {path:?}...");
         let mut out = std::fs::File::create(path).unwrap();
         problem.output_smtlib(&mut out).unwrap();
     }
     if let Some(path) = &args.qepcad {
-        println!("Writing QEPCAD commands to {path:?}...");
+        println!("\nWriting QEPCAD commands to {path:?}...");
         let mut out = std::fs::File::create(path).unwrap();
         problem.output_qepcad(&mut out).unwrap();
     }
     if args.unroll != 0 {
-        println!("Solving simplified problem with unroll limit set to 0 first...");
+        println!("\nSOLVING SIMPLIFIED PROBLEM:");
+        println!("Solving without loop unrolling first...");
         let modified_args = CliArgs {
             unroll: 1,
             objective: None,
             ..args.clone()
         };
+        println!("\nCONSTRAINT GENERATION (simplified problem):");
         let (simple_problem, _) = generate_constraints(&modified_args, program);
+        println!("\nSOLVING CONSTRAINTS (simplified problem):");
         let simple_solution = solve_constraints(&modified_args, &simple_problem);
         if let Ok(simple_solution) = simple_solution {
-            println!("Optimizing solution to the simplified problem...");
+            println!("\nOPTIMIZATION (simplified problem):");
             let modified_args = CliArgs {
                 objective: args.objective,
                 ..args.clone()
             };
             let simple_solution =
                 optimize_solution(&modified_args, &simple_problem, simple_solution.clone());
-            println!("Extending solution to the original problem...");
+            println!("\nEXTENDING SOLUTION:");
+            println!("Extending simplified solution to the original problem...");
+            let start_extend = Instant::now();
             // The nonlinear variables can be reused from the simplified problem:
             let mut solution = vec![Rational::zero(); problem.var_count];
             for (simple_var, var) in simple_problem.factor_vars.iter().zip(&problem.factor_vars) {
@@ -195,13 +201,19 @@ fn compute_constraints_solution(
             for (simple_var, var) in simple_problem.decay_vars.iter().zip(&problem.decay_vars) {
                 solution[*var] = simple_solution[*simple_var].clone();
             }
+            let solution = optimize_linear_parts(&problem, solution);
+            output_time("Extension time (LP solver)", start_extend, args.no_timing);
             // Solve the linear variables:
-            if let Some(solution) = optimize_linear_parts(&problem, solution) {
+            if let Some(solution) = solution {
                 return (problem, bound, Ok(solution));
             }
         }
         println!("Solving simplified problem (unrolling limit set to 0) failed.");
         println!("Continuing with the original problem.");
+
+        println!("\nSOLVING CONSTRAINTS (original problem):");
+    } else {
+        println!("\nSOLVING CONSTRAINTS:");
     }
     let init_solution = solve_constraints(args, &problem);
     (problem, bound, init_solution)
@@ -209,7 +221,6 @@ fn compute_constraints_solution(
 
 fn generate_constraints(args: &CliArgs, program: &Program) -> (ConstraintProblem, GeometricBound) {
     let start = Instant::now();
-    println!("Generating constraints...");
     let mut ctx = GeometricBoundSemantics::new()
         .with_verbose(args.verbose)
         .with_min_degree(args.min_degree)
@@ -252,11 +263,7 @@ fn generate_constraints(args: &CliArgs, program: &Program) -> (ConstraintProblem
         objective,
     };
     problem.preprocess();
-    let time_constraint_gen = start.elapsed();
-    println!(
-        "Constraint generation time: {:.5}s",
-        time_constraint_gen.as_secs_f64()
-    );
+    output_time("Constraint generation time", start, args.no_timing);
     (problem, bound)
 }
 
@@ -264,7 +271,6 @@ fn solve_constraints(
     args: &CliArgs,
     problem: &ConstraintProblem,
 ) -> Result<Vec<Rational>, SolverError> {
-    println!("Solving constraints...");
     let start_solver = Instant::now();
     let solution = match args.solver {
         Solver::Z3 => Z3Solver.solve(problem),
@@ -273,8 +279,7 @@ fn solve_constraints(
             .solve(problem),
         Solver::Ipopt => Ipopt::default().with_verbose(args.verbose).solve(problem),
     };
-    let solver_time = start_solver.elapsed();
-    println!("Solver time: {:.5}s", solver_time.as_secs_f64());
+    output_time("Solver time", start_solver, args.no_timing);
     solution
 }
 
@@ -285,6 +290,7 @@ fn continue_with_solution(
     problem: &ConstraintProblem,
     solution: Vec<Rational>,
 ) -> ExitCode {
+    println!("\nOPTIMIZATION:");
     let optimized_solution = optimize_solution(args, problem, solution);
     bound.upper = bound.upper.resolve(&optimized_solution);
     // TODO: bound the probability masses by 1 (or even by the residual mass bound)
@@ -293,7 +299,9 @@ fn continue_with_solution(
         println!("{bound}");
     }
     let marginal = bound.marginal(program.result);
+    println!("\nUNNORMALIZED BOUND:");
     let (thresh, decay, thresh_hi) = output_unnormalized(&marginal, program.result);
+    println!("\nNORMALIZED BOUND:");
     let norm = bound_normalization_constant(args, program, &marginal);
     output_probabilities(&marginal, program.result, args.limit, &norm, "p");
     output_tail_asymptotics(&decay, &thresh_hi, thresh, &norm.lo, "p");
@@ -306,19 +314,20 @@ fn optimize_solution(
     problem: &ConstraintProblem,
     mut solution: Vec<Rational>,
 ) -> Vec<Rational> {
-    if problem.objective.is_zero() {
+    if args.objective.is_none() {
+        println!("No optimization objective set. Skipping optimization.");
         return solution;
     };
     let start_optimizer = Instant::now();
-    println!("Optimizing solution...");
     let mut objective = problem
         .objective
         .eval_exact(&solution, &mut FxHashMap::default());
+    println!("Initial objective: {}", F64::from(objective.to_f64()));
     for (i, optimizer) in args.optimizer.iter().enumerate() {
-        println!("Optimization step {}: {optimizer}", i + 1);
+        println!("\nOptimization step {}: {optimizer}", i + 1);
         let cur_sol = solution.clone();
         let start = Instant::now();
-        let optimized_solution = match optimizer {
+        let new_solution = match optimizer {
             Optimizer::AdamBarrier => AdamBarrier::default()
                 .with_verbose(args.verbose)
                 .optimize(problem, cur_sol),
@@ -327,28 +336,33 @@ fn optimize_solution(
                 .optimize(problem, cur_sol),
             Optimizer::Linear => LinearProgrammingOptimizer.optimize(problem, cur_sol),
         };
-        println!(
-            "Optimizer ({optimizer}) time: {:.6} s",
-            start.elapsed().as_secs_f64()
+        output_time(
+            &format!("Optimizer time ({optimizer})"),
+            start,
+            args.no_timing,
         );
-        if let Some(optimized_objective) = problem.objective_if_holds_exactly(&optimized_solution) {
-            if optimized_objective <= objective {
-                solution = optimized_solution;
-                objective = optimized_objective;
+        if let Some(new_objective) = problem.objective_if_holds_exactly(&new_solution) {
+            if new_objective < objective {
+                solution = new_solution;
+                objective = new_objective;
+                println!("Improved objective: {}", F64::from(objective.to_f64()));
+            } else if new_objective == objective {
+                println!("Unchanged objective: {}", F64::from(new_objective.to_f64()));
             } else {
-                println!("Optimization step failed (worse objective). Continuing with the previous solution.");
+                println!(
+                    "Worse objective: {} (continuing with previous solution)",
+                    F64::from(new_objective.to_f64())
+                );
             }
         } else {
-            println!("Optimization step failed (constraint violation). Continuing with the previous solution.");
+            println!("Optimized solution violates constraints (continuing with previous solution)");
         }
     }
-    let optimizer_time = start_optimizer.elapsed();
-    println!("Optimization time: {:.6}", optimizer_time.as_secs_f64());
+    output_time("\nTotal optimization time", start_optimizer, args.no_timing);
     solution
 }
 
 fn output_unnormalized(bound: &GeometricBound, var: Var) -> (usize, Rational, Rational) {
-    println!("\nUnnormalized bound:");
     let ax = Axis(var.id());
     let upper_len = bound.upper.block.len_of(ax);
     let lower_len = bound.lower.masses.len_of(ax);
@@ -369,7 +383,11 @@ fn bound_normalization_constant(
     program: &Program,
     bound: &GeometricBound,
 ) -> Interval<Rational> {
-    if args.no_normalize || !program.uses_observe() {
+    if args.no_normalize {
+        println!("Normalization disabled by the flag --no-normalize.");
+        Interval::one()
+    } else if !program.uses_observe() {
+        println!("Normalizing constant: Z = 1 (no observe statements).");
         Interval::one()
     } else {
         let total_lo = bound.lower.total_mass();
@@ -380,10 +398,7 @@ fn bound_normalization_constant(
             total_hi
         };
         let total = Interval::exact(total_lo, total_hi);
-        if args.verbose {
-            println!("\nNormalizing constant: Z {}", in_iv(&total));
-            println!("Everything from here on is normalized.");
-        }
+        println!("Normalizing constant: Z {}", in_iv(&total));
         total
     }
 }
@@ -428,7 +443,7 @@ fn output_tail_asymptotics(
         } else {
             thresh + 1
         };
-        println!("Asymptotics: {p}(n) = 0 for n >= {from}");
+        println!("\nAsymptotics: {p}(n) = 0 for n >= {from}");
     } else {
         let factor =
             thresh_hi.clone() / norm_lo.clone() * decay.pow(-(i32::try_from(thresh).unwrap()));
@@ -480,5 +495,11 @@ fn objective_function(
         Some(Objective::Balance) => {
             bound.upper.total_mass() * bound.upper.tail_objective(result_var).pow(4)
         }
+    }
+}
+
+fn output_time(name: &str, start: Instant, no_timing: bool) {
+    if !no_timing {
+        println!("{}: {:.5} s", name, start.elapsed().as_secs_f64());
     }
 }

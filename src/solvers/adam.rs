@@ -132,7 +132,6 @@ impl Optimizer for AdamBarrier {
                 println!("{p},");
             }
         }
-        println!("Best objective: {best_objective} at {best_point}");
         best_point.mapv(Rational::from).to_vec()
     }
 }

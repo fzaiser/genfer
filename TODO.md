@@ -14,7 +14,6 @@ Features
 - [ ] Turn upper bounds into bounds on the remainder besides the lower bound
 - [ ] Find a way to deal with rounding errors
 - [ ] scale constraints by setting the sum of coefficients to 1 (after substituting 1 for all nonlinear variables)
-- [ ] Add faster LP solver (HIGHS? russell_sparse?)
 
 Bugs
 ====
@@ -34,3 +33,4 @@ Cleanups
 
 - [ ] make handling of lower bounds consistent between residual and geometric bound semantics
 - [ ] retain variable names
+- [ ] Get rid of unnecessary number traits (e.g. interval only takes rationals)

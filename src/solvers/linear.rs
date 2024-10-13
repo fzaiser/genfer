@@ -1,7 +1,4 @@
-use std::{
-    ops::{Add, Div, Mul, Neg, Sub},
-    time::Instant,
-};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
 use good_lp::{
     solvers::coin_cbc::CoinCbcProblem, variable, ProblemVariables, Solution, SolverModel, Variable,
@@ -27,17 +24,10 @@ impl Optimizer for LinearProgrammingOptimizer {
             let objective_value = problem
                 .objective
                 .eval_exact(&solution, &mut FxHashMap::default());
-            if init_obj < objective_value {
-                println!(
-            "LP solver found a solution with a worse objective value than the initial solution."
-        );
+            if init_obj <= objective_value {
+                println!("LP solver failed to improve the objective.");
                 return init;
             }
-            println!(
-                "Best objective: {} at {:?}",
-                objective_value.to_f64(),
-                solution.iter().map(Rational::to_f64).collect::<Vec<_>>()
-            );
             solution
         } else {
             println!("LP solver failed; returning previous solution.");
@@ -105,8 +95,7 @@ pub fn optimize_linear_parts(
     problem: &ConstraintProblem,
     init: Vec<Rational>,
 ) -> Option<Vec<Rational>> {
-    let start = Instant::now();
-    println!("Running LP solver...");
+    println!("Running LP solver CBC...");
     let lp = extract_lp(problem, &init);
     let mut tol = 1e-9;
     let mut tighten = 1e-9;
@@ -145,7 +134,6 @@ pub fn optimize_linear_parts(
                 todo!("Error: {msg}");
             }
         };
-        println!("LP solver time: {} s", start.elapsed().as_secs_f64());
         let solution = vars
             .iter()
             .map(|v| Rational::from(solution.value(*v)))

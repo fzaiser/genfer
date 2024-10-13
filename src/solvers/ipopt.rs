@@ -130,24 +130,14 @@ impl Optimizer for Ipopt {
                 let holds_exact = problem.holds_exact_with(&solution, cache);
                 match status {
                     SolutionStatus::Solved => {
-                        println!("IPOPT found the following solution:");
-                        println!(
-                            "Objective: {} at {:?}",
-                            obj_value.to_f64(),
-                            solution.iter().map(Rational::to_f64).collect::<Vec<_>>()
-                        );
                         if holds_exact {
-                            println!("The solution satisfies all constraints.");
                             solution
                         } else {
-                            println!("The solution does not satisfy all constraints (rounding errors?); returning initial solution.");
+                            println!("Solution by IPOPT does not actually satisfy the constraints (due to numerical issues).");
                             init
                         }
                     }
-                    SolutionStatus::Infeasible => {
-                        println!("IPOPT found the problem infeasible; returning initial solution.");
-                        init
-                    }
+                    SolutionStatus::Infeasible => init,
                     SolutionStatus::Other => {
                         if holds_exact && obj_value <= init_obj {
                             println!("IPOPT failed to find an optimal solution; continuing with nonoptimal solution.");
@@ -162,7 +152,7 @@ impl Optimizer for Ipopt {
                 }
             }
             Err(e) => {
-                println!("IPOPT failed: {e}\nReturning initial solution.");
+                println!("IPOPT failed: {e}");
                 init
             }
         }
