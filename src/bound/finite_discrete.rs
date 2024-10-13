@@ -10,13 +10,13 @@ pub struct FiniteDiscrete {
 }
 
 impl FiniteDiscrete {
-    pub fn zero(n: usize) -> FiniteDiscrete {
+    pub(crate) fn zero(n: usize) -> FiniteDiscrete {
         FiniteDiscrete {
             masses: ArrayD::zeros(vec![1; n]),
         }
     }
 
-    pub fn marginalize_out(&self, Var(v): Var) -> FiniteDiscrete {
+    pub(crate) fn marginalize_out(&self, Var(v): Var) -> FiniteDiscrete {
         let masses = self.masses.sum_axis(Axis(v)).insert_axis(Axis(v));
         FiniteDiscrete { masses }
     }
@@ -25,7 +25,7 @@ impl FiniteDiscrete {
         self.masses.sum()
     }
 
-    pub fn extend_axis(&mut self, Var(v): Var, new_len: usize) {
+    pub(crate) fn extend_axis(&mut self, Var(v): Var, new_len: usize) {
         let axis = Axis(v);
         let old_len = self.masses.len_of(axis);
         if new_len <= old_len {
@@ -38,7 +38,7 @@ impl FiniteDiscrete {
             .unwrap();
     }
 
-    pub fn shift_left(&mut self, Var(v): Var, offset: usize) {
+    pub(crate) fn shift_left(&mut self, Var(v): Var, offset: usize) {
         let len = self.masses.len_of(Axis(v));
         let zero_elem = self
             .masses
@@ -49,7 +49,7 @@ impl FiniteDiscrete {
         self.masses.index_axis_mut(Axis(v), 0).assign(&zero_elem);
     }
 
-    pub fn shift_right(&mut self, Var(v): Var, offset: usize) {
+    pub(crate) fn shift_right(&mut self, Var(v): Var, offset: usize) {
         let mut zero_shape = self.masses.shape().to_owned();
         zero_shape[v] = offset;
         self.masses = ndarray::concatenate(
@@ -59,7 +59,7 @@ impl FiniteDiscrete {
         .unwrap();
     }
 
-    pub fn add_categorical(&mut self, Var(v): Var, categorical: &[Rational]) {
+    pub(crate) fn add_categorical(&mut self, Var(v): Var, categorical: &[Rational]) {
         let len = self.masses.len_of(Axis(v));
         let max = categorical.len() - 1;
         self.extend_axis(Var(v), len + max);

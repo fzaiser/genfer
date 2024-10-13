@@ -11,12 +11,12 @@ pub struct FloatRat {
 }
 
 impl FloatRat {
-    pub fn new(rat: Rational) -> Self {
+    pub(crate) fn new(rat: Rational) -> Self {
         let float = rat.to_f64();
         FloatRat { rat, float }
     }
 
-    pub fn float(&self) -> f64 {
+    pub(crate) fn float(&self) -> f64 {
         self.float
     }
 
@@ -24,12 +24,7 @@ impl FloatRat {
         self.rat.clone()
     }
 
-    pub fn from_f64(float: f64) -> Self {
-        let rat = Rational::from(float);
-        FloatRat { rat, float }
-    }
-
-    pub fn pow(&self, exp: i32) -> Self {
+    pub(crate) fn pow(&self, exp: i32) -> Self {
         let rat = self.rat.pow(exp);
         FloatRat::new(rat)
     }

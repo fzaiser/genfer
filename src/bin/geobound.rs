@@ -447,7 +447,7 @@ fn output_moments(result: &GeometricBound, var: Var, norm: &Interval<Rational>) 
         let hi = upper_moments[i].clone() / norm.lo.clone();
         let moment = Interval::exact(lo, hi);
         println!("{i}-th (raw) moment {}", in_iv(&moment));
-        factorial *= Rational::from_int(i + 1);
+        factorial *= Rational::from(i as u64 + 1);
     }
 }
 

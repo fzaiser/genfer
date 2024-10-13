@@ -12,7 +12,7 @@ pub struct F64(f64);
 
 impl F64 {
     #[inline]
-    pub fn to_f64(self) -> f64 {
+    pub(crate) fn to_f64(self) -> f64 {
         self.0
     }
 }

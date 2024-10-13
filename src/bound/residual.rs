@@ -15,7 +15,7 @@ pub struct ResidualBound {
 }
 
 impl ResidualBound {
-    pub fn zero(n: usize) -> ResidualBound {
+    pub(crate) fn zero(n: usize) -> ResidualBound {
         ResidualBound {
             lower: FiniteDiscrete::zero(n),
             reject: Rational::zero(),
@@ -23,7 +23,7 @@ impl ResidualBound {
         }
     }
 
-    pub fn marginalize_out(&self, var: Var) -> ResidualBound {
+    pub(crate) fn marginalize_out(&self, var: Var) -> ResidualBound {
         let mut var_supports = self.var_supports.clone();
         if !var_supports[var].is_empty() {
             var_supports.set(var, SupportSet::zero());
@@ -45,11 +45,11 @@ impl ResidualBound {
         result
     }
 
-    pub fn var_count(&self) -> usize {
+    pub(crate) fn var_count(&self) -> usize {
         self.lower.masses.ndim()
     }
 
-    pub fn add_reject(mut self, reject: Rational) -> Self {
+    pub(crate) fn add_reject(mut self, reject: Rational) -> Self {
         self.reject += reject;
         self
     }

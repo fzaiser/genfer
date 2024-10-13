@@ -406,7 +406,7 @@ impl GeometricBoundSemantics {
         var
     }
 
-    pub fn add_constraint(&mut self, constraint: SymConstraint) {
+    pub(crate) fn add_constraint(&mut self, constraint: SymConstraint) {
         // Recognize variable bounds (lo <= v) constraints
         if let (SymExprKind::Constant(lo), SymExprKind::Variable(v)) =
             (constraint.lhs.kind(), constraint.rhs.kind())
@@ -421,7 +421,7 @@ impl GeometricBoundSemantics {
         self.constraints.push(constraint);
     }
 
-    pub fn new_decay_var(&mut self) -> SymExpr {
+    pub(crate) fn new_decay_var(&mut self) -> SymExpr {
         let idx = self.fresh_sym_var_idx(Rational::zero(), Rational::one());
         let var = SymExpr::var(idx);
         self.nonlinear_vars.push(idx);
@@ -429,7 +429,7 @@ impl GeometricBoundSemantics {
         var
     }
 
-    pub fn new_contraction_factor_var(&mut self) -> SymExpr {
+    pub(crate) fn new_contraction_factor_var(&mut self) -> SymExpr {
         let idx = self.fresh_sym_var_idx(Rational::zero(), Rational::one());
         let var = SymExpr::var(idx);
         self.nonlinear_vars.push(idx);
@@ -437,14 +437,14 @@ impl GeometricBoundSemantics {
         var
     }
 
-    pub fn new_block_var(&mut self) -> SymExpr {
+    pub(crate) fn new_block_var(&mut self) -> SymExpr {
         let idx = self.fresh_sym_var_idx(Rational::zero(), Rational::infinity());
         let var = SymExpr::var(idx);
         self.block_vars.push(idx);
         var
     }
 
-    pub fn add_egds(&mut self, mut lhs: Egd, mut rhs: Egd) -> Egd {
+    pub(crate) fn add_egds(&mut self, mut lhs: Egd, mut rhs: Egd) -> Egd {
         let count = self.program_var_count;
         let mut decays = Vec::with_capacity(count);
         for i in 0..count {
@@ -478,7 +478,11 @@ impl GeometricBoundSemantics {
         }
     }
 
-    pub fn add_bounds(&mut self, lhs: GeometricBound, rhs: GeometricBound) -> GeometricBound {
+    pub(crate) fn add_bounds(
+        &mut self,
+        lhs: GeometricBound,
+        rhs: GeometricBound,
+    ) -> GeometricBound {
         let lower = &lhs.lower + &rhs.lower;
         let upper = self.add_egds(lhs.upper, rhs.upper);
         let var_supports = lhs.var_supports.join(&rhs.var_supports);

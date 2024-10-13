@@ -1,5 +1,3 @@
-use std::io::Read;
-
 use nom::{
     branch::alt,
     bytes::complete::tag,
@@ -567,7 +565,7 @@ fn result<'a>(vars: &[&str], input: &'a str) -> IResult<&'a str, Var> {
     )(input)
 }
 
-pub fn program(input: &str) -> IResult<&str, Program> {
+fn program(input: &str) -> IResult<&str, Program> {
     let mut vars = vec![];
     let (input, stmts) = many0(|input| statement(&mut vars, input))(input)?;
     let stmts = stmts.into_iter().flatten().collect();
@@ -583,11 +581,4 @@ pub fn parse_program(input: &str) -> Program {
             panic!("Parse error:\n{}", convert_error(input, e));
         }
     }
-}
-
-pub fn parse_file(path: &std::path::Path) -> std::io::Result<Program> {
-    let mut file = std::fs::File::open(path)?;
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
-    Ok(parse_program(&contents))
 }

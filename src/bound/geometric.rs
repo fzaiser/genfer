@@ -10,7 +10,7 @@ pub struct GeometricBound {
 }
 
 impl GeometricBound {
-    pub fn zero(n: usize) -> GeometricBound {
+    pub(crate) fn zero(n: usize) -> GeometricBound {
         GeometricBound {
             lower: FiniteDiscrete::zero(n),
             upper: Egd::zero(n),
@@ -18,7 +18,7 @@ impl GeometricBound {
         }
     }
 
-    pub fn marginalize_out(&self, var: Var) -> GeometricBound {
+    pub(crate) fn marginalize_out(&self, var: Var) -> GeometricBound {
         let mut var_supports = self.var_supports.clone();
         if !var_supports[var].is_empty() {
             var_supports.set(var, SupportSet::zero());

@@ -20,27 +20,14 @@ pub struct Egd {
 }
 
 impl Egd {
-    pub fn zero(n: usize) -> Self {
+    pub(crate) fn zero(n: usize) -> Self {
         Egd {
             block: ArrayD::zeros(vec![1; n]),
             decays: vec![SymExpr::zero(); n],
         }
     }
 
-    pub fn mass(&self, mut idx: Vec<usize>) -> SymExpr {
-        assert_eq!(idx.len(), self.block.ndim());
-        let mut factor = SymExpr::one();
-        for (v, i) in idx.iter_mut().enumerate() {
-            let len = self.block.len_of(Axis(v));
-            if *i >= len {
-                factor *= self.decays[v].clone().pow((*i - len + 1) as i32);
-                *i = len - 1;
-            }
-        }
-        self.block[idx.as_slice()].clone() * factor
-    }
-
-    pub fn extend_axis(&mut self, var: Var, new_len: usize) {
+    pub(crate) fn extend_axis(&mut self, var: Var, new_len: usize) {
         let axis = Axis(var.id());
         let old_len = self.block.len_of(axis);
         if new_len <= old_len {
@@ -61,7 +48,7 @@ impl Egd {
         }
     }
 
-    pub fn shift_left(&mut self, Var(v): Var, offset: usize) {
+    pub(crate) fn shift_left(&mut self, Var(v): Var, offset: usize) {
         self.extend_axis(Var(v), offset + 2);
         let zero_elem = self
             .block
@@ -72,7 +59,7 @@ impl Egd {
         self.block.index_axis_mut(Axis(v), 0).assign(&zero_elem);
     }
 
-    pub fn shift_right(&mut self, Var(v): Var, offset: usize) {
+    pub(crate) fn shift_right(&mut self, Var(v): Var, offset: usize) {
         let mut zero_shape = self.block.shape().to_owned();
         zero_shape[v] = offset;
         self.block = ndarray::concatenate(
@@ -82,7 +69,7 @@ impl Egd {
         .unwrap();
     }
 
-    pub fn add_categorical(&mut self, Var(v): Var, categorical: &[Rational]) {
+    pub(crate) fn add_categorical(&mut self, Var(v): Var, categorical: &[Rational]) {
         let len = self.block.len_of(Axis(v));
         let max = categorical.len() - 1;
         self.extend_axis(Var(v), len + max);
@@ -103,7 +90,7 @@ impl Egd {
         }
     }
 
-    pub fn marginalize_out(&self, var: Var) -> Self {
+    pub(crate) fn marginalize_out(&self, var: Var) -> Self {
         let len = self.block.len_of(Axis(var.id()));
         let axis = Axis(var.id());
         let mut decays = self.decays.clone();
@@ -119,7 +106,7 @@ impl Egd {
         Self { block, decays }
     }
 
-    pub fn marginal(&self, var: Var) -> Self {
+    pub(crate) fn marginal(&self, var: Var) -> Self {
         let mut result = self.clone();
         for v in 0..self.block.ndim() {
             if Var(v) != var {
@@ -142,7 +129,7 @@ impl Egd {
         Self { block, decays }
     }
 
-    pub fn moments(&self, Var(v): Var, limit: usize) -> Vec<SymExpr> {
+    pub(crate) fn moments(&self, Var(v): Var, limit: usize) -> Vec<SymExpr> {
         assert!(self.block.ndim() > v);
         assert!(
             self.block

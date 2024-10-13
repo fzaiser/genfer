@@ -174,7 +174,7 @@ pub struct LinearExpr {
 }
 
 impl LinearExpr {
-    pub fn new(coeffs: Vec<Rational>, constant: Rational) -> Self {
+    pub(crate) fn new(coeffs: Vec<Rational>, constant: Rational) -> Self {
         Self { coeffs, constant }
     }
 
@@ -182,21 +182,21 @@ impl LinearExpr {
         Self::new(vec![], Rational::zero())
     }
 
-    pub fn one() -> Self {
+    pub(crate) fn one() -> Self {
         Self::new(vec![Rational::one()], Rational::zero())
     }
 
-    pub fn constant(constant: Rational) -> Self {
+    pub(crate) fn constant(constant: Rational) -> Self {
         Self::new(vec![], constant)
     }
 
-    pub fn var(var: usize) -> Self {
+    pub(crate) fn var(var: usize) -> Self {
         let mut coeffs = vec![Rational::zero(); var + 1];
         coeffs[var] = Rational::one();
         Self::new(coeffs, Rational::zero())
     }
 
-    pub fn as_constant(&self) -> Option<&Rational> {
+    pub(crate) fn as_constant(&self) -> Option<&Rational> {
         if self.coeffs.iter().all(Rational::is_zero) {
             Some(&self.constant)
         } else {
@@ -204,7 +204,7 @@ impl LinearExpr {
         }
     }
 
-    pub fn to_lp_expr(
+    pub(crate) fn to_lp_expr(
         &self,
         vars: &[good_lp::Variable],
         conv: &impl Fn(&Rational) -> f64,
@@ -216,7 +216,7 @@ impl LinearExpr {
         result
     }
 
-    pub fn max_coeff(&self) -> Rational {
+    pub(crate) fn max_coeff(&self) -> Rational {
         self.coeffs.iter().fold(self.constant.clone(), |max, c| {
             if c > &max {
                 c.clone()
@@ -226,7 +226,7 @@ impl LinearExpr {
         })
     }
 
-    pub fn normalize(&self) -> Self {
+    pub(crate) fn normalize(&self) -> Self {
         let max = self.max_coeff();
         let scale = if max.is_zero() {
             Rational::one()
@@ -351,17 +351,7 @@ pub struct LinearConstraint {
 }
 
 impl LinearConstraint {
-    pub fn eq(e1: LinearExpr, e2: LinearExpr) -> Self
-    where
-        LinearExpr: Sub<Output = LinearExpr>,
-    {
-        Self {
-            expr: e2 - e1,
-            eq_zero: true,
-        }
-    }
-
-    pub fn le(e1: LinearExpr, e2: LinearExpr) -> Self
+    pub(crate) fn le(e1: LinearExpr, e2: LinearExpr) -> Self
     where
         LinearExpr: Sub<Output = LinearExpr>,
     {
@@ -371,7 +361,7 @@ impl LinearConstraint {
         }
     }
 
-    pub fn to_lp_constraint(&self, var_list: &[good_lp::Variable]) -> good_lp::Constraint {
+    pub(crate) fn to_lp_constraint(&self, var_list: &[good_lp::Variable]) -> good_lp::Constraint {
         let result = self.expr.to_lp_expr(var_list, &Rational::to_f64_down);
         if self.eq_zero {
             result.eq(0.0)
@@ -380,14 +370,14 @@ impl LinearConstraint {
         }
     }
 
-    pub fn normalize(&self) -> Self {
+    pub(crate) fn normalize(&self) -> Self {
         Self {
             expr: self.expr.normalize(),
             eq_zero: self.eq_zero,
         }
     }
 
-    pub fn tighten(&self, eps: f64) -> Self {
+    pub(crate) fn tighten(&self, eps: f64) -> Self {
         let constant = if self.expr.max_coeff().is_zero() {
             self.expr.constant.clone()
         } else {

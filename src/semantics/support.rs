@@ -58,15 +58,15 @@ impl std::fmt::Display for VarSupport {
 }
 
 impl VarSupport {
-    pub fn empty(num_vars: usize) -> VarSupport {
+    pub(crate) fn empty(num_vars: usize) -> VarSupport {
         VarSupport::Empty(num_vars)
     }
 
-    pub fn zero(count: usize) -> VarSupport {
+    pub(crate) fn zero(count: usize) -> VarSupport {
         VarSupport::Prod(vec![SupportSet::zero(); count])
     }
 
-    pub fn as_vec(&self) -> Option<&[SupportSet]> {
+    pub(crate) fn as_vec(&self) -> Option<&[SupportSet]> {
         match self {
             VarSupport::Empty(_) => None,
             VarSupport::Prod(v) => Some(v),
@@ -80,7 +80,7 @@ impl VarSupport {
         }
     }
 
-    pub fn push(&mut self, support: SupportSet) {
+    pub(crate) fn push(&mut self, support: SupportSet) {
         match self {
             VarSupport::Empty(n) => *n += 1,
             VarSupport::Prod(v) => v.push(support),
@@ -98,7 +98,7 @@ impl VarSupport {
         }
     }
 
-    pub fn is_subset_of(&self, other: &VarSupport) -> bool {
+    pub(crate) fn is_subset_of(&self, other: &VarSupport) -> bool {
         match (self, other) {
             (VarSupport::Empty(_), _) => true,
             (_, VarSupport::Empty(_)) => false,
@@ -109,7 +109,7 @@ impl VarSupport {
         }
     }
 
-    pub fn join(&self, other: &VarSupport) -> VarSupport {
+    pub(crate) fn join(&self, other: &VarSupport) -> VarSupport {
         match (self, other) {
             (VarSupport::Empty(_), res) | (res, VarSupport::Empty(_)) => res.clone(),
             (VarSupport::Prod(this), VarSupport::Prod(other)) => {
@@ -130,7 +130,7 @@ impl VarSupport {
         }
     }
 
-    pub fn update(&mut self, Var(v): Var, f: impl FnOnce(&mut SupportSet)) {
+    pub(crate) fn update(&mut self, Var(v): Var, f: impl FnOnce(&mut SupportSet)) {
         match self {
             VarSupport::Empty(_) => {}
             VarSupport::Prod(supports) => {
@@ -140,7 +140,7 @@ impl VarSupport {
         self.normalize();
     }
 
-    pub fn set(&mut self, var: Var, new: SupportSet) {
+    pub(crate) fn set(&mut self, var: Var, new: SupportSet) {
         self.update(var, |s| *s = new);
     }
 }
@@ -151,7 +151,7 @@ pub struct SupportTransformer {
 }
 
 impl SupportTransformer {
-    pub fn with_unroll(mut self, unroll: usize) -> Self {
+    pub(crate) fn with_unroll(mut self, unroll: usize) -> Self {
         self.unroll = unroll;
         self
     }
@@ -254,7 +254,7 @@ impl Transformer for SupportTransformer {
 }
 
 impl SupportTransformer {
-    pub fn transform_distribution(
+    pub(crate) fn transform_distribution(
         dist: &Distribution,
         v: Var,
         init: VarSupport,
@@ -272,7 +272,7 @@ impl SupportTransformer {
         result
     }
 
-    pub fn find_unroll_fixpoint(
+    pub(crate) fn find_unroll_fixpoint(
         &mut self,
         cond: &Event,
         body: &[Statement],
@@ -292,7 +292,7 @@ impl SupportTransformer {
         None
     }
 
-    pub fn find_while_invariant(
+    pub(crate) fn find_while_invariant(
         &mut self,
         cond: &Event,
         body: &[Statement],

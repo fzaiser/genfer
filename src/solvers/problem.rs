@@ -19,7 +19,7 @@ pub struct ConstraintProblem {
 }
 
 impl ConstraintProblem {
-    pub fn holds_exact_f64(&self, assignment: &[f64]) -> bool {
+    pub(crate) fn holds_exact_f64(&self, assignment: &[f64]) -> bool {
         let assignment = assignment
             .iter()
             .map(|r| Rational::from(*r))
@@ -27,11 +27,11 @@ impl ConstraintProblem {
         self.holds_exact(&assignment)
     }
 
-    pub fn holds_exact(&self, assignment: &[Rational]) -> bool {
+    pub(crate) fn holds_exact(&self, assignment: &[Rational]) -> bool {
         self.holds_exact_with(assignment, &mut FxHashMap::default())
     }
 
-    pub fn holds_exact_with(
+    pub(crate) fn holds_exact_with(
         &self,
         assignment: &[Rational],
         cache: &mut FxHashMap<usize, Rational>,
@@ -56,7 +56,7 @@ impl ConstraintProblem {
         }
     }
 
-    pub fn substitute(&self, replacements: &[SymExpr]) -> Self {
+    pub(crate) fn substitute(&self, replacements: &[SymExpr]) -> Self {
         let cache = &mut FxHashMap::default();
         let objective = self.objective.substitute_with(replacements, cache);
         let constraints = self
@@ -199,7 +199,7 @@ struct Tarjan {
 }
 
 impl Tarjan {
-    pub fn new(var_count: usize) -> Self {
+    pub(crate) fn new(var_count: usize) -> Self {
         Self {
             index: 1,
             stack: Vec::new(),
@@ -210,7 +210,7 @@ impl Tarjan {
         }
     }
 
-    pub fn sccs(mut self, edges: &[Vec<usize>]) -> Vec<Vec<usize>> {
+    pub(crate) fn sccs(mut self, edges: &[Vec<usize>]) -> Vec<Vec<usize>> {
         // Nonrecursive Tarjan:
         for v in 0..edges.len() {
             if self.lowlink[v] == 0 {

@@ -12,14 +12,14 @@ use crate::{
 pub enum SupportSet {
     Empty,
     Range { start: u64, end: Option<u64> }, // TODO: should be ExtendedNat
-    Interval { start: Rational, end: Rational },
+    Interval { start: Rational, end: Rational }, // TODO: remove
 }
 impl SupportSet {
-    pub fn empty() -> Self {
+    pub(crate) fn empty() -> Self {
         Self::Empty
     }
 
-    pub fn is_empty(&self) -> bool {
+    pub(crate) fn is_empty(&self) -> bool {
         matches!(self, Self::Empty)
     }
 
@@ -33,28 +33,28 @@ impl SupportSet {
         )
     }
 
-    pub fn zero() -> Self {
+    pub(crate) fn zero() -> Self {
         Self::Range {
             start: 0,
             end: Some(0),
         }
     }
 
-    pub fn point(x: u64) -> Self {
+    pub(crate) fn point(x: u64) -> Self {
         Self::Range {
             start: x,
             end: Some(x),
         }
     }
 
-    pub fn naturals() -> Self {
+    pub(crate) fn naturals() -> Self {
         Self::Range {
             start: 0,
             end: None,
         }
     }
 
-    pub fn join(&self, other: &Self) -> Self {
+    pub(crate) fn join(&self, other: &Self) -> Self {
         match (self, other) {
             (Self::Empty, x) | (x, Self::Empty) => x.clone(),
             (
@@ -111,7 +111,7 @@ impl SupportSet {
         }
     }
 
-    pub fn saturating_sub(&self, other: u64) -> Self {
+    pub(crate) fn saturating_sub(&self, other: u64) -> Self {
         match self {
             Self::Empty => Self::Empty,
             Self::Range { start, end } => Self::Range {
@@ -132,25 +132,7 @@ impl SupportSet {
         }
     }
 
-    pub fn is_discrete(&self) -> bool {
-        match self {
-            Self::Empty | Self::Range { .. } => true,
-            Self::Interval { .. } => false,
-        }
-    }
-
-    pub fn interval(start: Rational, end: Rational) -> Self {
-        if start > end {
-            return Self::empty();
-        }
-        Self::Interval { start, end }
-    }
-
-    pub fn nonneg_reals() -> SupportSet {
-        Self::interval(Rational::zero(), Rational::infinity())
-    }
-
-    pub fn is_subset_of(&self, other: &SupportSet) -> bool {
+    pub(crate) fn is_subset_of(&self, other: &SupportSet) -> bool {
         match (self, other) {
             (Self::Empty, _) => true,
             (_, Self::Empty) | (Self::Interval { .. }, Self::Range { .. }) => false,
@@ -182,13 +164,8 @@ impl SupportSet {
         }
     }
 
-    pub fn vec_is_subset_of(lhs: &[Self], rhs: &[Self]) -> bool {
-        assert_eq!(lhs.len(), rhs.len());
-        lhs.iter().zip(rhs.iter()).all(|(x, y)| x.is_subset_of(y))
-    }
-
     #[inline]
-    pub fn retain_only(&mut self, set: impl Iterator<Item = u64>) {
+    pub(crate) fn retain_only(&mut self, set: impl Iterator<Item = u64>) {
         let mut set = set.collect::<Vec<_>>();
         set.sort_unstable();
         *self = self.retain_only_impl(&set);
@@ -219,7 +196,7 @@ impl SupportSet {
     }
 
     #[inline]
-    pub fn remove_all(&mut self, set: impl Iterator<Item = u64>) {
+    pub(crate) fn remove_all(&mut self, set: impl Iterator<Item = u64>) {
         let mut set = set.collect::<Vec<_>>();
         set.sort_unstable();
         self.remove_all_impl(&set);

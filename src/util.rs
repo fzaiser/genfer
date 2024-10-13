@@ -5,7 +5,7 @@ use num_traits::{One, Zero};
 
 use crate::numbers::Rational;
 
-pub fn rational_to_z3<'a>(ctx: &'a z3::Context, r: &Rational) -> z3::ast::Real<'a> {
+pub(crate) fn rational_to_z3<'a>(ctx: &'a z3::Context, r: &Rational) -> z3::ast::Real<'a> {
     let (numer, denom) = r.to_integer_ratio();
     let numer = z3::ast::Int::from_str(ctx, &numer.to_string())
         .unwrap()
@@ -16,7 +16,7 @@ pub fn rational_to_z3<'a>(ctx: &'a z3::Context, r: &Rational) -> z3::ast::Real<'
     numer / denom
 }
 
-pub fn z3_real_to_rational(real: &z3::ast::Real) -> Option<Rational> {
+pub(crate) fn z3_real_to_rational(real: &z3::ast::Real) -> Option<Rational> {
     if let Some((n, d)) = real.as_real() {
         return Some(Rational::from_frac(n, d));
     }
@@ -34,11 +34,11 @@ pub fn z3_real_to_rational(real: &z3::ast::Real) -> Option<Rational> {
     }
 }
 
-pub fn rational_to_qepcad(r: &Rational) -> String {
+pub(crate) fn rational_to_qepcad(r: &Rational) -> String {
     format!("({r})")
 }
 
-pub fn pow<T>(base: T, exp: i32) -> T
+pub(crate) fn pow<T>(base: T, exp: i32) -> T
 where
     T: Clone + One + MulAssign + Div<Output = T>,
 {
@@ -51,7 +51,7 @@ where
     }
 }
 
-pub fn pow_nonneg<T>(base: T, exp: u32) -> T
+pub(crate) fn pow_nonneg<T>(base: T, exp: u32) -> T
 where
     T: Clone + One + MulAssign,
 {
@@ -68,15 +68,15 @@ where
     result
 }
 
-pub fn max(vec: &ArrayView1<f64>) -> f64 {
+pub(crate) fn max(vec: &ArrayView1<f64>) -> f64 {
     vec.iter().cloned().fold(f64::NEG_INFINITY, f64::max)
 }
 
-pub fn norm(vec: &ArrayView1<f64>) -> f64 {
+pub(crate) fn norm(vec: &ArrayView1<f64>) -> f64 {
     vec.iter().map(|x| x * x).sum::<f64>().sqrt()
 }
 
-pub fn normalize(vec: &ArrayView1<f64>) -> Array1<f64> {
+pub(crate) fn normalize(vec: &ArrayView1<f64>) -> Array1<f64> {
     let norm = norm(vec);
     if norm == 0.0 {
         return vec.to_owned();
@@ -85,7 +85,7 @@ pub fn normalize(vec: &ArrayView1<f64>) -> Array1<f64> {
 }
 
 /// Compute the binomial coefficients up to `limit`.
-pub fn binomial(limit: u64) -> Vec<Vec<u64>> {
+pub(crate) fn binomial(limit: u64) -> Vec<Vec<u64>> {
     let mut result = vec![Vec::new(); limit as usize + 1];
     result[0] = vec![1];
     for n in 1..=limit as usize {
@@ -98,7 +98,7 @@ pub fn binomial(limit: u64) -> Vec<Vec<u64>> {
 }
 
 /// Compute the Stirling numbers of the second kind up to `limit`.
-pub fn stirling_second(limit: u64) -> Vec<Vec<u64>> {
+pub(crate) fn stirling_second(limit: u64) -> Vec<Vec<u64>> {
     let mut result = vec![Vec::new(); limit as usize + 1];
     result[0] = vec![1];
     for n in 1..=limit as usize {
@@ -113,7 +113,7 @@ pub fn stirling_second(limit: u64) -> Vec<Vec<u64>> {
 
 /// Computes the values of the polylogarithm function Li_{-n}(x) for `n in 0..=limit`.
 /// This is useful for computing the moments of the geometric distribution.
-pub fn polylog_neg<T>(limit: u64, x: T) -> Vec<T>
+pub(crate) fn polylog_neg<T>(limit: u64, x: T) -> Vec<T>
 where
     T: Zero
         + One

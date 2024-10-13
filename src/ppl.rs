@@ -1,7 +1,7 @@
 use std::borrow::Borrow;
 use std::fmt::Display;
 
-use crate::{numbers::Number, support::SupportSet};
+use crate::support::SupportSet;
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Natural(pub u64);
@@ -33,37 +33,8 @@ pub struct PosRatio {
 }
 
 impl PosRatio {
-    pub fn new(numer: u64, denom: u64) -> Self {
+    pub(crate) fn new(numer: u64, denom: u64) -> Self {
         Self { numer, denom }
-    }
-
-    pub fn zero() -> Self {
-        Self::new(0, 1)
-    }
-
-    pub fn is_zero(&self) -> bool {
-        self.numer == 0 && self.denom != 0
-    }
-
-    pub fn infinity() -> Self {
-        Self::new(1, 0)
-    }
-
-    pub fn complement(&self) -> Self {
-        assert!(self.numer <= self.denom);
-        Self::new(self.denom - self.numer, self.denom)
-    }
-
-    pub fn as_integer(&self) -> Option<u64> {
-        if self.denom != 0 && self.numer % self.denom == 0 {
-            Some(self.numer / self.denom)
-        } else {
-            None
-        }
-    }
-
-    pub fn to_f64(&self) -> f64 {
-        (self.numer as f64) / (self.denom as f64)
     }
 }
 
@@ -116,41 +87,27 @@ pub struct VarRange(usize);
 
 impl VarRange {
     #[inline]
-    pub fn new(var: Var) -> Self {
+    pub(crate) fn new(var: Var) -> Self {
         Self(var.id() + 1)
     }
 
     #[inline]
-    pub fn empty() -> Self {
+    pub(crate) fn empty() -> Self {
         Self(0)
     }
 
     #[inline]
-    pub fn add(&self, var: Var) -> Self {
+    pub(crate) fn add(&self, var: Var) -> Self {
         self.union(&VarRange::new(var))
     }
 
     #[inline]
-    pub fn union(&self, other: &VarRange) -> Self {
+    pub(crate) fn union(&self, other: &VarRange) -> Self {
         Self(self.0.max(other.0))
     }
 
     #[inline]
-    pub fn remove(&self, var: Var) -> Self {
-        if var.id() + 1 == self.0 {
-            Self(var.id())
-        } else {
-            self.clone()
-        }
-    }
-
-    #[inline]
-    pub fn max_var(&self) -> Option<Var> {
-        self.0.checked_sub(1).map(Var)
-    }
-
-    #[inline]
-    pub fn union_all(iter: impl Iterator<Item = impl Borrow<VarRange>>) -> Self {
+    pub(crate) fn union_all(iter: impl Iterator<Item = impl Borrow<VarRange>>) -> Self {
         let mut result = VarRange::empty();
         for varset in iter {
             result = result.union(varset.borrow());
@@ -159,13 +116,8 @@ impl VarRange {
     }
 
     #[inline]
-    pub fn num_vars(&self) -> usize {
+    pub(crate) fn num_vars(&self) -> usize {
         self.0
-    }
-
-    #[inline]
-    pub fn zero_to(num_vars: usize) -> VarRange {
-        VarRange(num_vars)
     }
 }
 
@@ -185,7 +137,7 @@ pub enum Distribution {
 }
 
 impl Distribution {
-    pub fn support(&self) -> SupportSet {
+    pub(crate) fn support(&self) -> SupportSet {
         match self {
             Distribution::Dirac(a) => SupportSet::point(a.0),
             Distribution::Bernoulli(_) => (0..=1).into(),
@@ -250,7 +202,7 @@ pub enum Event {
 }
 
 impl Event {
-    pub fn used_vars(&self) -> VarRange {
+    pub(crate) fn used_vars(&self) -> VarRange {
         match self {
             Event::InSet(v, _) => VarRange::new(*v),
             Event::VarComparison(v1, _, v2) => VarRange::new(*v1).add(*v2),
@@ -262,32 +214,7 @@ impl Event {
         }
     }
 
-    pub fn recognize_const_prob<T: Number>(&self) -> Option<T> {
-        match self {
-            Event::InSet(..) | Event::VarComparison(..) => None,
-            Event::DataFromDist(data, dist) => match dist {
-                Distribution::Bernoulli(p) => match data.0 {
-                    0 => {
-                        let p1 = p.complement();
-                        Some(T::from_ratio(p1.numer, p1.denom))
-                    }
-                    1 => Some(T::from_ratio(p.numer, p.denom)),
-                    _ => Some(T::zero()),
-                },
-                _ => None,
-            },
-            Event::Complement(e) => e.recognize_const_prob().map(|p| T::one() - p),
-            Event::Intersection(es) => {
-                let mut result = T::one();
-                for e in es {
-                    result *= e.recognize_const_prob()?;
-                }
-                Some(result)
-            }
-        }
-    }
-
-    pub fn complement(self) -> Event {
+    pub(crate) fn complement(self) -> Event {
         if let Event::Complement(e) = self {
             *e
         } else {
@@ -295,25 +222,7 @@ impl Event {
         }
     }
 
-    pub fn and(self, other: Event) -> Event {
-        match (self, other) {
-            (Event::Intersection(mut es), Event::Intersection(mut es2)) => {
-                es.append(&mut es2);
-                Event::Intersection(es)
-            }
-            (Event::Intersection(mut es), e) => {
-                es.push(e);
-                Event::Intersection(es)
-            }
-            (e, Event::Intersection(mut es)) => {
-                es.insert(0, e);
-                Event::Intersection(es)
-            }
-            (e1, e2) => Event::Intersection(vec![e1, e2]),
-        }
-    }
-
-    pub fn intersection(es: Vec<Event>) -> Event {
+    pub(crate) fn intersection(es: Vec<Event>) -> Event {
         let mut conjuncts = Vec::new();
         for e in es {
             if let Event::Intersection(mut es) = e {
@@ -329,7 +238,7 @@ impl Event {
         }
     }
 
-    pub fn disjunction(es: Vec<Event>) -> Event {
+    pub(crate) fn disjunction(es: Vec<Event>) -> Event {
         if es.len() == 1 {
             es[0].clone()
         } else {
@@ -337,11 +246,11 @@ impl Event {
         }
     }
 
-    pub fn always() -> Event {
+    pub(crate) fn always() -> Event {
         Event::intersection(Vec::new())
     }
 
-    pub fn never() -> Event {
+    pub(crate) fn never() -> Event {
         Event::always().complement()
     }
 }
@@ -420,7 +329,7 @@ impl Statement {
         Ok(())
     }
 
-    pub fn recognize_observe(&self) -> Option<&Event> {
+    pub(crate) fn recognize_observe(&self) -> Option<&Event> {
         if let Statement::IfThenElse { cond, then, els } = self {
             if then.is_empty() && matches!(els.as_slice(), &[Statement::Fail]) {
                 return Some(cond);
@@ -504,7 +413,7 @@ impl Statement {
         }
     }
 
-    pub fn uses_observe(&self) -> bool {
+    pub(crate) fn uses_observe(&self) -> bool {
         match self {
             Statement::Sample { .. } | Statement::Assign { .. } | Statement::Decrement { .. } => {
                 false
@@ -517,7 +426,7 @@ impl Statement {
         }
     }
 
-    pub fn used_vars(&self) -> VarRange {
+    pub(crate) fn used_vars(&self) -> VarRange {
         match self {
             Statement::Sample { var: v, .. } | Statement::Decrement { var: v, offset: _ } => {
                 VarRange::new(*v)
@@ -580,7 +489,7 @@ impl Program {
         self.stmts.iter().any(Statement::uses_observe)
     }
 
-    pub fn used_vars(&self) -> VarRange {
+    pub(crate) fn used_vars(&self) -> VarRange {
         VarRange::union_all(self.stmts.iter().map(Statement::used_vars))
     }
 

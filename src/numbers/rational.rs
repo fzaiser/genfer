@@ -44,11 +44,11 @@ pub enum Rational {
 }
 
 impl Rational {
-    pub fn from_int(n: impl Into<rug::Integer>) -> Self {
+    pub(crate) fn from_int(n: impl Into<rug::Integer>) -> Self {
         Self::Frac(Rc::new(rug::Rational::from(n.into())))
     }
 
-    pub fn from_frac(n: impl Into<rug::Integer>, d: impl Into<rug::Integer>) -> Self {
+    pub(crate) fn from_frac(n: impl Into<rug::Integer>, d: impl Into<rug::Integer>) -> Self {
         Self::Frac(Rc::new(rug::Rational::from((n.into(), d.into()))))
     }
     pub(crate) fn from_rug_rational(r: rug::Rational) -> Self {
@@ -84,7 +84,7 @@ impl Rational {
         }
     }
 
-    pub fn to_integer_ratio(&self) -> (rug::Integer, rug::Integer) {
+    pub(crate) fn to_integer_ratio(&self) -> (rug::Integer, rug::Integer) {
         match self {
             Self::Frac(r) => (r.numer().clone(), r.denom().clone()),
             Self::Special(s) => match s {
@@ -95,15 +95,15 @@ impl Rational {
         }
     }
 
-    pub fn not_a_rational() -> Self {
+    pub(crate) fn not_a_rational() -> Self {
         Self::Special(Special::NaR)
     }
 
-    pub fn infinity() -> Self {
+    pub(crate) fn infinity() -> Self {
         Self::Special(Special::PosInf)
     }
 
-    pub fn neg_infinity() -> Self {
+    pub(crate) fn neg_infinity() -> Self {
         Self::Special(Special::NegInf)
     }
 

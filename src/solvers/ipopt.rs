@@ -24,7 +24,7 @@ impl Ipopt {
         self
     }
 
-    pub fn construct_model(
+    pub(crate) fn construct_model(
         &self,
         problem: &ConstraintProblem,
         init: Option<&[Rational]>,
@@ -55,7 +55,7 @@ impl Ipopt {
         (vars, model)
     }
 
-    pub fn solve(
+    pub(crate) fn solve(
         vars: &[Var],
         model: &mut IpoptModel,
     ) -> Result<(SolutionStatus, Vec<Rational>), String> {

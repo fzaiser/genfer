@@ -26,53 +26,23 @@ impl<T: IntervalNumber> Interval<T> {
     }
 
     #[inline]
-    pub fn widen(lo: T, hi: T) -> Self {
+    pub(crate) fn widen(lo: T, hi: T) -> Self {
         Self::exact(lo.next_down(), hi.next_up())
     }
 
     #[inline]
-    pub fn contains(&self, x: &T) -> bool {
+    pub(crate) fn contains(&self, x: &T) -> bool {
         self.lo <= *x && *x <= self.hi
     }
 
     #[inline]
-    pub fn union(&self, x: &T) -> Self {
+    pub(crate) fn union(&self, x: &T) -> Self {
         Self::exact(self.lo.min(x), self.hi.max(x))
     }
 
     #[inline]
     pub fn all_reals() -> Self {
         Self::exact(-T::infinity(), T::infinity())
-    }
-
-    pub fn extract_point(&self) -> Option<&T> {
-        if self.lo == self.hi {
-            Some(&self.lo)
-        } else {
-            None
-        }
-    }
-
-    pub fn center(self) -> T {
-        (self.lo + self.hi) / T::from(2)
-    }
-
-    pub fn ensure_lower_bound(self, new_lo: T) -> Self {
-        debug_assert!(new_lo.partial_cmp(&self.hi) != Some(Ordering::Greater));
-        if self.lo < new_lo {
-            Self::exact(new_lo, self.hi)
-        } else {
-            self
-        }
-    }
-
-    pub fn ensure_upper_bound(self, new_hi: T) -> Self {
-        debug_assert!(new_hi.partial_cmp(&self.lo) != Some(Ordering::Less));
-        if self.hi > new_hi {
-            Self::exact(self.lo, new_hi)
-        } else {
-            self
-        }
     }
 }
 

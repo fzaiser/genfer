@@ -24,7 +24,7 @@ pub enum SymExprKind {
 }
 
 impl SymExprKind {
-    pub fn into_expr(self) -> SymExpr {
+    pub(crate) fn into_expr(self) -> SymExpr {
         SymExpr(Rc::new(self))
     }
 }
@@ -37,33 +37,11 @@ impl SymExpr {
         self.0.as_ref()
     }
 
-    /// To estimate the memory usage of the expression
-    pub fn count_nodes(&self) -> usize {
-        self.count_nodes_with(&mut FxHashMap::default())
-    }
-
-    fn count_nodes_with(&self, cache: &mut FxHashMap<usize, usize>) -> usize {
-        let key = std::ptr::from_ref::<SymExprKind>(self.0.as_ref()) as usize;
-        if Rc::strong_count(&self.0) > 1 {
-            if cache.get(&key).is_some() {
-                return 1;
-            }
-            cache.insert(key, 1);
-        }
-        match self.kind() {
-            SymExprKind::Constant(_) | SymExprKind::Variable(_) => 1,
-            SymExprKind::Add(lhs, rhs) | SymExprKind::Mul(lhs, rhs) => {
-                1 + lhs.count_nodes_with(cache) + rhs.count_nodes_with(cache)
-            }
-            SymExprKind::Pow(base, _) => 1 + base.count_nodes_with(cache),
-        }
-    }
-
-    pub fn var(i: usize) -> Self {
+    pub(crate) fn var(i: usize) -> Self {
         SymExprKind::Variable(i).into_expr()
     }
 
-    pub fn inverse(self) -> Self {
+    pub(crate) fn inverse(self) -> Self {
         self.pow(-1)
     }
 
@@ -80,16 +58,11 @@ impl SymExpr {
     }
 
     /// Must be less than or equal to `rhs`.
-    pub fn must_le(self, rhs: Self) -> SymConstraint {
+    pub(crate) fn must_le(self, rhs: Self) -> SymConstraint {
         SymConstraint { lhs: self, rhs }
     }
 
-    /// Must be greater than or equal to `rhs`.
-    pub fn must_ge(self, rhs: Self) -> SymConstraint {
-        rhs.must_le(self)
-    }
-
-    pub fn substitute_with(
+    pub(crate) fn substitute_with(
         &self,
         replacements: &[Self],
         cache: &mut FxHashMap<usize, Self>,
@@ -125,7 +98,7 @@ impl SymExpr {
         }
     }
 
-    pub fn extract_linear(
+    pub(crate) fn extract_linear(
         &self,
         cache: &mut FxHashMap<usize, Option<LinearExpr>>,
     ) -> Option<LinearExpr> {
@@ -221,7 +194,7 @@ impl SymExpr {
         result
     }
 
-    pub fn derivative_at(
+    pub(crate) fn derivative_at(
         &self,
         values: &[f64],
         var: usize,
@@ -230,7 +203,7 @@ impl SymExpr {
         self.eval_dual(values, var, cache).1
     }
 
-    pub fn gradient_at(
+    pub(crate) fn gradient_at(
         &self,
         values: &[f64],
         grad_cache: &mut [FxHashMap<usize, (f64, f64)>],
@@ -241,7 +214,7 @@ impl SymExpr {
             .collect()
     }
 
-    pub fn to_z3<'a>(
+    pub(crate) fn to_z3<'a>(
         &self,
         ctx: &'a z3::Context,
         conv: &impl Fn(&'a z3::Context, &Rational) -> z3::ast::Real<'a>,
@@ -257,17 +230,7 @@ impl SymExpr {
         }
     }
 
-    pub fn to_python(&self) -> String {
-        match self.kind() {
-            SymExprKind::Constant(c) => c.to_string(),
-            SymExprKind::Variable(v) => format!("x[{v}]"),
-            SymExprKind::Add(lhs, rhs) => format!("({} + {})", lhs.to_python(), rhs.to_python()),
-            SymExprKind::Mul(lhs, rhs) => format!("({} * {})", lhs.to_python(), rhs.to_python()),
-            SymExprKind::Pow(lhs, rhs) => format!("({} ** {})", lhs.to_python(), rhs),
-        }
-    }
-
-    pub fn to_smtlib(&self) -> String {
+    pub(crate) fn to_smtlib(&self) -> String {
         match self.kind() {
             SymExprKind::Constant(value) => {
                 let value = value.rat();
@@ -312,21 +275,7 @@ impl SymExpr {
         }
     }
 
-    pub fn to_python_z3(&self) -> String {
-        match self.kind() {
-            SymExprKind::Constant(c) => c.to_string(),
-            SymExprKind::Variable(v) => format!("x{v}"),
-            SymExprKind::Add(lhs, rhs) => {
-                format!("({} + {})", lhs.to_python_z3(), rhs.to_python_z3())
-            }
-            SymExprKind::Mul(lhs, rhs) => {
-                format!("({} * {})", lhs.to_python_z3(), rhs.to_python_z3())
-            }
-            SymExprKind::Pow(lhs, rhs) => format!("({} ^ {})", lhs.to_python_z3(), rhs),
-        }
-    }
-
-    pub fn to_qepcad(&self, conv: &impl Fn(&Rational) -> String) -> String {
+    pub(crate) fn to_qepcad(&self, conv: &impl Fn(&Rational) -> String) -> String {
         match self.kind() {
             SymExprKind::Constant(c) => conv(&c.rat()),
             SymExprKind::Variable(v) => format!("{}", SymExpr::var(*v)),
@@ -340,7 +289,7 @@ impl SymExpr {
         }
     }
 
-    pub fn eval_float(&self, values: &[f64], cache: &mut FxHashMap<usize, f64>) -> f64 {
+    pub(crate) fn eval_float(&self, values: &[f64], cache: &mut FxHashMap<usize, f64>) -> f64 {
         let key = std::ptr::from_ref::<SymExprKind>(self.0.as_ref()) as usize;
         if Rc::strong_count(&self.0) > 1 {
             if let Some(cached_result) = cache.get(&key) {
@@ -392,7 +341,7 @@ impl SymExpr {
         result
     }
 
-    pub fn to_ipopt_expr(&self, vars: &[Var], cache: &mut FxHashMap<usize, Expr>) -> Expr {
+    pub(crate) fn to_ipopt_expr(&self, vars: &[Var], cache: &mut FxHashMap<usize, Expr>) -> Expr {
         let key = std::ptr::from_ref::<SymExprKind>(self.0.as_ref()) as usize;
         if Rc::strong_count(&self.0) > 1 {
             if let Some(cached_result) = cache.get(&key) {
@@ -589,11 +538,11 @@ pub struct SymConstraint {
     pub rhs: SymExpr,
 }
 impl SymConstraint {
-    pub fn is_trivial(&self) -> bool {
+    pub(crate) fn is_trivial(&self) -> bool {
         self.lhs.is_zero() || self.lhs == self.rhs
     }
 
-    pub fn to_z3<'a>(
+    pub(crate) fn to_z3<'a>(
         &self,
         ctx: &'a z3::Context,
         conv: &impl Fn(&'a z3::Context, &Rational) -> z3::ast::Real<'a>,
@@ -601,7 +550,7 @@ impl SymConstraint {
         self.lhs.to_z3(ctx, conv).le(&self.rhs.to_z3(ctx, conv))
     }
 
-    pub fn to_qepcad(&self, conv: &impl Fn(&Rational) -> String) -> String {
+    pub(crate) fn to_qepcad(&self, conv: &impl Fn(&Rational) -> String) -> String {
         format!(
             "{} <= {}",
             self.lhs.to_qepcad(conv),
@@ -609,11 +558,11 @@ impl SymConstraint {
         )
     }
 
-    pub fn to_smtlib(&self) -> String {
+    pub(crate) fn to_smtlib(&self) -> String {
         format!("(<= {} {})", self.lhs.to_smtlib(), self.rhs.to_smtlib())
     }
 
-    pub fn substitute_with(
+    pub(crate) fn substitute_with(
         &self,
         replacements: &[SymExpr],
         cache: &mut FxHashMap<usize, SymExpr>,
@@ -623,7 +572,7 @@ impl SymConstraint {
             .must_le(self.rhs.substitute_with(replacements, cache))
     }
 
-    pub fn gradient_at(
+    pub(crate) fn gradient_at(
         &self,
         values: &[f64],
         cache: &mut [FxHashMap<usize, (f64, f64)>],
@@ -632,7 +581,7 @@ impl SymConstraint {
         term.gradient_at(values, cache)
     }
 
-    pub fn extract_linear(
+    pub(crate) fn extract_linear(
         &self,
         cache: &mut FxHashMap<usize, Option<LinearExpr>>,
     ) -> Option<LinearConstraint> {
@@ -642,36 +591,15 @@ impl SymConstraint {
         ))
     }
 
-    pub fn holds_exact_f64(&self, values: &[f64], cache: &mut FxHashMap<usize, Rational>) -> bool {
-        let values = values
-            .iter()
-            .map(|r| Rational::from(*r))
-            .collect::<Vec<_>>();
-        self.holds_exact(&values, cache)
-    }
-
-    pub fn holds_exact(&self, values: &[Rational], cache: &mut FxHashMap<usize, Rational>) -> bool {
+    pub(crate) fn holds_exact(
+        &self,
+        values: &[Rational],
+        cache: &mut FxHashMap<usize, Rational>,
+    ) -> bool {
         self.lhs.eval_exact(values, cache) <= self.rhs.eval_exact(values, cache)
     }
 
-    pub fn is_close(
-        &self,
-        point: &[f64],
-        min_dist: f64,
-        cache: &mut FxHashMap<usize, f64>,
-        grad_cache: &mut [FxHashMap<usize, (f64, f64)>],
-    ) -> bool {
-        let term = self.lhs.clone() - self.rhs.clone();
-        let val = term.eval_float(point, cache);
-        let grad = term.gradient_at(point, grad_cache);
-        let grad_len_sq = grad.iter().map(|g| g * g).fold(0.0, |acc, f| acc + f);
-        if grad_len_sq.is_zero() {
-            return false;
-        }
-        let dist = -val / grad_len_sq.sqrt();
-        dist < min_dist
-    }
-    pub fn estimate_signed_dist(
+    pub(crate) fn estimate_signed_dist(
         &self,
         point: &[f64],
         cache: &mut FxHashMap<usize, f64>,
