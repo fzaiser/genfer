@@ -40,7 +40,7 @@ impl Solver for Z3Solver {
                     panic!("Solver responded 'unknown' but no reason was given.")
                 }
             }
-            z3::SatResult::Unsat => return Err(SolverError::Infeasible),
+            z3::SatResult::Unsat => return Err(SolverError::ProvenInfeasible),
             z3::SatResult::Sat => {}
         }
         let assignment = if let Some(model) = solver.get_model() {

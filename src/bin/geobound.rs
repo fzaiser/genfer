@@ -130,15 +130,19 @@ fn run_program(program: &Program, args: &CliArgs) -> ExitCode {
         Err(e) => {
             match e {
                 SolverError::Failed => {
-                    eprintln!("Solver failed: timeout");
+                    eprintln!("Solver failed to find a solution.");
                 }
-                SolverError::Infeasible => {
-                    eprintln!("Solver failed: it claims the problem is infeasible");
+                SolverError::ProvenInfeasible => {
+                    eprintln!("The constraint problem is infeasible. No geometric bound exists.");
+                }
+                SolverError::MaybeInfeasible => {
+                    eprintln!("Solver failed, indicating that the problem may be infeasible.");
                 }
                 SolverError::Other => {
                     eprintln!("Solver failed: unknown reason");
                 }
             }
+            eprintln!("Try varying the options (unrolling, invariant size, etc.).");
             ExitCode::FAILURE
         }
     };

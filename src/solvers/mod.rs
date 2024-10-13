@@ -10,7 +10,8 @@ use problem::ConstraintProblem;
 
 #[derive(Clone, Debug)]
 pub enum SolverError {
-    Infeasible,
+    ProvenInfeasible,
+    MaybeInfeasible,
     Failed,
     Other,
 }

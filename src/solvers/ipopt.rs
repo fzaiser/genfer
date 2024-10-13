@@ -1,7 +1,4 @@
-use crate::{
-    numbers::Rational,
-    sym_expr::{SymConstraint, SymExpr},
-};
+use crate::{numbers::Rational, sym_expr::SymConstraint};
 
 use super::{problem::ConstraintProblem, Optimizer, Solver, SolverError};
 
@@ -10,7 +7,6 @@ use descent::{
     model::{Model, SolutionStatus},
 };
 use descent_ipopt::IpoptModel;
-use num_traits::Zero;
 use rustc_hash::FxHashMap;
 
 pub struct Ipopt {
@@ -77,36 +73,39 @@ impl Solver for Ipopt {
     fn solve(&mut self, problem: &ConstraintProblem) -> Result<Vec<Rational>, SolverError> {
         let (vars, mut model) = self.construct_model(problem, None);
         // Set objective to zero because we're just solving, not optimizing
-        model.set_obj(SymExpr::zero().to_ipopt_expr(&vars, &mut FxHashMap::default()));
+        model.set_obj(Expr::from(0.0));
         if !self.verbose {
             model.silence();
         }
         match Self::solve(&vars, &mut model) {
-            Ok((status, solution)) => match status {
-                SolutionStatus::Solved => {
-                    if self.verbose {
+            Ok((status, solution)) => {
+                if self.verbose {
+                    println!(
+                        "IPOPT returned the following solution: {:?}",
+                        solution.iter().map(Rational::to_f64).collect::<Vec<_>>()
+                    );
+                }
+                if problem.holds_exact(&solution) {
+                    println!("IPOPT found a solution that satisfies all constraints exactly.");
+                    return Ok(solution);
+                }
+                match status {
+                    SolutionStatus::Solved => {
                         println!(
-                            "IPOPT found the following solution: {:?}",
-                            solution.iter().map(Rational::to_f64).collect::<Vec<_>>()
+                            "Solution by IPOPT does not actually satisfy the constraints (due to numerical issues)."
                         );
-                    }
-                    if problem.holds_exact(&solution) {
-                        println!("Solution satisfies all constraints.");
-                        Ok(solution)
-                    } else {
-                        println!("Solution does not satisfy all constraints (rounding errors?).");
                         Err(SolverError::Failed)
                     }
+                    SolutionStatus::Infeasible => {
+                        println!("IPOPT found signs of infeasibility.");
+                        Err(SolverError::MaybeInfeasible)
+                    }
+                    SolutionStatus::Other => {
+                        println!("IPOPT failed to solve the problem.");
+                        Err(SolverError::Other)
+                    }
                 }
-                SolutionStatus::Infeasible => {
-                    println!("IPOPT found the problem infeasible.");
-                    Err(SolverError::Infeasible)
-                }
-                SolutionStatus::Other => {
-                    println!("IPOPT failed to solve the problem.");
-                    Err(SolverError::Other)
-                }
-            },
+            }
             Err(e) => {
                 println!("IPOPT failed: {e}");
                 Err(SolverError::Other)
