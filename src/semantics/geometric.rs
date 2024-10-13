@@ -153,6 +153,7 @@ impl Transformer for GeometricBoundSemantics {
         }
     }
 
+    #[expect(clippy::too_many_lines)]
     fn transform_statement(&mut self, stmt: &Statement, init: Self::Domain) -> Self::Domain {
         let direct_var_supports = if cfg!(debug_assertions) {
             Some(

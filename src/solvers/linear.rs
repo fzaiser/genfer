@@ -151,11 +151,10 @@ pub fn optimize_linear_parts(
                 println!("LP solver succeeded after {retry} retries (due to numerical issues).");
             }
             return Some(solution);
-        } else {
-            println!("Solution by LP solver does not satisfy the constraints (rounding issues).");
-            tol *= 2.0;
-            tighten *= 3.0;
-        };
+        }
+        println!("Solution by LP solver does not satisfy the constraints (rounding issues).");
+        tol *= 2.0;
+        tighten *= 3.0;
     }
     println!("LP solver failed after {retries} retries (probably numerical issues).");
     None
@@ -236,9 +235,9 @@ impl LinearExpr {
         let coeffs = self
             .coeffs
             .iter()
-            .map(|c| c.clone() * Rational::from(scale.clone()))
+            .map(|c| c.clone() * scale.clone())
             .collect();
-        let constant = self.constant.clone() * Rational::from(scale);
+        let constant = self.constant.clone() * scale;
         Self::new(coeffs, constant)
     }
 }

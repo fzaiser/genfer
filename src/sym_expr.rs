@@ -240,12 +240,12 @@ impl SymExpr {
                         if numer.is_negative() {
                             format!("(- {})", -numer)
                         } else {
-                            format!("{}", numer)
+                            format!("{numer}")
                         }
                     } else if numer.is_negative() {
-                        format!("(- (/ {} {}))", -numer, denom)
+                        format!("(- (/ {} {denom}))", -numer)
                     } else {
-                        format!("(/ {} {})", numer, denom)
+                        format!("(/ {numer} {denom})")
                     }
                 } else {
                     panic!("Nonfinite number {value} cannot be represented in SMT-LIB");

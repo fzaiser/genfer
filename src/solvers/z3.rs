@@ -18,10 +18,10 @@ impl Solver for Z3Solver {
         let solver = z3::Solver::new(&ctx);
         for (v, (lo, hi)) in problem.var_bounds.iter().enumerate() {
             let var = z3::ast::Real::new_const(&ctx, v as u32);
-            let lo = rational_to_z3(&ctx, &lo);
+            let lo = rational_to_z3(&ctx, lo);
             solver.assert(&lo.le(&var));
             if hi.is_finite() {
-                let hi = rational_to_z3(&ctx, &hi);
+                let hi = rational_to_z3(&ctx, hi);
                 solver.assert(&var.lt(&hi));
             }
         }

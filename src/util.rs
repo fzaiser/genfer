@@ -69,7 +69,7 @@ where
 }
 
 pub(crate) fn max(vec: &ArrayView1<f64>) -> f64 {
-    vec.iter().cloned().fold(f64::NEG_INFINITY, f64::max)
+    vec.iter().copied().fold(f64::NEG_INFINITY, f64::max)
 }
 
 pub(crate) fn norm(vec: &ArrayView1<f64>) -> f64 {

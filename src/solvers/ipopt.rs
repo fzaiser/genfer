@@ -45,9 +45,8 @@ impl Ipopt {
             vars.push(model.add_var(lo, hi, start));
         }
         for constraint in &problem.constraints {
-            if let Some((expr, lo, hi)) = to_ipopt_constraint(constraint, &vars, self.tol, cache) {
-                model.add_con(expr, lo, hi);
-            }
+            let (expr, lo, hi) = to_ipopt_constraint(constraint, &vars, self.tol, cache);
+            model.add_con(expr, lo, hi);
         }
         // Weirdly, adding this trivial constraint helps IPOPT find feasible solutions:
         model.add_con(Expr::from(0.0), 0.0, 0.0);
@@ -176,8 +175,8 @@ fn to_ipopt_constraint(
     vars: &[Var],
     tol: f64,
     cache: &mut FxHashMap<usize, Expr>,
-) -> Option<(Expr, f64, f64)> {
+) -> (Expr, f64, f64) {
     let expr =
         constraint.lhs.to_ipopt_expr(vars, cache) - constraint.rhs.to_ipopt_expr(vars, cache);
-    Some((expr, f64::NEG_INFINITY, -2.0 * tol))
+    (expr, f64::NEG_INFINITY, -2.0 * tol)
 }

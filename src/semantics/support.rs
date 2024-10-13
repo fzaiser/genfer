@@ -173,8 +173,8 @@ impl Transformer for SupportTransformer {
                 else_support.update(*v, |s| s.remove_all(set.iter().map(|n| n.0)));
                 (then_support, else_support)
             }
-            Event::DataFromDist(..) => (init.clone(), init),
-            Event::VarComparison(..) => (init.clone(), init), // TODO: make this approximation more precise
+            // TODO: make the approximation more precise for VarComparison
+            Event::DataFromDist(..) | Event::VarComparison(..) => (init.clone(), init),
             Event::Complement(event) => {
                 let (then_support, else_support) = self.transform_event(event, init);
                 (else_support, then_support)
