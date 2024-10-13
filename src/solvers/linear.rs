@@ -122,6 +122,10 @@ pub fn optimize_linear_parts(
         model.set_parameter("primalT", &tol.to_string());
         // For an optimal solution no dual infeasibility may exceed this value:
         model.set_parameter("dualT", &tol.to_string());
+        // The log level adjustments don't seem to have an effect, but we set them anyway:
+        model.set_parameter("slogLevel", "0");
+        model.set_parameter("logLevel", "0");
+        model.set_parameter("messages", "off");
         let solution = match model.solve() {
             Ok(solution) => solution,
             Err(good_lp::ResolutionError::Unbounded) => {
