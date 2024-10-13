@@ -1,6 +1,6 @@
 use std::{
     ops::{Add, Div, Mul, Neg, Sub},
-    time::{Duration, Instant},
+    time::Instant,
 };
 
 use good_lp::{
@@ -19,12 +19,7 @@ use super::{problem::ConstraintProblem, Optimizer};
 pub struct LinearProgrammingOptimizer;
 
 impl Optimizer for LinearProgrammingOptimizer {
-    fn optimize(
-        &mut self,
-        problem: &ConstraintProblem,
-        init: Vec<Rational>,
-        _timeout: Duration,
-    ) -> Vec<Rational> {
+    fn optimize(&mut self, problem: &ConstraintProblem, init: Vec<Rational>) -> Vec<Rational> {
         if let Some(solution) = optimize_linear_parts(problem, init.clone()) {
             let init_obj = problem
                 .objective

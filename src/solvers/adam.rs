@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use ndarray::Array1;
 use num_traits::Zero;
 use rustc_hash::FxHashMap;
@@ -48,31 +46,22 @@ impl Default for AdamBarrier {
 }
 
 impl Solver for AdamBarrier {
-    fn solve(
-        &mut self,
-        problem: &ConstraintProblem,
-        timeout: Duration,
-    ) -> Result<Vec<Rational>, SolverError> {
+    fn solve(&mut self, problem: &ConstraintProblem) -> Result<Vec<Rational>, SolverError> {
         let init = vec![Rational::from(1.0 - 1e-3); problem.var_count];
         let mut problem = problem.clone();
         // Set objective to zero because we're just solving, not optimizing
         problem.objective = SymExpr::zero();
-        let res = self.optimize(&problem, init, timeout);
+        let res = self.optimize(&problem, init);
         if problem.holds_exact(&res) {
             Ok(res)
         } else {
-            Err(SolverError::Timeout)
+            Err(SolverError::Failed)
         }
     }
 }
 
 impl Optimizer for AdamBarrier {
-    fn optimize(
-        &mut self,
-        problem: &ConstraintProblem,
-        init: Vec<Rational>,
-        _timeout: Duration,
-    ) -> Vec<Rational> {
+    fn optimize(&mut self, problem: &ConstraintProblem, init: Vec<Rational>) -> Vec<Rational> {
         let objective = &problem.objective;
         let mut best_point = Array1::from_vec(init).map(Rational::to_f64);
         let mut point: Array1<f64> = best_point.clone();

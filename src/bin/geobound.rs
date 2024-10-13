@@ -4,7 +4,7 @@
 
 use std::path::PathBuf;
 use std::process::ExitCode;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use rustc_hash::FxHashMap;
 use tool::bound::GeometricBound;
@@ -84,9 +84,6 @@ struct CliArgs {
     /// The limit for the probability masses to be computed
     #[arg(short, long)]
     pub limit: Option<usize>,
-    /// Timeout for the solver in ms
-    #[arg(long, default_value = "10000")]
-    timeout: u64,
     /// The solver to use
     #[arg(long, default_value = "ipopt")]
     solver: Solver,
@@ -127,13 +124,12 @@ pub fn main() -> std::io::Result<ExitCode> {
 
 fn run_program(program: &Program, args: &CliArgs) -> ExitCode {
     let start = Instant::now();
-    let timeout = Duration::from_millis(args.timeout);
-    let (problem, bound, init_solution) = compute_constraints_solution(args, program, timeout);
+    let (problem, bound, init_solution) = compute_constraints_solution(args, program);
     let exit_code = match init_solution {
         Ok(solution) => continue_with_solution(args, bound, program, &problem, solution),
         Err(e) => {
             match e {
-                SolverError::Timeout => {
+                SolverError::Failed => {
                     eprintln!("Solver failed: timeout");
                 }
                 SolverError::Infeasible => {
@@ -153,7 +149,6 @@ fn run_program(program: &Program, args: &CliArgs) -> ExitCode {
 fn compute_constraints_solution(
     args: &CliArgs,
     program: &Program,
-    timeout: Duration,
 ) -> (
     ConstraintProblem,
     GeometricBound,
@@ -168,19 +163,15 @@ fn compute_constraints_solution(
             ..args.clone()
         };
         let (simple_problem, _) = generate_constraints(&modified_args, program);
-        let simple_solution = solve_constraints(&modified_args, &simple_problem, timeout);
+        let simple_solution = solve_constraints(&modified_args, &simple_problem);
         if let Ok(simple_solution) = simple_solution {
             println!("Optimizing solution to the simplified problem...");
             let modified_args = CliArgs {
                 objective: args.objective,
                 ..args.clone()
             };
-            let simple_solution = optimize_solution(
-                &modified_args,
-                &simple_problem,
-                simple_solution.clone(),
-                timeout,
-            );
+            let simple_solution =
+                optimize_solution(&modified_args, &simple_problem, simple_solution.clone());
             println!("Extending solution to the original problem...");
             // The nonlinear variables can be reused from the simplified problem:
             let mut solution = vec![Rational::zero(); problem.var_count];
@@ -198,7 +189,7 @@ fn compute_constraints_solution(
         println!("Solving simplified problem (unrolling limit set to 0) failed.");
         println!("Continuing with the original problem.");
     }
-    let init_solution = solve_constraints(args, &problem, timeout);
+    let init_solution = solve_constraints(args, &problem);
     (problem, bound, init_solution)
 }
 
@@ -268,18 +259,15 @@ fn generate_constraints(args: &CliArgs, program: &Program) -> (ConstraintProblem
 fn solve_constraints(
     args: &CliArgs,
     problem: &ConstraintProblem,
-    timeout: Duration,
 ) -> Result<Vec<Rational>, SolverError> {
     println!("Solving constraints...");
     let start_solver = Instant::now();
     let solution = match args.solver {
-        Solver::Z3 => Z3Solver.solve(problem, timeout),
+        Solver::Z3 => Z3Solver.solve(problem),
         Solver::AdamBarrier => AdamBarrier::default()
             .with_verbose(args.verbose)
-            .solve(problem, timeout),
-        Solver::Ipopt => Ipopt::default()
-            .with_verbose(args.verbose)
-            .solve(problem, timeout),
+            .solve(problem),
+        Solver::Ipopt => Ipopt::default().with_verbose(args.verbose).solve(problem),
     };
     let solver_time = start_solver.elapsed();
     println!("Solver time: {:.5}s", solver_time.as_secs_f64());
@@ -293,8 +281,7 @@ fn continue_with_solution(
     problem: &ConstraintProblem,
     solution: Vec<Rational>,
 ) -> ExitCode {
-    let timeout = Duration::from_millis(args.timeout);
-    let optimized_solution = optimize_solution(args, problem, solution, timeout);
+    let optimized_solution = optimize_solution(args, problem, solution);
     bound.upper = bound.upper.resolve(&optimized_solution);
     // TODO: bound the probability masses by 1 (or even by the residual mass bound)
     if args.verbose {
@@ -314,7 +301,6 @@ fn optimize_solution(
     args: &CliArgs,
     problem: &ConstraintProblem,
     mut solution: Vec<Rational>,
-    timeout: Duration,
 ) -> Vec<Rational> {
     if problem.objective.is_zero() {
         return solution;
@@ -331,11 +317,11 @@ fn optimize_solution(
         let optimized_solution = match optimizer {
             Optimizer::AdamBarrier => AdamBarrier::default()
                 .with_verbose(args.verbose)
-                .optimize(problem, cur_sol, timeout),
+                .optimize(problem, cur_sol),
             Optimizer::Ipopt => Ipopt::default()
                 .with_verbose(args.verbose)
-                .optimize(problem, cur_sol, timeout),
-            Optimizer::Linear => LinearProgrammingOptimizer.optimize(problem, cur_sol, timeout),
+                .optimize(problem, cur_sol),
+            Optimizer::Linear => LinearProgrammingOptimizer.optimize(problem, cur_sol),
         };
         println!(
             "Optimizer ({optimizer}) time: {:.6} s",

@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use crate::{
     numbers::Rational,
     sym_expr::{SymConstraint, SymExpr},
@@ -77,11 +75,7 @@ impl Default for Ipopt {
 }
 
 impl Solver for Ipopt {
-    fn solve(
-        &mut self,
-        problem: &ConstraintProblem,
-        _timeout: Duration,
-    ) -> Result<Vec<Rational>, SolverError> {
+    fn solve(&mut self, problem: &ConstraintProblem) -> Result<Vec<Rational>, SolverError> {
         let (vars, mut model) = self.construct_model(problem, None);
         // Set objective to zero because we're just solving, not optimizing
         model.set_obj(SymExpr::zero().to_ipopt_expr(&vars, &mut FxHashMap::default()));
@@ -102,7 +96,7 @@ impl Solver for Ipopt {
                         Ok(solution)
                     } else {
                         println!("Solution does not satisfy all constraints (rounding errors?).");
-                        Err(SolverError::Timeout)
+                        Err(SolverError::Failed)
                     }
                 }
                 SolutionStatus::Infeasible => {
@@ -123,12 +117,7 @@ impl Solver for Ipopt {
 }
 
 impl Optimizer for Ipopt {
-    fn optimize(
-        &mut self,
-        problem: &ConstraintProblem,
-        init: Vec<Rational>,
-        _timeout: Duration,
-    ) -> Vec<Rational> {
+    fn optimize(&mut self, problem: &ConstraintProblem, init: Vec<Rational>) -> Vec<Rational> {
         let init_obj = problem
             .objective
             .eval_exact(&init, &mut FxHashMap::default());

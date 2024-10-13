@@ -9,13 +9,10 @@ use crate::{
 pub struct Z3Solver;
 
 impl Solver for Z3Solver {
-    fn solve(
-        &mut self,
-        problem: &ConstraintProblem,
-        timeout: Duration,
-    ) -> Result<Vec<Rational>, SolverError> {
+    fn solve(&mut self, problem: &ConstraintProblem) -> Result<Vec<Rational>, SolverError> {
         let mut cfg = z3::Config::new();
         cfg.set_model_generation(true);
+        let timeout = Duration::from_secs(10);
         cfg.set_timeout_msec(timeout.as_millis() as u64);
         let ctx = z3::Context::new(&cfg);
         let solver = z3::Solver::new(&ctx);
@@ -36,7 +33,7 @@ impl Solver for Z3Solver {
             z3::SatResult::Unknown => {
                 if let Some(reason) = solver.get_reason_unknown() {
                     if reason == "timeout" {
-                        return Err(SolverError::Timeout);
+                        return Err(SolverError::Failed);
                     }
                     panic!("Solver responded 'unknown': {reason}")
                 } else {

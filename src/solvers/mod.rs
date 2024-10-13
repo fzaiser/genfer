@@ -4,8 +4,6 @@ pub mod linear;
 pub mod problem;
 pub mod z3;
 
-use std::time::Duration;
-
 use crate::numbers::Rational;
 
 use problem::ConstraintProblem;
@@ -13,23 +11,14 @@ use problem::ConstraintProblem;
 #[derive(Clone, Debug)]
 pub enum SolverError {
     Infeasible,
-    Timeout,
+    Failed,
     Other,
 }
 
 pub trait Solver {
-    fn solve(
-        &mut self,
-        problem: &ConstraintProblem,
-        timeout: Duration,
-    ) -> Result<Vec<Rational>, SolverError>;
+    fn solve(&mut self, problem: &ConstraintProblem) -> Result<Vec<Rational>, SolverError>;
 }
 
 pub trait Optimizer {
-    fn optimize(
-        &mut self,
-        problem: &ConstraintProblem,
-        init: Vec<Rational>,
-        timeout: Duration,
-    ) -> Vec<Rational>;
+    fn optimize(&mut self, problem: &ConstraintProblem, init: Vec<Rational>) -> Vec<Rational>;
 }
