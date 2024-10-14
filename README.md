@@ -51,9 +51,7 @@ It contains three directories:
 
 
 
-## 2 Kicking the Tires
-
-### 2.1 Trying out the tool
+## 2 Trying out the tool
 
 Our tool is written in Rust and can be built with Cargo as usual.
 The evaluation scripts are written in Python.
@@ -169,7 +167,51 @@ All the flags that the tool accepts are documented in the help text (`target/rel
 
 
 
-## 2.2 Reproducing the plots from the paper (Fig. 7)
+
+
+
+## 3 Evaluation instructions
+
+### 3.1 Claims
+
+We make the following claims in the paper:
+
+* **Claim 1**: The Residual Bound Semantics as implemented in our tool is orders of magnitude faster than GuBPI (another tool to compute guaranteed bounds for probabilistic programs).
+
+### 3.2 Comparison with GuBPI (Table 4)
+
+We compare our tool with GuBPI on three benchmarks: the geometric counter, asymmetric random walk, and die paradox example from the paper.
+We translated the examples to GuBPI's file format (`.spcf`) and you can run GuBPI on them as follows.
+
+```shell
+cd tool/benchmarks # if not already
+../../gubpi/app/GuBPI geo.spcf # ~1 second
+../../gubpi/app/GuBPI asym_rw.spcf # ~90 seconds
+../../gubpi/app/GuBPI die_paradox.spcf # ~180 seconds
+```
+
+The running time is reported by GuBPI at the end of each run.
+The computed bounds are saved in `output/<benchmark>-norm.bounds`.
+Note that GuBPI has trouble normalizing the bounds for `die_paradox.spcf`, so we only considered the usable lower bounds in `output/die_paradox-unnorm.bounds`.
+
+To run our tool with the Residual Mass Semantics on the same examples with comparable settings, use these commands:
+
+```shell
+cd tool/benchmarks # if not already
+../target/release/residual geo.sgcl -u 100 # ~0.006 seconds
+../target/release/residual asym_rw.sgcl -u 14 # ~0.002 seconds
+../target/release/residual die_paradox.sgcl -u 6 # ~0.001 seconds
+```
+
+The running time is reported by our tool at the end of each run.
+You can check that the bounds of our tool are at least as good as GuBPI's by comparing our tool's output in the terminal with GuBPI's output in `output/<benchmark>-norm.bounds`.
+Note that for the `die_paradox` example, GuBPI fails to compute normalized bounds, so we compare our tool's unnormalized bounds (under `Unnormalized bounds:` in the output) with GuBPI's unnormalized bounds in `output/die_paradox-unnorm.bounds`.
+
+These experiments support the data in Table 4 and demonstrate that our tool is orders of magnitude faster than GuBPI to produce the same (or better) bounds (Claim 1).
+
+
+
+### 3.3 Reproducing the plots from the paper (Fig. 7)
 
 Next, let's reproduce the plots from Fig. 7 in the paper.
 To do this, run the following commands:
@@ -180,7 +222,7 @@ cd tool/benchmarks # if not already
 ./comparison.sh
 # Plot the data:
 ./plots.sh
-# Now the plots (named `plot_benchmark.pdf`) are in the `benchmarks/` directory
+# Now the plots (named `plot_<benchmark>.pdf`) are in the `benchmarks/` directory
 ```
 
 The script `./comparison.sh` runs the Geometric Bound Semantics on 5 benchmarks: `asym_rw.sgcl`, `coupon-collector.sgcl`, `die_paradox.sgcl`, `geo.sgcl`, `herman.sgcl`.
@@ -190,6 +232,8 @@ Each benchmark is run 4 times: once with the Residual Mass Semantics and three t
 
 
 
+
+## 4 Further details
 
 ## Probabilistic programming language
 

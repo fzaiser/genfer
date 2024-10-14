@@ -1,0 +1,22 @@
+# method polytopes
+# depth 80
+# discretization -0.1 50.9 1.0
+# epsilonVar 1
+# epsilonScore 0.5
+
+# outputSplitProgress 0
+# outputCurrentPath 1
+# outputCurrentArea 0
+
+letrec loop counter =
+    let die = sample uniform(1, 7) in
+    if (1 < die) and (die < 2)
+    then score(0)
+    else if (3 < die) and (die < 4)
+    then score(0)
+    else if (5 < die) and (die < 6)
+    then score(0)
+    else if (die < 6)
+    then loop (counter + 1)
+    else counter
+in loop 1

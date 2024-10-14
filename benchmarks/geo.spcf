@@ -1,0 +1,12 @@
+# depth 500
+# discretization -0.1 100.9 1.0
+# epsilonVar 1
+
+# outputSplitProgress 0
+# outputCurrentPath 1
+# outputCurrentArea 0
+
+letrec geo counter =
+    if (sample uniform(0, 1) <= 0.5)
+    then counter else geo (counter + 1)
+in geo 0

@@ -1,0 +1,13 @@
+# depth 100
+# discretization -0.1 100.9 1.0
+# epsilonVar 1
+
+# outputSplitProgress 0
+# outputCurrentPath 1
+# outputCurrentArea 0
+
+letrec rw pos =
+    if (pos <= 0) then 0
+    else if (sample uniform(0, 1) <= 0.25) then 1 + rw (pos + 1)
+    else 1 + rw (pos - 1)
+in rw 1
