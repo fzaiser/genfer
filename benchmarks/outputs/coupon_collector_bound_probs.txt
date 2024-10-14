@@ -1,701 +1,562 @@
-Solving simplified problem with unroll limit set to 0 first...
+
+CONSTRAINT GENERATION:
+Generated 150 constraints with 162 symbolic variables.
+Constraint generation time: 0.92040 s
+
+SOLVING SIMPLIFIED PROBLEM:
+Solving without loop unrolling first...
+
+CONSTRAINT GENERATION (simplified problem):
 Generated 80 constraints with 162 symbolic variables.
-Constraint generation time: 0.00533s
-Solving constraints...
+Constraint generation time: 0.00175 s
 
-******************************************************************************
-This program contains Ipopt, a library for large-scale nonlinear optimization.
- Ipopt is released as open source code under the Eclipse Public License (EPL).
-         For more information visit http://projects.coin-or.org/Ipopt
-******************************************************************************
+SOLVING CONSTRAINTS (simplified problem):
+IPOPT found a solution that satisfies all constraints exactly.
+Solver time: 0.03357 s
 
-This is Ipopt version 3.11.9, running with linear solver mumps.
-NOTE: Other linear solvers might be more efficient (see Ipopt documentation).
+OPTIMIZATION (simplified problem):
+Initial objective: 0.0
 
-Number of nonzeros in equality constraint Jacobian...:        0
-Number of nonzeros in inequality constraint Jacobian.:      910
-Number of nonzeros in Lagrangian Hessian.............:      151
-
-Total number of variables............................:      162
-                     variables with only lower bounds:      160
-                variables with lower and upper bounds:        2
-                     variables with only upper bounds:        0
-Total number of equality constraints.................:        0
-Total number of inequality constraints...............:       80
-        inequality constraints with only lower bounds:        0
-   inequality constraints with lower and upper bounds:        0
-        inequality constraints with only upper bounds:       80
-
-iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
-   0  0.0000000e+00 1.95e-01 1.00e+00  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0
-   1  0.0000000e+00 1.91e-01 1.24e+00  -1.7 8.25e-01    -  1.25e-01 6.50e-02h  1
-   2  0.0000000e+00 1.22e-01 1.17e+00  -1.7 2.09e+00    -  2.09e-01 2.11e-01h  1
-   3  0.0000000e+00 1.06e-01 1.14e+00  -1.7 1.04e+00    -  2.02e-01 1.22e-01f  1
-   4  0.0000000e+00 8.08e-02 1.06e+00  -1.7 3.54e-01    -  2.38e-01 2.23e-01f  1
-   5  0.0000000e+00 0.00e+00 4.04e+01  -1.7 5.73e-01    -  6.66e-01 1.00e+00f  1
-   6  0.0000000e+00 0.00e+00 9.79e+00  -1.7 1.19e+00    -  4.11e-01 1.00e+00f  1
-   7  0.0000000e+00 0.00e+00 1.99e+01  -1.7 1.68e+00    -  6.82e-01 1.00e+00f  1
-   8  0.0000000e+00 0.00e+00 2.32e+00  -1.7 5.61e+00    -  5.70e-01 1.00e+00f  1
-   9  0.0000000e+00 0.00e+00 1.13e+01  -1.7 1.33e+01    -  6.08e-01 1.00e+00f  1
-iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
-  10  0.0000000e+00 0.00e+00 8.09e+00  -1.7 3.66e+01    -  4.57e-01 1.00e+00f  1
-  11  0.0000000e+00 0.00e+00 5.97e+00  -1.7 2.69e+01    -  5.47e-01 1.17e-01h  1
-  12  0.0000000e+00 0.00e+00 3.66e+00  -1.7 2.27e+02    -  2.63e-01 3.50e-02f  1
-  13  0.0000000e+00 0.00e+00 3.24e+01  -1.7 4.09e+02    -  1.83e-01 8.52e-01f  1
-  14  0.0000000e+00 0.00e+00 3.74e+00  -1.7 5.16e+02    -  5.53e-01 1.00e+00f  1
-  15  0.0000000e+00 5.84e+01 2.65e+00  -1.7 1.49e+03    -  7.74e-01 1.00e+00h  1
-  16  0.0000000e+00 0.00e+00 1.46e+01  -1.7 7.11e+03    -  5.00e-01 1.00e+00h  1
-  17  0.0000000e+00 0.00e+00 1.40e+00  -1.7 3.36e+00  -4.0 7.33e-01 1.00e+00h  1
-  18  0.0000000e+00 0.00e+00 1.83e-02  -1.7 7.53e+00  -4.5 1.00e+00 1.00e+00h  1
-  19  0.0000000e+00 0.00e+00 1.63e-03  -1.7 1.90e+01  -5.0 1.00e+00 1.00e+00h  1
-iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
-  20  0.0000000e+00 0.00e+00 7.74e-03  -2.5 5.94e+00  -5.4 1.00e+00 1.00e+00h  1
-  21  0.0000000e+00 0.00e+00 1.88e-04  -3.8 1.15e+00  -5.9 1.00e+00 1.00e+00h  1
-  22  0.0000000e+00 0.00e+00 4.02e-07  -5.7 4.55e-02  -6.4 1.00e+00 1.00e+00h  1
-  23  0.0000000e+00 0.00e+00 2.60e-11  -8.6 1.89e-04  -6.9 1.00e+00 1.00e+00h  1
-
-Number of Iterations....: 23
-
-                                   (scaled)                 (unscaled)
-Objective...............:   0.0000000000000000e+00    0.0000000000000000e+00
-Dual infeasibility......:   2.6000084370285576e-11    2.6000084370285576e-11
-Constraint violation....:   0.0000000000000000e+00    0.0000000000000000e+00
-Complementarity.........:   2.5095277847321888e-09    2.5095277847321888e-09
-Overall NLP error.......:   2.5095277847321888e-09    2.5095277847321888e-09
-
-
-Number of objective function evaluations             = 24
-Number of objective gradient evaluations             = 24
-Number of equality constraint evaluations            = 0
-Number of inequality constraint evaluations          = 24
-Number of equality constraint Jacobian evaluations   = 0
-Number of inequality constraint Jacobian evaluations = 24
-Number of Lagrangian Hessian evaluations             = 23
-Total CPU secs in IPOPT (w/o function evaluations)   =      0.139
-Total CPU secs in NLP function evaluations           =      0.006
-
-EXIT: Optimal Solution Found.
-Solution satisfies all constraints.
-Solver time: 0.03370s
-Optimizing solution to the simplified problem...
-Optimizing solution...
 Optimization step 1: IPOPT
-This is Ipopt version 3.11.9, running with linear solver mumps.
-NOTE: Other linear solvers might be more efficient (see Ipopt documentation).
+Optimizer time (IPOPT): 0.01407 s
+Unchanged objective: 0.0
 
-Number of nonzeros in equality constraint Jacobian...:        0
-Number of nonzeros in inequality constraint Jacobian.:      910
-Number of nonzeros in Lagrangian Hessian.............:      173
+Optimization step 2: Linear Optimization
+Running LP solver CBC...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 70 (-10) rows, 70 (-92) columns and 330 (-425) elements
+0  Obj 0 Primal inf 1.0036745 (20) Dual inf 14.986788 (20)
+33  Obj 0 Primal inf 0.73063139 (17) Dual inf 13.26455 (10)
+67  Obj 0 Primal inf 0.22589346 (4) Dual inf 3.3730164 (4)
+71  Obj 0
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 71 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 70 (-10) rows, 70 (-92) columns and 330 (-425) elements
+0  Obj 0 Primal inf 1.0036745 (20) Dual inf 14.986788 (20)
+33  Obj 0 Primal inf 0.73063144 (17) Dual inf 13.26455 (10)
+67  Obj 0 Primal inf 0.22589347 (4) Dual inf 3.3730164 (4)
+71  Obj 0
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 71 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 70 (-10) rows, 70 (-92) columns and 330 (-425) elements
+0  Obj 0 Primal inf 1.0036747 (20) Dual inf 14.986788 (20)
+33  Obj 0 Primal inf 0.73063157 (17) Dual inf 13.26455 (10)
+67  Obj 0 Primal inf 0.2258935 (4) Dual inf 3.3730164 (4)
+71  Obj 0
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 71 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 70 (-10) rows, 70 (-92) columns and 330 (-425) elements
+0  Obj 0 Primal inf 1.0036751 (20) Dual inf 14.986788 (20)
+33  Obj 0 Primal inf 0.73063198 (17) Dual inf 13.26455 (10)
+67  Obj 0 Primal inf 0.2258936 (4) Dual inf 3.3730164 (4)
+71  Obj 0
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 71 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 70 (-10) rows, 70 (-92) columns and 330 (-425) elements
+0  Obj 0 Primal inf 1.0036765 (20) Dual inf 14.986788 (20)
+33  Obj 0 Primal inf 0.73063318 (17) Dual inf 13.26455 (10)
+67  Obj 0 Primal inf 0.22589391 (4) Dual inf 3.3730164 (4)
+71  Obj 0
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 71 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+LP solver succeeded after 5 retries (due to numerical issues).
+Presolve 70 (-10) rows, 70 (-92) columns and 330 (-425) elements
+0  Obj 0 Primal inf 1.0036805 (20) Dual inf 14.986788 (20)
+33  Obj 0 Primal inf 0.73063681 (17) Dual inf 13.26455 (10)
+67  Obj 0 Primal inf 0.22589482 (4) Dual inf 3.3730164 (4)
+71  Obj 0
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 1.4300025e-06 (10)
+Presolved model was optimal, full model needs cleaning up
+Optimal - objective value 0
+Optimal objective 0 - 71 iterations time 0.002, Presolve 0.00
+LP solver failed to improve the objective.
+Optimizer time (Linear Optimization): 0.02107 s
+Unchanged objective: 0.0
 
-Total number of variables............................:      162
-                     variables with only lower bounds:      160
-                variables with lower and upper bounds:        2
-                     variables with only upper bounds:        0
-Total number of equality constraints.................:        0
-Total number of inequality constraints...............:       80
-        inequality constraints with only lower bounds:        0
-   inequality constraints with lower and upper bounds:        0
-        inequality constraints with only upper bounds:       80
+Total optimization time: 0.03570 s
 
-iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
-   0  7.0291781e+07 0.00e+00 1.03e+00  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0
-   1  7.1727601e+07 0.00e+00 4.33e-01  -1.0 5.56e-01    -  9.90e-01 1.00e+00f  1
-   2  9.8964725e+07 0.00e+00 1.65e+01  -1.0 7.27e+01    -  9.84e-01 1.00e+00f  1
-   3  1.0225876e+08 0.00e+00 2.02e+01  -1.0 4.09e+03    -  7.48e-01 1.00e+00f  1
-   4  1.1448243e+08 0.00e+00 9.64e+01  -1.0 1.55e+04    -  1.00e+00 1.00e+00f  1
-   5  1.1366483e+08 8.76e+03 4.06e+02  -1.0 1.30e+05    -  2.03e-01 1.00e+00f  1
-   6  4.5131974e+08 0.00e+00 2.78e+02  -1.0 8.35e+00  -4.0 1.00e+00 1.00e+00h  1
-   7  3.9514163e+08 1.60e+03 7.66e+01  -1.0 1.56e+05    -  1.00e+00 1.00e+00f  1
-   8  5.0720866e+08 0.00e+00 2.40e+01  -1.0 1.76e+01  -4.5 1.00e+00 1.00e+00h  1
-   9  4.5996407e+08 0.00e+00 1.43e+01  -1.0 6.44e+04    -  1.00e+00 4.05e-01h  1
-iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
-  10  4.5047786e+08 0.00e+00 3.79e+00  -1.0 2.96e+04    -  1.00e+00 1.00e+00f  1
-  11  4.5387962e+08 0.00e+00 4.06e-02  -1.0 6.33e+03    -  1.00e+00 1.00e+00h  1
-  12  2.0067165e+08 0.00e+00 1.08e+01  -2.5 1.53e+05    -  9.13e-01 1.00e+00f  1
-  13  4.0297026e+07 0.00e+00 1.85e+00  -2.5 1.55e+05    -  1.00e+00 1.00e+00h  1
-  14  2.0827893e+07 0.00e+00 4.68e-01  -2.5 1.94e+04    -  1.00e+00 1.00e+00h  1
-  15  2.0170200e+07 0.00e+00 1.70e-02  -2.5 3.27e+01    -  1.00e+00 1.00e+00h  1
-  16  1.7386458e+06 0.00e+00 1.76e-02  -3.8 2.01e+04    -  1.00e+00 1.00e+00f  1
-  17  1.0962142e+06 0.00e+00 4.17e-04  -3.8 7.21e+02    -  1.00e+00 1.00e+00h  1
-  18  1.5770177e+04 0.00e+00 5.12e-05  -5.7 1.20e+03    -  1.00e+00 1.00e+00h  1
-  19  1.3650458e+04 0.00e+00 2.37e-06  -5.7 2.42e+00    -  1.00e+00 1.00e+00h  1
-iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
-  20  4.4622729e+03 4.51e-05 2.21e-05  -8.6 1.49e+01    -  1.00e+00 6.86e-01h  1
-  21  1.1286669e+03 5.51e-03 5.72e-05  -8.6 4.26e+00    -  8.49e-01 8.74e-01h  1
-  22  1.1280977e+03 5.49e-03 1.57e-04  -8.6 2.44e+01    -  1.00e+00 2.90e-03h  1
-  23  9.1974274e+02 4.69e-03 7.78e-06  -8.6 4.07e-01    -  1.00e+00 9.80e-01f  1
-  24  1.0009058e+03 0.00e+00 1.12e-07  -8.6 6.44e-02    -  1.00e+00 1.00e+00h  1
-  25  1.0003942e+03 0.00e+00 1.60e-10  -8.6 1.30e-04    -  1.00e+00 1.00e+00h  1
-  26  9.8849730e+02 3.35e-06 3.95e-08 -12.5 1.44e-02    -  1.00e+00 9.94e-01h  1
-  27  9.8853928e+02 0.00e+00 5.68e-11 -12.5 5.11e-06  -5.0 1.00e+00 1.00e+00h  1
-
-Number of Iterations....: 27
-
-                                   (scaled)                 (unscaled)
-Objective...............:   3.2539194174231295e-05    9.8853927747636976e+02
-Dual infeasibility......:   5.6816799146140775e-11    1.7260918409874200e-03
-Constraint violation....:   0.0000000000000000e+00    0.0000000000000000e+00
-Complementarity.........:   2.9970623432490189e-13    9.1050621213394328e-06
-Overall NLP error.......:   5.6816799146140775e-11    1.7260918409874200e-03
-
-
-Number of objective function evaluations             = 28
-Number of objective gradient evaluations             = 28
-Number of equality constraint evaluations            = 0
-Number of inequality constraint evaluations          = 28
-Number of equality constraint Jacobian evaluations   = 0
-Number of inequality constraint Jacobian evaluations = 28
-Number of Lagrangian Hessian evaluations             = 27
-Total CPU secs in IPOPT (w/o function evaluations)   =      0.120
-Total CPU secs in NLP function evaluations           =      0.010
-
-EXIT: Optimal Solution Found.
-IPOPT found the following solution:
-Objective: 988.5392774763698 at [0.9424075578204224, 0.07266633993460371, 0.07266633993460371, 0.07266633993460371, 0.07266633993460371, 0.07266633993460371, 0.0, 0.0, 0.0, 0.0, 0.21222261805592693, 0.0, 0.0, 0.0, 0.21222261805592693, 0.0, 0.0, 0.0, 0.0, 0.08754823113372956, 0.08754823113372956, 0.0, 0.0, 0.21222261805592693, 0.0, 0.0, 0.0, 0.0, 0.08754823113372955, 0.0, 0.08754823113372955, 0.0, 0.0, 0.08754823113372959, 0.08754823113372959, 0.0, 9.15809592730603e-10, 9.15809592730603e-10, 0.12295510027818311, 0.1229551002781831, 0.12295510027818313, 0.0, 0.21222261805592693, 0.0, 0.0, 0.0, 0.0, 0.08754823113372956, 0.0, 0.0, 0.08754823113372956, 0.0, 0.08754823113372957, 0.0, 0.08754823113372957, 0.0, 9.158095927296766e-10, 0.1229551002781831, 9.158095927296766e-10, 0.1229551002781831, 0.1229551002781831, 0.0, 0.08754823113372957, 0.08754823113372957, 0.0, 0.0, 9.158095927298089e-10, 0.12295510027818309, 0.1229551002781831, 9.158095927298089e-10, 0.12295510027818311, 9.158095927311589e-10, 0.12295510027818302, 0.12295510027818302, 0.12295510027818302, 9.158095927311589e-10, 5.331325990976083e-9, 0.8698109816472577, 0.8698109816472576, 0.8698109816472576, 0.8698109816472576, 0.21222261805592693, 0.0, 0.0, 0.0, 0.0, 0.08754823113372956, 0.0, 0.0, 0.0, 0.08754823113372956, 0.08754823113372957, 0.0, 0.0, 0.08754823113372957, 0.0, 0.12295510027818307, 9.158095927304177e-10, 9.158095927304177e-10, 0.12295510027818307, 0.12295510027818309, 0.08754823113372957, 0.0, 0.08754823113372957, 0.0, 0.0, 0.12295510027818307, 9.158095927305236e-10, 0.12295510027818309, 9.158095927305236e-10, 0.1229551002781831, 0.12295510027818306, 9.158095927319e-10, 0.12295510027818304, 0.12295510027818304, 9.158095927319e-10, 0.8698109816472569, 5.331325990978677e-9, 0.8698109816472568, 0.8698109816472568, 0.8698109816472568, 0.08754823113372957, 0.08754823113372957, 0.0, 0.0, 0.0, 0.12295510027818302, 0.12295510027818302, 9.15809592729703e-10, 9.15809592729703e-10, 0.12295510027818303, 0.12295510027818306, 0.12295510027818306, 9.15809592731106e-10, 0.12295510027818306, 9.15809592731106e-10, 0.8698109816472577, 0.8698109816472577, 5.331325990975924e-9, 0.8698109816472577, 0.8698109816472577, 0.12295510027818306, 0.12295510027818306, 0.12295510027818306, 9.15809592731106e-10, 9.15809592731106e-10, 0.8698109816472579, 0.8698109816472579, 0.8698109816472579, 5.331325990975818e-9, 0.8698109816472579, 0.8698109816472562, 0.8698109816472563, 0.8698109816472563, 0.8698109816472563, 5.331325990980636e-9, 2.1980595574123197e-8, 2.1980595574123197e-8, 2.1980595574123197e-8, 2.1980595574123197e-8, 2.1980595574123197e-8, 0.9388881448733655]
-The solution satisfies all constraints.
-Optimizer time: 0.037856
-Extending solution to the original problem...
-Generated 150 constraints with 162 symbolic variables.
-Constraint generation time: 0.90876s
-Solution by LP solver does not satisfy the constraints.
+EXTENDING SOLUTION:
+Extending simplified solution to the original problem...
+Running LP solver CBC...
+Solution by LP solver does not satisfy the constraints (rounding issues).
 Presolve 70 (-80) rows, 70 (-92) columns and 330 (-495) elements
-Optimal - objective value 0.078739216
-After Postsolve, objective 0.078739216, infeasibilities - dual 0 (0), primal 0 (0)
-Optimal objective 0.07873921551 - 0 iterations time 0.002, Presolve 0.00
-Solving simplified problem (unrolling limit set to 0) failed.
-Continuing with the original problem.
-Generated 150 constraints with 162 symbolic variables.
-Constraint generation time: 1.77537s
-Solving constraints...
-This is Ipopt version 3.11.9, running with linear solver mumps.
-NOTE: Other linear solvers might be more efficient (see Ipopt documentation).
+Optimal - objective value 1.5047848e-05
+After Postsolve, objective 1.5047848e-05, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 1.504784764e-05 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 70 (-80) rows, 70 (-92) columns and 330 (-495) elements
+Optimal - objective value 1.5055848e-05
+After Postsolve, objective 1.5055848e-05, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 1.505584764e-05 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 70 (-80) rows, 70 (-92) columns and 330 (-495) elements
+Optimal - objective value 1.5079848e-05
+After Postsolve, objective 1.5079848e-05, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 1.507984764e-05 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 70 (-80) rows, 70 (-92) columns and 330 (-495) elements
+Optimal - objective value 1.5151848e-05
+After Postsolve, objective 1.5151848e-05, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 1.515184764e-05 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 70 (-80) rows, 70 (-92) columns and 330 (-495) elements
+Optimal - objective value 1.5367848e-05
+After Postsolve, objective 1.5367848e-05, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 1.536784764e-05 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+LP solver succeeded after 5 retries (due to numerical issues).
+Presolve 70 (-80) rows, 70 (-92) columns and 330 (-495) elements
+Optimal - objective value 1.6015848e-05
+After Postsolve, objective 1.6015848e-05, infeasibilities - dual 0 (0), primal 4.7456022e-06 (50)
+Presolved model was optimal, full model needs cleaning up
+0  Obj 1.6015848e-05 Primal inf 1.5730085e-05 (110)
+66  Obj 1.6015848e-05 Primal inf 4.7120445e-07 (9)
+75  Obj 1.6015848e-05
+Optimal - objective value 1.6015848e-05
+Optimal objective 1.601584764e-05 - 75 iterations time 0.012, Presolve 0.00
+Extension time (LP solver): 0.04541 s
 
-Number of nonzeros in equality constraint Jacobian...:        0
-Number of nonzeros in inequality constraint Jacobian.:     1050
-Number of nonzeros in Lagrangian Hessian.............:      152
+OPTIMIZATION:
+Initial objective: 15.457892333777435
 
-Total number of variables............................:      162
-                     variables with only lower bounds:      160
-                variables with lower and upper bounds:        2
-                     variables with only upper bounds:        0
-Total number of equality constraints.................:        0
-Total number of inequality constraints...............:      150
-        inequality constraints with only lower bounds:        0
-   inequality constraints with lower and upper bounds:        0
-        inequality constraints with only upper bounds:      150
-
-iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
-   0  0.0000000e+00 1.75e-02 1.00e+00  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0
-   1  0.0000000e+00 1.06e-02 5.93e-01  -1.7 3.92e-01    -  5.68e-01 5.70e-01h  1
-   2  0.0000000e+00 5.36e-03 1.18e+02  -1.7 4.72e+01   0.0 8.04e-03 5.81e-03f  1
-   3  0.0000000e+00 4.37e-03 9.13e+01  -1.7 4.66e-02    -  2.82e-01 2.02e-01f  1
-   4  0.0000000e+00 2.06e-03 3.54e+01  -1.7 9.76e-02    -  2.13e-01 3.50e-01f  1
-   5  0.0000000e+00 0.00e+00 5.99e+01  -1.7 1.38e-01    -  3.04e-01 1.00e+00f  1
-   6  0.0000000e+00 0.00e+00 3.71e+01  -1.7 2.49e-01    -  4.40e-01 1.00e+00f  1
-   7  0.0000000e+00 0.00e+00 1.99e+01  -1.7 5.89e-01    -  4.55e-01 2.90e-01f  1
-   8  0.0000000e+00 0.00e+00 8.89e+01  -1.7 9.63e-01    -  2.29e-01 1.00e+00f  1
-   9  0.0000000e+00 0.00e+00 6.82e+01  -1.7 4.02e-01  -0.5 9.67e-01 1.15e-01h  1
-iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
-  10  0.0000000e+00 0.00e+00 1.39e+01  -1.7 1.53e+00  -1.0 5.62e-01 2.97e-01f  1
-  11  0.0000000e+00 0.00e+00 1.61e+01  -1.7 2.86e+00    -  5.88e-01 1.00e+00f  1
-  12  0.0000000e+00 0.00e+00 1.81e+02  -1.7 6.83e+00    -  5.17e-01 1.00e+00f  1
-  13  0.0000000e+00 0.00e+00 5.29e+01  -1.7 1.47e+01    -  4.24e-01 1.00e+00f  1
-  14  0.0000000e+00 0.00e+00 3.08e+01  -1.7 4.30e+01    -  5.28e-01 4.58e-02h  1
-  15  0.0000000e+00 0.00e+00 1.12e+02  -1.7 6.98e+01    -  3.96e-01 1.00e+00f  1
-  16  0.0000000e+00 2.60e-01 3.38e+01  -1.7 1.77e+02    -  2.00e-01 3.77e-01h  1
-  17  0.0000000e+00 1.48e+01 2.45e+02  -1.7 2.73e+02    -  5.26e-01 1.00e+00h  1
-  18  0.0000000e+00 0.00e+00 1.45e+02  -1.7 6.78e+02    -  3.69e-01 7.36e-01h  1
-  19  0.0000000e+00 0.00e+00 2.14e+00  -1.7 1.35e+00  -1.4 1.00e+00 1.00e+00h  1
-iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
-  20  0.0000000e+00 0.00e+00 3.00e-01  -1.7 3.71e-01  -1.9 1.00e+00 1.00e+00h  1
-  21  0.0000000e+00 0.00e+00 4.68e-03  -1.7 9.61e-01  -2.4 1.00e+00 1.00e+00f  1
-  22  0.0000000e+00 0.00e+00 3.13e-03  -3.8 1.63e-02  -2.9 1.00e+00 1.00e+00h  1
-  23  0.0000000e+00 0.00e+00 3.02e-05  -3.8 6.61e-02  -3.3 1.00e+00 1.00e+00h  1
-  24  0.0000000e+00 0.00e+00 2.66e-06  -5.7 2.37e-03  -3.8 1.00e+00 1.00e+00h  1
-  25  0.0000000e+00 0.00e+00 5.02e-10  -8.6 9.87e-06  -4.3 1.00e+00 1.00e+00h  1
-
-Number of Iterations....: 25
-
-                                   (scaled)                 (unscaled)
-Objective...............:   0.0000000000000000e+00    0.0000000000000000e+00
-Dual infeasibility......:   5.0164179043369767e-10    5.0164179043369767e-10
-Constraint violation....:   0.0000000000000000e+00    0.0000000000000000e+00
-Complementarity.........:   2.5065384729348628e-09    2.5065384729348628e-09
-Overall NLP error.......:   2.5065384729348628e-09    2.5065384729348628e-09
-
-
-Number of objective function evaluations             = 26
-Number of objective gradient evaluations             = 26
-Number of equality constraint evaluations            = 0
-Number of inequality constraint evaluations          = 26
-Number of equality constraint Jacobian evaluations   = 0
-Number of inequality constraint Jacobian evaluations = 26
-Number of Lagrangian Hessian evaluations             = 25
-Total CPU secs in IPOPT (w/o function evaluations)   =      0.023
-Total CPU secs in NLP function evaluations           =      0.001
-
-EXIT: Optimal Solution Found.
-Solution satisfies all constraints.
-Solver time: 0.02523s
-Optimizing solution...
 Optimization step 1: IPOPT
-This is Ipopt version 3.11.9, running with linear solver mumps.
-NOTE: Other linear solvers might be more efficient (see Ipopt documentation).
+Optimizer time (IPOPT): 0.06563 s
+Improved objective: 1.0282747465409168
 
-Number of nonzeros in equality constraint Jacobian...:        0
-Number of nonzeros in inequality constraint Jacobian.:     1050
-Number of nonzeros in Lagrangian Hessian.............:      173
+Optimization step 2: Linear Optimization
+Running LP solver CBC...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 70 (-80) rows, 70 (-92) columns and 330 (-495) elements
+Optimal - objective value 6.3470176e-05
+After Postsolve, objective 6.3470176e-05, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 6.34701757e-05 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 70 (-80) rows, 70 (-92) columns and 330 (-495) elements
+Optimal - objective value 6.3478176e-05
+After Postsolve, objective 6.3478176e-05, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 6.34781757e-05 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 70 (-80) rows, 70 (-92) columns and 330 (-495) elements
+Optimal - objective value 6.3502176e-05
+After Postsolve, objective 6.3502176e-05, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 6.35021757e-05 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 70 (-80) rows, 70 (-92) columns and 330 (-495) elements
+Optimal - objective value 6.3574176e-05
+After Postsolve, objective 6.3574176e-05, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 6.35741757e-05 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 70 (-80) rows, 70 (-92) columns and 330 (-495) elements
+Optimal - objective value 6.3790176e-05
+After Postsolve, objective 6.3790176e-05, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 6.37901757e-05 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+LP solver succeeded after 5 retries (due to numerical issues).
+Presolve 70 (-80) rows, 70 (-92) columns and 330 (-495) elements
+Optimal - objective value 6.4438176e-05
+After Postsolve, objective 6.4438176e-05, infeasibilities - dual 0 (0), primal 6.3654847e-06 (50)
+Presolved model was optimal, full model needs cleaning up
+0  Obj 6.4438176e-05 Primal inf 1.5730359e-05 (110)
+65  Obj 6.4438176e-05 Primal inf 8.36013e-07 (10)
+75  Obj 6.4438176e-05
+Optimal - objective value 6.4438176e-05
+Optimal objective 6.44381757e-05 - 75 iterations time 0.002, Presolve 0.00
+Optimizer time (Linear Optimization): 0.02955 s
+Improved objective: 1.0251288166443173
 
-Total number of variables............................:      162
-                     variables with only lower bounds:      160
-                variables with lower and upper bounds:        2
-                     variables with only upper bounds:        0
-Total number of equality constraints.................:        0
-Total number of inequality constraints...............:      150
-        inequality constraints with only lower bounds:        0
-   inequality constraints with lower and upper bounds:        0
-        inequality constraints with only upper bounds:      150
+Total optimization time: 0.09744 s
 
-iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
-   0  9.6358190e+06 2.38e+00 1.28e+00  -1.0 0.00e+00    -  0.00e+00 0.00e+00   0
-   1  1.1877307e+07 0.00e+00 2.90e-01  -1.0 6.33e-01    -  9.78e-01 1.00e+00f  1
-   2  2.3806175e+07 0.00e+00 5.29e+01  -1.0 2.61e+01    -  7.74e-01 1.16e-01f  2
-   3  4.4871342e+07 0.00e+00 3.33e+01  -1.0 7.42e+02    -  3.11e-01 2.53e-02f  2
-   4  1.4863506e+09 0.00e+00 1.08e+04  -1.0 2.46e+02    -  7.63e-01 1.00e+00H  1
-   5  1.0915899e+09 0.00e+00 4.89e+03  -1.0 1.23e+03    -  5.02e-01 1.00e+00f  1
-   6  6.3535456e+08 0.00e+00 1.78e+03  -1.0 6.17e+00  -4.0 1.00e+00 1.00e+00f  1
-   7  4.9449880e+08 0.00e+00 1.07e+03  -1.0 2.64e+03    -  5.81e-01 1.00e+00f  1
-   8  3.3734095e+08 0.00e+00 1.76e+02  -1.0 8.36e+00  -4.5 1.00e+00 1.00e+00h  1
-   9  3.2352468e+08 0.00e+00 3.74e+02  -1.0 5.18e+03    -  9.66e-01 1.00e+00f  1
-iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
-  10  2.1844917e+08 2.16e+03 7.64e+02  -1.0 1.06e+05    -  3.14e-02 5.00e-01f  2
-  11  1.0857928e+09 0.00e+00 3.68e+02  -1.0 2.58e+01  -5.0 1.00e+00 1.00e+00h  1
-  12  8.7112483e+08 0.00e+00 9.04e+01  -1.0 4.42e+01  -5.4 1.00e+00 1.00e+00h  1
-  13  7.7254508e+08 0.00e+00 2.18e+01  -1.0 3.75e+01  -5.9 1.00e+00 1.00e+00h  1
-  14  7.5077090e+08 0.00e+00 9.65e-01  -1.0 8.78e+01  -6.4 1.00e+00 1.00e+00h  1
-  15  5.2374385e+08 0.00e+00 8.27e+01  -1.7 2.49e+02  -6.9 9.03e-01 1.00e+00f  1
-  16  4.0148662e+08 0.00e+00 3.28e+01  -1.7 5.07e+02  -7.3 1.00e+00 1.00e+00h  1
-  17  3.4036194e+08 0.00e+00 7.76e+00  -1.7 5.34e+02  -7.8 1.00e+00 1.00e+00h  1
-  18  3.1622931e+08 0.00e+00 8.72e-01  -1.7 1.43e+03  -8.3 1.00e+00 1.00e+00h  1
-  19  3.0137024e+08 0.00e+00 2.91e-01  -1.7 4.19e+03  -8.8 1.00e+00 1.00e+00h  1
-iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
-  20  2.8175724e+08 0.00e+00 3.78e-01  -1.7 1.27e+04  -9.2 1.00e+00 1.00e+00h  1
-  21  2.6773673e+08 0.00e+00 4.72e-01  -1.7 2.60e+06    -  4.87e-02 2.47e-03h  2
-  22  3.5564107e+08 0.00e+00 1.94e+01  -1.7 5.05e+04    -  9.38e-01 1.00e+00h  1
-  23  3.9253668e+08 5.43e+02 2.14e+01  -1.7 1.12e+05    -  1.00e+00 1.00e+00h  1
-  24  4.5753451e+08 0.00e+00 2.84e+00  -1.7 5.39e+04    -  1.00e+00 1.00e+00h  1
-  25  4.6799449e+08 0.00e+00 1.19e-01  -1.7 5.42e+02    -  1.00e+00 1.00e+00h  1
-  26  1.9433165e+08 0.00e+00 3.71e+00  -2.5 1.43e+05    -  1.00e+00 1.00e+00h  1
-  27  8.6992470e+07 0.00e+00 6.12e-01  -2.5 7.65e+04    -  1.00e+00 1.00e+00h  1
-  28  8.3093996e+07 0.00e+00 4.05e-02  -2.5 1.21e+03    -  1.00e+00 1.00e+00h  1
-  29  8.3002467e+07 0.00e+00 1.19e-04  -2.5 3.71e+01    -  1.00e+00 1.00e+00h  1
-iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
-  30  1.1738513e+07 0.00e+00 2.12e-01  -3.8 5.43e+04    -  1.00e+00 1.00e+00f  1
-  31  4.6609264e+06 0.00e+00 2.05e-03  -3.8 5.74e+03    -  1.00e+00 1.00e+00h  1
-  32  4.6486192e+06 0.00e+00 8.97e-06  -3.8 3.10e+00    -  1.00e+00 1.00e+00h  1
-  33  8.4470434e+04 0.00e+00 8.85e-04  -5.7 3.69e+03    -  1.00e+00 1.00e+00h  1
-  34  5.7191562e+04 0.00e+00 9.84e-08  -5.7 2.23e+01    -  1.00e+00 1.00e+00h  1
-  35  8.2948197e+01 0.00e+00 1.39e-07  -8.6 4.63e+01    -  1.00e+00 1.00e+00h  1
-  36  7.8698363e+01 0.00e+00 1.33e-11  -8.6 3.48e-03    -  1.00e+00 1.00e+00h  1
-  37  1.0327772e+00 4.70e-07 6.08e-11 -12.9 6.30e-02    -  1.00e+00 1.00e+00h  1
-  38  1.0236487e+00 6.27e-07 6.17e-02 -12.9 1.16e-02    -  1.00e+00 8.27e-01h  1
-  39  1.0238756e+00 5.54e-07 5.41e-02 -12.9 6.44e-03    -  1.22e-01 1.14e-01f  4
-iter    objective    inf_pr   inf_du lg(mu)  ||d||  lg(rg) alpha_du alpha_pr  ls
-  40  1.0258888e+00 0.00e+00 4.67e-02 -12.9 5.36e-03    -  1.78e-01 1.00e+00h  1
-  41  1.0260093e+00 0.00e+00 3.91e-03 -12.9 1.62e-03    -  9.18e-01 1.00e+00h  1
-  42  1.0259087e+00 1.77e-10 8.80e-02 -12.9 1.05e-03    -  1.46e-01 9.78e-01h  1
-  43  1.0259275e+00 1.32e-10 1.58e-02 -12.9 1.49e-04    -  9.29e-01 2.50e-01f  3
-  44  1.0260303e+00 0.00e+00 1.63e-03 -12.9 4.38e-04    -  7.38e-01 1.00e+00h  1
-  45  1.0260314e+00 0.00e+00 7.39e-10 -12.9 3.89e-05    -  1.00e+00 1.00e+00h  1
+UNNORMALIZED BOUND:
 
-Number of Iterations....: 45
+Probability masses:
+p'(0) = 0.0
+p'(1) ∈ [0.0, 0.0007236349603403504]
+p'(2) ∈ [0.0, 0.0007023582063854435]
+p'(3) ∈ [0.0, 0.0006817070444536814]
+p'(4) ∈ [0.0, 0.0006616630805090071]
+p'(5) ∈ [0.0384, 0.03904220846134797]
+p'(6) ∈ [0.0768, 0.07742332585869782]
+p'(7) ∈ [0.09984, 0.10044499845378223]
+p'(8) ∈ [0.10751999999999999, 0.10810720992234067]
+p'(9) ∈ [0.10450944, 0.10507938442008848]
+p'(10) ∈ [0.09547776, 0.09603094656860423]
+p'(11) ∈ [0.08381644799999999, 0.08435336944163217]
+p'(12) ∈ [0.07163903999999999, 0.0721601745517874]
+p'(13) ∈ [0.060112994303999995, 0.060618806141651854]
+p'(14) ∈ [0.049791565823999996, 0.05028250547524984]
+p'(15) ∈ [0.040862004019199996, 0.0413385087650917]
+p'(16) ∈ [0.0333100744704, 0.03377256873477501]
+p'(17) ∈ [0.027021630662246398, 0.027470526389778968]
+p'(18) ∈ [0.0218419625459712, 0.022277659569088455]
+p'(19) ∈ [0.01760857099862016, 0.01803145739363372]
+p'(20) ∈ [0.01416793983811584, 0.014578392270882262]
+p'(21) ∈ [0.011383034679121674, 0.011781418740539569]
+p'(22) ∈ [0.009135650622563942, 0.009522321154206606]
+p'(23) ∈ [0.007326059503256863, 0.007701360913430457]
+p'(24) ∈ [0.005871373116789227, 0.00623563968729803]
+p'(25) ∈ [0.004703414646366151, 0.005056970830258105]
+p'(26) ∈ [0.003766521746623675, 0.00410968245718144]
+p'(27) ∈ [0.0030154915501253645, 0.003348562441360284]
+p'(28) ∈ [0.002413757785839339, 0.0027370355247381497]
+p'(29) ∈ [0.0019318249777321769, 0.002245597508498957]
+p'(30) ∈ [0.0015459512402690762, 0.0018504980407977908]
+p'(31) ∈ [0.0012370557505240263, 0.0015326480813301119]
+p'(32) ∈ [0.000989821456787986, 0.001276722602620697]
+p'(33) ∈ [0.0007919632798050501, 0.0010704287841557735]
+p'(34) ∈ [0.0006336342926901978, 0.0009039121854056116]
+p'(35) ∈ [0.0005069456355483972, 0.0007692766537512089]
+p'(36) ∈ [0.00040557942931187895, 0.0006601972318259181]
+p'(37) ∈ [0.0003244772959875669, 0.0005716086714582218]
+p'(38) ∈ [0.00025959008831855866, 0.000499455157213929]
+p'(39) ∈ [0.00020767702157421675, 0.00044048943224690636]
+p'(40) ∈ [0.00016614458781190195, 0.0003921117067960837]
+p'(41) ∈ [0.0001329174525814014, 0.000352240549294652]
+p'(42) ∈ [0.00010633503146439408, 0.0003192094574788143]
+p'(43) ∈ [0.00008506866681113707, 0.0002916840298534331]
+p'(44) ∈ [0.00006805531843270596, 0.00026859565126821503]
+p'(45) ∈ [0.00005444448573645183, 0.00024908841008753745]
+p'(46) ∈ [0.00004355572718333741, 0.00023247661282815632]
+p'(47) ∈ [0.000034844664903176985, 0.00021821078409652795]
+p'(48) ∈ [0.000027875781816446418, 0.00020585045917024324]
+p'(49) ∈ [0.000022300655389500266, 0.00019504241334636848]
+p'(50) ∈ [0.00001784054227340619, 0.00018550324230297673]
 
-                                   (scaled)                 (unscaled)
-Objective...............:   1.0260314306717213e-08    1.0260314306717213e+00
-Dual infeasibility......:   7.3898244198667564e-10    7.3898244198667570e-02
-Constraint violation....:   0.0000000000000000e+00    0.0000000000000000e+00
-Complementarity.........:   1.2644143689811424e-13    1.2644143689811424e-05
-Overall NLP error.......:   7.3898244198667564e-10    7.3898244198667570e-02
+Asymptotics: p'(n) <= 0.0008248889172978868 * 0.9705973935464647^n for n >= 51
 
-
-Number of objective function evaluations             = 60
-Number of objective gradient evaluations             = 46
-Number of equality constraint evaluations            = 0
-Number of inequality constraint evaluations          = 62
-Number of equality constraint Jacobian evaluations   = 0
-Number of inequality constraint Jacobian evaluations = 46
-Number of Lagrangian Hessian evaluations             = 45
-Total CPU secs in IPOPT (w/o function evaluations)   =      0.312
-Total CPU secs in NLP function evaluations           =      0.111
-
-EXIT: Optimal Solution Found.
-IPOPT found the following solution:
-Objective: 1.0260314306717222 at [0.9721158331437767, 1.716817816000375e-7, 1.716817816000375e-7, 1.716817816000375e-7, 1.716817816000375e-7, 1.716817816000375e-7, 2.0017295432669635e-8, 2.0017295432669635e-8, 2.0017295432669635e-8, 2.0017295432669635e-8, 8.180695246757427e-7, 2.0014989245645458e-8, 2.0014989245645458e-8, 2.0014989245645458e-8, 8.180659899125218e-7, 2.0014989245645458e-8, 6.5413106414295554e-9, 6.5413106414295554e-9, 6.5413106414295554e-9, 8.235391449495111e-7, 8.235372755314067e-7, 2.00182122832456e-8, 2.00182122832456e-8, 8.180707821729488e-7, 2.00182122832456e-8, 2.00182122832456e-8, 6.5421583197259125e-9, 6.5421583197259125e-9, 8.235494771448792e-7, 6.5421583197259125e-9, 8.235509305633121e-7, 6.543186806097097e-9, 6.543186806097097e-9, 8.235460502316093e-7, 8.23548843807664e-7, 6.543186806097097e-9, 5.034131177781311e-9, 5.034131177781311e-9, 1.8991109753197414e-6, 1.899116916380892e-6, 1.8991164096410043e-6, 1.9944230613118092e-8, 8.179616539655164e-7, 1.9944230613118092e-8, 1.9944230613118092e-8, 1.9944230613118092e-8, 6.435902337233675e-9, 8.231489642644797e-7, 6.435902337233675e-9, 6.435902337233675e-9, 8.2308634610694e-7, 6.4353453084014934e-9, 8.231438292064314e-7, 6.4353453084014934e-9, 8.230846037229543e-7, 6.4353453084014934e-9, 4.8711159396573794e-9, 1.8979750649096632e-6, 4.8711159396573794e-9, 1.897713233937035e-6, 1.8977113046485682e-6, 6.435674301825233e-9, 8.231492272858549e-7, 8.230859183111373e-7, 6.435674301825233e-9, 6.435674301825233e-9, 4.871927973676264e-9, 1.8979899433721102e-6, 1.8977221759822591e-6, 4.871927973676264e-9, 1.8977219861326451e-6, 4.870840026193617e-9, 1.897982945277947e-6, 1.8977137501307575e-6, 1.897715489427044e-6, 4.870840026193617e-9, 9.454178207177458e-9, 1.6119705919187613e-5, 1.611874043917336e-5, 1.6118748612285125e-5, 1.6118743155734424e-5, 8.180666541147157e-7, 2.0015450840339596e-8, 2.0015450840339596e-8, 2.0015450840339596e-8, 2.0015450840339596e-8, 8.235397629887612e-7, 6.541396922508006e-9, 6.541396922508006e-9, 6.541396922508006e-9, 8.235381203726997e-7, 8.235414989328547e-7, 6.541853171717693e-9, 6.541853171717693e-9, 8.235417927600013e-7, 6.541853171717693e-9, 1.8990323859203898e-6, 5.018525716882271e-9, 5.018525716882271e-9, 1.8990327754263925e-6, 1.89903432691992e-6, 8.235492739891407e-7, 6.543247787838316e-9, 8.235467632942684e-7, 6.543247787838316e-9, 6.543247787838316e-9, 1.8991200419923899e-6, 5.034725756574727e-9, 1.899114489090394e-6, 5.034725756574727e-9, 1.8991198330106063e-6, 1.8991119381374178e-6, 5.0327924680105644e-9, 1.8991084460018936e-6, 1.8991122354330593e-6, 5.0327924680105644e-9, 1.6085034983223166e-5, 9.804435598635984e-9, 1.6084854963352977e-5, 1.608504852133017e-5, 1.6065520606491794e-5, 8.230848142629746e-7, 8.231443010606462e-7, 6.435341939090467e-9, 6.435341939090467e-9, 6.435341939090467e-9, 1.8977137001632578e-6, 1.89797591996112e-6, 4.871130719150213e-9, 4.871130719150213e-9, 1.8977119230489575e-6, 1.8977070318787923e-6, 1.897972731329266e-6, 4.870121327479906e-9, 1.8977071843707422e-6, 4.870121327479906e-9, 1.61185418075225e-5, 1.6119445176210907e-5, 9.452092161423923e-9, 1.6118542299546713e-5, 1.611853852198148e-5, 1.8977159644573569e-6, 1.8979837178663364e-6, 1.8977143774206313e-6, 4.8708764634978825e-9, 4.8708764634978825e-9, 1.6118756676375665e-5, 1.6119716511167017e-5, 1.6118748974567666e-5, 9.454243485165427e-9, 1.611875180848654e-5, 1.6118689004171023e-5, 1.611964848209251e-5, 1.6118683131536416e-5, 1.61186895487769e-5, 9.451337766315935e-9, 2.1784644434554695e-8, 2.1784644434554695e-8, 2.1784644434554695e-8, 2.1784644434554695e-8, 2.1784644434554695e-8, 0.909131561201022]
-The solution satisfies all constraints.
-Optimizer time: 0.169071
-
-Unnormalized bound:
-0: [0.0, 0.0]
-1: [0.0, 0.0007105115611272663]
-2: [0.0, 0.0006906995382035179]
-3: [0.0, 0.0006714399570327347]
-4: [0.0, 0.0006527174132368984]
-5: [0.0384, 0.03903451693197624]
-6: [0.0768, 0.07741682395597191]
-7: [0.09984, 0.10043962433386266]
-8: [0.10751999999999999, 0.1081029043088862]
-9: [0.10450944, 0.105076090507876]
-10: [0.09547776, 0.09602860993056522]
-11: [0.08381644799999999, 0.0843519379391886]
-12: [0.07163903999999999, 0.07215959824837444]
-13: [0.060112994303999995, 0.060619037219318384]
-14: [0.049791565823999996, 0.050283498154231235]
-15: [0.040862004019199996, 0.0413402192262531]
-16: [0.0333100744704, 0.033774955044826444]
-17: [0.027021630662246398, 0.027473548429167324]
-18: [0.0218419625459712, 0.02228127896247401]
-19: [0.01760857099862016, 0.018035637442862525]
-20: [0.01416793983811584, 0.014583097890368258]
-21: [0.011383034679121674, 0.01178661639497338]
-22: [0.009135650622563942, 0.009527978798510719]
-23: [0.007326059503256863, 0.007707447934883142]
-24: [0.005871373116789227, 0.006242126849751006]
-25: [0.004703414646366151, 0.005063830220375457]
-26: [0.003766521746623675, 0.004116887432629723]
-27: [0.0030154915501253645, 0.003356087580882125]
-28: [0.002413757785839339, 0.0027448565800439104]
-29: [0.0019318249777321769, 0.002253691357913254]
-30: [0.0015459512402690762, 0.0018588426445997758]
-31: [0.0012370557505240263, 0.0015412224387284905]
-32: [0.000989821456787986, 0.001285506710306452]
-33: [0.0007919632798050501, 0.0010794035963774826]
-34: [0.0006336342926901978, 0.0009130595755141189]
-35: [0.0005069456355483972, 0.0007785793771622087]
-36: [0.00040557942931187895, 0.0006696388903507507]
-37: [0.0003244772959875669, 0.0005811736789548663]
-38: [0.00025959008831855866, 0.0005091287065118089]
-39: [0.00020767702157421675, 0.00045025746330069503]
-40: [0.00016614458781190195, 0.0004019608760252228]
-41: [0.0001329174525814014, 0.0003621582000667667]
-42: [0.00010633503146439408, 0.0003291835916966321]
-43: [0.00008506866681113707, 0.00030170328060619026]
-44: [0.00006805531843270596, 0.00027864925650986436]
-45: [0.00005444448573645183, 0.0002591661873053576]
-46: [0.00004355572718333741, 0.00024256893466660588]
-47: [0.000034844664903176985, 0.0002283085549023898]
-48: [0.000027875781816446418, 0.00021594509242626715]
-49: [0.000022300655389500266, 0.00020512580996174187]
-50: [0.00001784054227340619, 0.0001955677697300406]
-n >= 51: [0, 0.0001901145254071887 * 0.9721158331437767^(n - 51)]
+NORMALIZED BOUND:
+Normalizing constant: Z = 1 (no observe statements).
 
 Probability masses:
 p(0) = 0.0
-p(1) ∈ [0.0, 0.0007105115611272664]
-p(2) ∈ [0.0, 0.000690699538203518]
-p(3) ∈ [0.0, 0.0006714399570327348]
-p(4) ∈ [0.0, 0.0006527174132368985]
-p(5) ∈ [0.0384, 0.039034516931976244]
-p(6) ∈ [0.0768, 0.07741682395597192]
-p(7) ∈ [0.09984, 0.10043962433386268]
-p(8) ∈ [0.10751999999999999, 0.10810290430888621]
-p(9) ∈ [0.10450944, 0.10507609050787602]
-p(10) ∈ [0.09547776, 0.09602860993056524]
-p(11) ∈ [0.08381644799999999, 0.08435193793918862]
-p(12) ∈ [0.07163903999999999, 0.07215959824837445]
-p(13) ∈ [0.060112994303999995, 0.06061903721931839]
-p(14) ∈ [0.049791565823999996, 0.05028349815423124]
-p(15) ∈ [0.040862004019199996, 0.041340219226253104]
-p(16) ∈ [0.0333100744704, 0.03377495504482645]
-p(17) ∈ [0.027021630662246398, 0.027473548429167327]
-p(18) ∈ [0.0218419625459712, 0.022281278962474012]
-p(19) ∈ [0.01760857099862016, 0.018035637442862528]
-p(20) ∈ [0.01416793983811584, 0.01458309789036826]
-p(21) ∈ [0.011383034679121674, 0.011786616394973382]
-p(22) ∈ [0.009135650622563942, 0.00952797879851072]
-p(23) ∈ [0.007326059503256863, 0.007707447934883143]
-p(24) ∈ [0.005871373116789227, 0.006242126849751007]
-p(25) ∈ [0.004703414646366151, 0.0050638302203754575]
-p(26) ∈ [0.003766521746623675, 0.004116887432629724]
-p(27) ∈ [0.0030154915501253645, 0.0033560875808821256]
-p(28) ∈ [0.002413757785839339, 0.002744856580043911]
-p(29) ∈ [0.0019318249777321769, 0.0022536913579132545]
-p(30) ∈ [0.0015459512402690762, 0.001858842644599776]
-p(31) ∈ [0.0012370557505240263, 0.0015412224387284907]
-p(32) ∈ [0.000989821456787986, 0.0012855067103064522]
-p(33) ∈ [0.0007919632798050501, 0.0010794035963774828]
-p(34) ∈ [0.0006336342926901978, 0.000913059575514119]
-p(35) ∈ [0.0005069456355483972, 0.0007785793771622089]
-p(36) ∈ [0.00040557942931187895, 0.0006696388903507508]
-p(37) ∈ [0.0003244772959875669, 0.0005811736789548664]
-p(38) ∈ [0.00025959008831855866, 0.000509128706511809]
-p(39) ∈ [0.00020767702157421675, 0.0004502574633006951]
-p(40) ∈ [0.00016614458781190195, 0.00040196087602522283]
-p(41) ∈ [0.0001329174525814014, 0.00036215820006676677]
-p(42) ∈ [0.00010633503146439408, 0.00032918359169663216]
-p(43) ∈ [0.00008506866681113707, 0.0003017032806061903]
-p(44) ∈ [0.00006805531843270596, 0.0002786492565098644]
-p(45) ∈ [0.00005444448573645183, 0.00025916618730535766]
-p(46) ∈ [0.00004355572718333741, 0.0002425689346666059]
-p(47) ∈ [0.000034844664903176985, 0.00022830855490238984]
-p(48) ∈ [0.000027875781816446418, 0.00021594509242626718]
-p(49) ∈ [0.000022300655389500266, 0.0002051258099617419]
-p(50) ∈ [0.00001784054227340619, 0.00019556776973004062]
-p(51) ∈ [0.0, 0.00019011452540718872]
-p(52) ∈ [0.0, 0.00018481334025894296]
-p(53) ∈ [0.0, 0.0001796599742419066]
-p(54) ∈ [0.0, 0.00017465030554276052]
-p(55) ∈ [0.0, 0.00016978032728151582]
-p(56) ∈ [0.0, 0.0001650461443066938]
-p(57) ∈ [0.0, 0.00016044397007986965]
-p(58) ∈ [0.0, 0.00015597012364708767]
-p(59) ∈ [0.0, 0.0001516210266947265]
-p(60) ∈ [0.0, 0.00014739320068745887]
-p(61) ∈ [0.0, 0.00014328326408601696]
-p(62) ∈ [0.0, 0.00013928792964253814]
-p(63) ∈ [0.0, 0.00013540400177132773]
-p(64) ∈ [0.0, 0.00013162837399293567]
-p(65) ∈ [0.0, 0.00012795802644950327]
-p(66) ∈ [0.0, 0.0001243900234893923]
-p(67) ∈ [0.0, 0.00012092151131916454]
-p(68) ∈ [0.0, 0.00011754971572103426]
-p(69) ∈ [0.0, 0.00011427193983396733]
-p(70) ∈ [0.0, 0.00011108556199665268]
-p(71) ∈ [0.0, 0.00010798803365062067]
-p(72) ∈ [0.0, 0.00010497687730183131]
-p(73) ∈ [0.0, 0.00010204968453910177]
-p(74) ∈ [0.0, 0.00009920411410778849]
-p(75) ∈ [0.0, 0.00009643789003718311]
-p(76) ∈ [0.0, 0.00009374879982012418]
-p(77) ∈ [0.0, 0.00009113469264336916]
-p(78) ∈ [0.0, 0.00008859347766731083]
-p(79) ∈ [0.0, 0.00008612312235366244]
-p(80) ∈ [0.0, 0.00008372165083977398]
-p(81) ∈ [0.0, 0.00008138714235827926]
-p(82) ∈ [0.0, 0.0000791177297008098]
-p(83) ∈ [0.0, 0.00007691159772454684]
-p(84) ∈ [0.0, 0.00007476698190041686]
-p(85) ∈ [0.0, 0.0000726821669017694]
-p(86) ∈ [0.0, 0.0000706554852324086]
-p(87) ∈ [0.0, 0.0000686853158928807]
-p(88) ∈ [0.0, 0.0000667700830839512]
-p(89) ∈ [0.0, 0.00006490825494623442]
-p(90) ∈ [0.0, 0.00006309834233496734]
-p(91) ∈ [0.0, 0.000061338897628948]
-p(92) ∈ [0.0, 0.00005962851357268562]
-p(93) ∈ [0.0, 0.00005796582215083627]
-p(94) ∈ [0.0, 0.000056349493494024195]
-p(95) ∈ [0.0, 0.000054778234815173155]
-p(96) ∈ [0.0, 0.00005325078937549748]
-p(97) ∈ [0.0, 0.00005176593547932551]
-p(98) ∈ [0.0, 0.0000503224854969515]
-p(99) ∈ [0.0, 0.00004891928491473463]
-p(100) ∈ [0.0, 0.00004755521141168505]
-p(101) ∈ [0.0, 0.00004622917396179865]
-p(102) ∈ [0.0, 0.00004494011196142248]
-p(103) ∈ [0.0, 0.00004368699438095282]
-p(104) ∈ [0.0, 0.00004246881894018744]
-p(105) ∈ [0.0, 0.00004128461130667252]
-p(106) ∈ [0.0, 0.000040133424316402933]
-p(107) ∈ [0.0, 0.00003901433721625275]
-p(108) ∈ [0.0, 0.00003792645492752979]
-p(109) ∈ [0.0, 0.00003686890733006552]
-p(110) ∈ [0.0, 0.00003584084856626734]
-p(111) ∈ [0.0, 0.00003484145636457691]
-p(112) ∈ [0.0, 0.00003386993138179322]
-p(113) ∈ [0.0, 0.00003292549656373447]
-p(114) ∈ [0.0, 0.000032007396523727285]
-p(115) ∈ [0.0, 0.00003111489693842638]
-p(116) ∈ [0.0, 0.000030247283960481102]
-p(117) ∈ [0.0, 0.00002940386364757948]
-p(118) ∈ [0.0, 0.000028583961407412733]
-p(119) ∈ [0.0, 0.00002778692145811659]
-p(120) ∈ [0.0, 0.000027012106303757695]
-p(121) ∈ [0.0, 0.000026258896224445675]
-p(122) ∈ [0.0, 0.00002552668878066298]
-p(123) ∈ [0.0, 0.00002481489833141609]
-p(124) ∈ [0.0, 0.000024122955565822667]
-p(125) ∈ [0.0, 0.000023450307047760008]
-p(126) ∈ [0.0, 0.000022796414773210596]
-p(127) ∈ [0.0, 0.00002216075573995072]
-p(128) ∈ [0.0, 0.000021542821529237926]
-p(129) ∈ [0.0, 0.000020942117899162815]
-p(130) ∈ [0.0, 0.00002035816438933986]
-p(131) ∈ [0.0, 0.00001979049393662108]
-p(132) ∈ [0.0, 0.000019238652501525265]
-p(133) ∈ [0.0, 0.000018702198705083835]
-p(134) ∈ [0.0, 0.000018180703475813035]
-p(135) ∈ [0.0, 0.000017673749706529945]
-p(136) ∈ [0.0, 0.000017180931920737938]
-p(137) ∈ [0.0, 0.000016701855948314666]
-p(138) ∈ [0.0, 0.000016236138610243256]
-p(139) ∈ [0.0, 0.000015783407412134463]
-p(140) ∈ [0.0, 0.000015343300246294754]
-p(141) ∈ [0.0, 0.000014915465102101938]
-p(142) ∈ [0.0, 0.000014499559784456752]
-p(143) ∈ [0.0, 0.000014095251640085175]
-p(144) ∈ [0.0, 0.000013702217291472584]
-p(145) ∈ [0.0, 0.000013320142378216936]
-p(146) ∈ [0.0, 0.000012948721305594083]
-p(147) ∈ [0.0, 0.000012587657000134164]
-p(148) ∈ [0.0, 0.000012236660672013516]
-p(149) ∈ [0.0, 0.000011895451584072105]
-p(150) ∈ [0.0, 0.000011563756827271713]
-p(151) ∈ [0.0, 0.000011241311102415277]
-p(152) ∈ [0.0, 0.000010927856507952815]
-p(153) ∈ [0.0, 0.000010623142333704193]
-p(154) ∈ [0.0, 0.000010326924860333775]
-p(155) ∈ [0.0, 0.000010038967164416547]
-p(156) ∈ [0.0, 9.75903892893981e-6]
-p(157) ∈ [0.0, 9.486916259088874e-6]
-p(158) ∈ [0.0, 9.222381503169422e-6]
-p(159) ∈ [0.0, 8.965223078523298e-6]
-p(160) ∈ [0.0, 8.71523530229849e-6]
-p(161) ∈ [0.0, 8.47221822693795e-6]
-p(162) ∈ [0.0, 8.235977480255678e-6]
-p(163) ∈ [0.0, 8.006324109972131e-6]
-p(164) ∈ [0.0, 7.783074432584665e-6]
-p(165) ∈ [0.0, 7.566049886452067e-6]
-p(166) ∈ [0.0, 7.355076888975729e-6]
-p(167) ∈ [0.0, 7.149986697763178e-6]
-p(168) ∈ [0.0, 6.950615275662972e-6]
-p(169) ∈ [0.0, 6.7568031595629715e-6]
-p(170) ∈ [0.0, 6.568395332847061e-6]
-p(171) ∈ [0.0, 6.385241101408315e-6]
-p(172) ∈ [0.0, 6.2071939731194305e-6]
-p(173) ∈ [0.0, 6.034111540664024e-6]
-p(174) ∈ [0.0, 5.865855367635086e-6]
-p(175) ∈ [0.0, 5.702290877809477e-6]
-p(176) ∈ [0.0, 5.543287247509917e-6]
-p(177) ∈ [0.0, 5.388717300968376e-6]
-p(178) ∈ [0.0, 5.238457408607156e-6]
-p(179) ∈ [0.0, 5.092387388156335e-6]
-p(180) ∈ [0.0, 4.950390408528457e-6]
-p(181) ∈ [0.0, 4.812352896373602e-6]
-p(182) ∈ [0.0, 4.678164445240091e-6]
-p(183) ∈ [0.0, 4.547717727268165e-6]
-p(184) ∈ [0.0, 4.420908407346015e-6]
-p(185) ∈ [0.0, 4.297635059659498e-6]
-p(186) ∈ [0.0, 4.177799086568797e-6]
-p(187) ∈ [0.0, 4.0613046397471355e-6]
-p(188) ∈ [0.0, 3.948058543518473e-6]
-p(189) ∈ [0.0, 3.837970220332866e-6]
-p(190) ∈ [0.0, 3.730951618319888e-6]
-p(191) ∈ [0.0, 3.6269171408621596e-6]
-p(192) ∈ [0.0, 3.525783578132663e-6]
-p(193) ∈ [0.0, 3.4274700405410795e-6]
-p(194) ∈ [0.0, 3.3318978940359256e-6]
-p(195) ∈ [0.0, 3.238990697210729e-6]
-p(196) ∈ [0.0, 3.14867414016395e-6]
-p(197) ∈ [0.0, 3.060875985063743e-6]
-p(198) ∈ [0.0, 2.9755260083700188e-6]
-p(199) ∈ [0.0, 2.892555944667597e-6]
-p(200) ∈ [0.0, 2.811899432065525e-6]
-p(201) ∈ [0.0, 2.7334919591188903e-6]
-p(202) ∈ [0.0, 2.6572708132306744e-6]
-p(203) ∈ [0.0, 2.5831750304923785e-6]
-p(204) ∈ [0.0, 2.5111453469232993e-6]
-p(205) ∈ [0.0, 2.441124151069461e-6]
-p(206) ∈ [0.0, 2.373055437924284e-6]
-p(207) ∈ [0.0, 2.306884764134135e-6]
-p(208) ∈ [0.0, 2.2425592044529396e-6]
-p(209) ∈ [0.0, 2.1800273094110144e-6]
-p(210) ∈ [0.0, 2.1192390641642742e-6]
-p(211) ∈ [0.0, 2.060145848490891e-6]
-p(212) ∈ [0.0, 2.0027003979034152e-6]
-p(213) ∈ [0.0, 1.9468567658452518e-6]
-p(214) ∈ [0.0, 1.8925702869412553e-6]
-p(215) ∈ [0.0, 1.8397975412730549e-6]
-p(216) ∈ [0.0, 1.7884963196505277e-6]
-p(217) ∈ [0.0, 1.738625589851651e-6]
-p(218) ∈ [0.0, 1.690145463803728e-6]
-p(219) ∈ [0.0, 1.6430171656797358e-6]
-p(220) ∈ [0.0, 1.597203000884283e-6]
-p(221) ∈ [0.0, 1.5526663259043651e-6]
-p(222) ∈ [0.0, 1.5093715190008085e-6]
-p(223) ∈ [0.0, 1.4672839517169588e-6]
-p(224) ∈ [0.0, 1.4263699611818245e-6]
-p(225) ∈ [0.0, 1.3865968231855256e-6]
-p(226) ∈ [0.0, 1.3479327260055114e-6]
-p(227) ∈ [0.0, 1.3103467449626097e-6]
-p(228) ∈ [0.0, 1.2738088176865633e-6]
-p(229) ∈ [0.0, 1.2382897200712626e-6]
-p(230) ∈ [0.0, 1.2037610429004495e-6]
-p(231) ∈ [0.0, 1.1701951691251919e-6]
-p(232) ∈ [0.0, 1.1375652517749587e-6]
-p(233) ∈ [0.0, 1.105845192484624e-6]
-p(234) ∈ [0.0, 1.0750096206202304e-6]
-p(235) ∈ [0.0, 1.0450338729868105e-6]
-p(236) ∈ [0.0, 1.015893974102041e-6]
-p(237) ∈ [0.0, 9.87566617019948e-7]
-p(238) ∈ [0.0, 9.600291446893279e-7]
-p(239) ∈ [0.0, 9.332595318319732e-7]
-p(240) ∈ [0.0, 9.072363673262096e-7]
-p(241) ∈ [0.0, 8.819388370816517e-7]
-p(242) ∈ [0.0, 8.573467073914833e-7]
-p(243) ∈ [0.0, 8.334403087489456e-7]
-p(244) ∈ [0.0, 8.102005201150877e-7]
-p(245) ∈ [0.0, 7.876087536251998e-7]
-p(246) ∈ [0.0, 7.656469397216925e-7]
-p(247) ∈ [0.0, 7.442975127015362e-7]
-p(248) ∈ [0.0, 7.235433966666946e-7]
-p(249) ∈ [0.0, 7.033679918663218e-7]
-p(250) ∈ [0.0, 6.837551614197946e-7]
-p(251) ∈ [0.0, 6.646892184099612e-7]
-p(252) ∈ [0.0, 6.461549133362852e-7]
-p(253) ∈ [0.0, 6.281374219178477e-7]
-p(254) ∈ [0.0, 6.106223332364525e-7]
-p(255) ∈ [0.0, 5.935956382103509e-7]
-p(256) ∈ [0.0, 5.770437183893671e-7]
-p(257) ∈ [0.0, 5.609533350624625e-7]
-p(258) ∈ [0.0, 5.453116186690258e-7]
-p(259) ∈ [0.0, 5.301060585054215e-7]
-p(260) ∈ [0.0, 5.153244927185614e-7]
-p(261) ∈ [0.0, 5.009550985784984e-7]
-p(262) ∈ [0.0, 4.869863830222598e-7]
-p(263) ∈ [0.0, 4.7340717346135843e-7]
-p(264) ∈ [0.0, 4.602066088456288e-7]
-p(265) ∈ [0.0, 4.4737413097624064e-7]
-p(266) ∈ [0.0, 4.3489947606094123e-7]
-p(267) ∈ [0.0, 4.227726665047739e-7]
-p(268) ∈ [0.0, 4.109840029297043e-7]
-p(269) ∈ [0.0, 3.995240564167739e-7]
-p(270) ∈ [0.0, 3.8838366096457336e-7]
-p(271) ∈ [0.0, 3.7755390615800634e-7]
-p(272) ∈ [0.0, 3.6702613004147763e-7]
-p(273) ∈ [0.0, 3.5679191219080715e-7]
-p(274) ∈ [0.0, 3.468430669783277e-7]
-p(275) ∈ [0.0, 3.371716370257798e-7]
-p(276) ∈ [0.0, 3.27769886839767e-7]
-p(277) ∈ [0.0, 3.186302966246815e-7]
-p(278) ∈ [0.0, 3.0974555626815094e-7]
-p(279) ∈ [0.0, 3.011085594941961e-7]
-p(280) ∈ [0.0, 2.927123981794229e-7]
-p(281) ∈ [0.0, 2.845503568277026e-7]
-p(282) ∈ [0.0, 2.766159071989211e-7]
-p(283) ∈ [0.0, 2.6890270308750077e-7]
-p(284) ∈ [0.0, 2.6140457524651943e-7]
-p(285) ∈ [0.0, 2.541155264533653e-7]
-p(286) ∈ [0.0, 2.4702972671298265e-7]
-p(287) ∈ [0.0, 2.401415085948706e-7]
-p(288) ∈ [0.0, 2.3344536270010603e-7]
-p(289) ∈ [0.0, 2.269359332547647e-7]
-p(290) ∈ [0.0, 2.2060801382621611e-7]
-p(291) ∈ [0.0, 2.1445654315886588e-7]
-p(292) ∈ [0.0, 2.084766011260152e-7]
-p(293) ∈ [0.0, 2.026634047945991e-7]
-p(294) ∈ [0.0, 1.9701230459965616e-7]
-p(295) ∈ [0.0, 1.9151878062547026e-7]
-p(296) ∈ [0.0, 1.8617843899040922e-7]
-p(297) ∈ [0.0, 1.8098700833256947e-7]
-p(298) ∈ [0.0, 1.759403363934154e-7]
-p(299) ∈ [0.0, 1.7103438669668136e-7]
+p(1) ∈ [0.0, 0.0007236349603403504]
+p(2) ∈ [0.0, 0.0007023582063854435]
+p(3) ∈ [0.0, 0.0006817070444536814]
+p(4) ∈ [0.0, 0.0006616630805090071]
+p(5) ∈ [0.0384, 0.03904220846134797]
+p(6) ∈ [0.0768, 0.07742332585869782]
+p(7) ∈ [0.09984, 0.10044499845378223]
+p(8) ∈ [0.10751999999999999, 0.10810720992234067]
+p(9) ∈ [0.10450944, 0.10507938442008848]
+p(10) ∈ [0.09547776, 0.09603094656860423]
+p(11) ∈ [0.08381644799999999, 0.08435336944163217]
+p(12) ∈ [0.07163903999999999, 0.0721601745517874]
+p(13) ∈ [0.060112994303999995, 0.060618806141651854]
+p(14) ∈ [0.049791565823999996, 0.05028250547524984]
+p(15) ∈ [0.040862004019199996, 0.0413385087650917]
+p(16) ∈ [0.0333100744704, 0.03377256873477501]
+p(17) ∈ [0.027021630662246398, 0.027470526389778968]
+p(18) ∈ [0.0218419625459712, 0.022277659569088455]
+p(19) ∈ [0.01760857099862016, 0.01803145739363372]
+p(20) ∈ [0.01416793983811584, 0.014578392270882262]
+p(21) ∈ [0.011383034679121674, 0.011781418740539569]
+p(22) ∈ [0.009135650622563942, 0.009522321154206606]
+p(23) ∈ [0.007326059503256863, 0.007701360913430457]
+p(24) ∈ [0.005871373116789227, 0.00623563968729803]
+p(25) ∈ [0.004703414646366151, 0.005056970830258105]
+p(26) ∈ [0.003766521746623675, 0.00410968245718144]
+p(27) ∈ [0.0030154915501253645, 0.003348562441360284]
+p(28) ∈ [0.002413757785839339, 0.0027370355247381497]
+p(29) ∈ [0.0019318249777321769, 0.002245597508498957]
+p(30) ∈ [0.0015459512402690762, 0.0018504980407977908]
+p(31) ∈ [0.0012370557505240263, 0.0015326480813301119]
+p(32) ∈ [0.000989821456787986, 0.001276722602620697]
+p(33) ∈ [0.0007919632798050501, 0.0010704287841557735]
+p(34) ∈ [0.0006336342926901978, 0.0009039121854056116]
+p(35) ∈ [0.0005069456355483972, 0.0007692766537512089]
+p(36) ∈ [0.00040557942931187895, 0.0006601972318259181]
+p(37) ∈ [0.0003244772959875669, 0.0005716086714582218]
+p(38) ∈ [0.00025959008831855866, 0.000499455157213929]
+p(39) ∈ [0.00020767702157421675, 0.00044048943224690636]
+p(40) ∈ [0.00016614458781190195, 0.0003921117067960837]
+p(41) ∈ [0.0001329174525814014, 0.000352240549294652]
+p(42) ∈ [0.00010633503146439408, 0.0003192094574788143]
+p(43) ∈ [0.00008506866681113707, 0.0002916840298534331]
+p(44) ∈ [0.00006805531843270596, 0.00026859565126821503]
+p(45) ∈ [0.00005444448573645183, 0.00024908841008753745]
+p(46) ∈ [0.00004355572718333741, 0.00023247661282815632]
+p(47) ∈ [0.000034844664903176985, 0.00021821078409652795]
+p(48) ∈ [0.000027875781816446418, 0.00020585045917024324]
+p(49) ∈ [0.000022300655389500266, 0.00019504241334636848]
+p(50) ∈ [0.00001784054227340619, 0.00018550324230297673]
+p(51) ∈ [0.0, 0.0001800489634736875]
+p(52) ∈ [0.0, 0.00017475505465830372]
+p(53) ∈ [0.0, 0.00016961680056041956]
+p(54) ∈ [0.0, 0.00016462962452563375]
+p(55) ∈ [0.0, 0.00015978908446511326]
+p(56) ∈ [0.0, 0.00015509086889901484]
+p(57) ∈ [0.0, 0.00015053079311624026]
+p(58) ∈ [0.0, 0.0001461047954471049]
+p(59) ∈ [0.0, 0.00014180893364559939]
+p(60) ∈ [0.0, 0.00013763938137802234]
+p(61) ∈ [0.0, 0.00013359242481485628]
+p(62) ∈ [0.0, 0.00012966445932285155]
+p(63) ∈ [0.0, 0.00012585198625437131]
+p(64) ∈ [0.0, 0.0001221516098311383]
+p(65) ∈ [0.0, 0.00011856003411960753]
+p(66) ∈ [0.0, 0.000115074060095271]
+p(67) ∈ [0.0, 0.00011169058279327928]
+p(68) ∈ [0.0, 0.00010840658854284248]
+p(69) ∈ [0.0, 0.00010521915228294695]
+p(70) ∈ [0.0, 0.00010212543495699685]
+p(71) ∈ [0.0, 0.00009912268098406016]
+p(72) ∈ [0.0, 0.00009620821580446651]
+p(73) ∈ [0.0, 0.00009337944349757099]
+p(74) ∈ [0.0, 0.00009063384446956177]
+p(75) ∈ [0.0, 0.00008796897320925232]
+p(76) ∈ [0.0, 0.00008538245610985909]
+p(77) ∈ [0.0, 0.00008287198935482464]
+p(78) ∈ [0.0, 0.00008043533686580317]
+p(79) ∈ [0.0, 0.00007807032831098042]
+p(80) ∈ [0.0, 0.00007577485717195436]
+p(81) ∈ [0.0, 0.00007354687886745454]
+p(82) ∈ [0.0, 0.00007138440893222893]
+p(83) ∈ [0.0, 0.00006928552124947639]
+p(84) ∈ [0.0, 0.00006724834633524997]
+p(85) ∈ [0.0, 0.00006527106967330356]
+p(86) ∈ [0.0, 0.00006335193009889814]
+p(87) ∈ [0.0, 0.00006148921823012837]
+p(88) ∈ [0.0, 0.000059681274945372344]
+p(89) ∈ [0.0, 0.000057926489905508326]
+p(90) ∈ [0.0, 0.00005622330011958198]
+p(91) ∈ [0.0, 0.0000545701885526469]
+p(92) ∈ [0.0, 0.00005296568277453821]
+p(93) ∈ [0.0, 0.000051408353648375666]
+p(94) ∈ [0.0, 0.00004989681405762831]
+p(95) ∈ [0.0, 0.00004842971767060664]
+p(96) ∈ [0.0, 0.00004700575774128196]
+p(97) ∈ [0.0, 0.00004562366594536483]
+p(98) ∈ [0.0, 0.000044282211250605707]
+p(99) ∈ [0.0, 0.00004298019882031183]
+p(100) ∈ [0.0, 0.0000417164689491035]
+p(101) ∈ [0.0, 0.00004048989602996188]
+p(102) ∈ [0.0, 0.00003929938755164835]
+p(103) ∈ [0.0, 0.00003814388312560227]
+p(104) ∈ [0.0, 0.00003702235354145054]
+p(105) ∈ [0.0, 0.00003593379985028762]
+p(106) ∈ [0.0, 0.00003487725247490951]
+p(107) ∈ [0.0, 0.00003385177034620916]
+p(108) ∈ [0.0, 0.00003285644006496411]
+p(109) ∈ [0.0, 0.0000318903750882698]
+p(110) ∈ [0.0, 0.00003095271493989378]
+p(111) ∈ [0.0, 0.000030042624443847614]
+p(112) ∈ [0.0, 0.0000291592929804938]
+p(113) ∈ [0.0, 0.000028301933764525007]
+p(114) ∈ [0.0, 0.000027469783144172657]
+p(115) ∈ [0.0, 0.000026662099921020588]
+p(116) ∈ [0.0, 0.000025878164689817985]
+p(117) ∈ [0.0, 0.000025117279197703494]
+p(118) ∈ [0.0, 0.000024378765722269848]
+p(119) ∈ [0.0, 0.000023661966467915012]
+p(120) ∈ [0.0, 0.000022966242979942156]
+p(121) ∈ [0.0, 0.00002229097557588665]
+p(122) ∈ [0.0, 0.000021635562793563487]
+p(123) ∈ [0.0, 0.00002099942085534359]
+p(124) ∈ [0.0, 0.00002038198314818176]
+p(125) ∈ [0.0, 0.000019782699718933183]
+p(126) ∈ [0.0, 0.000019201036784508925]
+p(127) ∈ [0.0, 0.000018636476256434154]
+p(128) ∈ [0.0, 0.000018088515279385567]
+p(129) ∈ [0.0, 0.000017556665783297033]
+p(130) ∈ [0.0, 0.000017040454048634502]
+p(131) ∈ [0.0, 0.000016539420284452947]
+p(132) ∈ [0.0, 0.000016053118218859557]
+p(133) ∈ [0.0, 0.000015581114701518352]
+p(134) ∈ [0.0, 0.000015122989317842214]
+p(135) ∈ [0.0, 0.000014678334014528681]
+p(136) ∈ [0.0, 0.000014246752736105954]
+p(137) ∈ [0.0, 0.000013827861072165403]
+p(138) ∈ [0.0, 0.000013421285914966362]
+p(139) ∈ [0.0, 0.00001302666512710823]
+p(140) ∈ [0.0, 0.000012643647218973874]
+p(141) ∈ [0.0, 0.000012271891035657049]
+p(142) ∈ [0.0, 0.000011911065453094957]
+p(143) ∈ [0.0, 0.000011560849083135305]
+p(144) ∈ [0.0, 0.000011220929987275163]
+p(145) ∈ [0.0, 0.000010891005398816639]
+p(146) ∈ [0.0, 0.000010570781453191906]
+p(147) ∈ [0.0, 0.000010259972926217373]
+p(148) ∈ [0.0, 9.958302980043876e-6]
+p(149) ∈ [0.0, 9.665502916576578e-6]
+p(150) ∈ [0.0, 9.38131193814498e-6]
+p(151) ∈ [0.0, 9.10547691520985e-6]
+p(152) ∈ [0.0, 8.837752160900184e-6]
+p(153) ∈ [0.0, 8.577899212179355e-6]
+p(154) ∈ [0.0, 8.325686617445555e-6]
+p(155) ∈ [0.0, 8.080889730377338e-6]
+p(156) ∈ [0.0, 7.843290509840638e-6]
+p(157) ∈ [0.0, 7.612677325679044e-6]
+p(158) ∈ [0.0, 7.388844770214352e-6]
+p(159) ∈ [0.0, 7.171593475289476e-6]
+p(160) ∈ [0.0, 6.960729934690798e-6]
+p(161) ∈ [0.0, 6.756066331791742e-6]
+p(162) ∈ [0.0, 6.5574203722640895e-6]
+p(163) ∈ [0.0, 6.364615121708014e-6]
+p(164) ∈ [0.0, 6.177478848056213e-6]
+p(165) ∈ [0.0, 5.995844868611777e-6]
+p(166) ∈ [0.0, 5.819551401583537e-6]
+p(167) ∈ [0.0, 5.6484414219866555e-6]
+p(168) ∈ [0.0, 5.482362521780134e-6]
+p(169) ∈ [0.0, 5.321166774116622e-6]
+p(170) ∈ [0.0, 5.164710601583643e-6]
+p(171) ∈ [0.0, 5.012854648318877e-6]
+p(172) ∈ [0.0, 4.8654636558855825e-6]
+p(173) ∈ [0.0, 4.7224063427975995e-6]
+p(174) ∈ [0.0, 4.583555287586642e-6]
+p(175) ∈ [0.0, 4.448786815307712e-6]
+p(176) ∈ [0.0, 4.317980887381542e-6]
+p(177) ∈ [0.0, 4.191020994675975e-6]
+p(178) ∈ [0.0, 4.067794053731014e-6]
+p(179) ∈ [0.0, 3.94819030603513e-6]
+p(180) ∈ [0.0, 3.832103220263116e-6]
+p(181) ∈ [0.0, 3.7194293973883935e-6]
+p(182) ∈ [0.0, 3.6100684785852724e-6]
+p(183) ∈ [0.0, 3.503923055839117e-6]
+p(184) ∈ [0.0, 3.4008985851848105e-6]
+p(185) ∈ [0.0, 3.3009033024962363e-6]
+p(186) ∈ [0.0, 3.2038481417517644e-6]
+p(187) ∈ [0.0, 3.109646655702947e-6]
+p(188) ∈ [0.0, 3.018214938875761e-6]
+p(189) ∈ [0.0, 2.929471552835816e-6]
+p(190) ∈ [0.0, 2.8433374536509573e-6]
+p(191) ∈ [0.0, 2.759735921486661e-6]
+p(192) ∈ [0.0, 2.678592492271504e-6]
+p(193) ∈ [0.0, 2.5998348913718505e-6]
+p(194) ∈ [0.0, 2.5233929692166745e-6]
+p(195) ∈ [0.0, 2.4491986388151787e-6]
+p(196) ∈ [0.0, 2.3771858151115616e-6]
+p(197) ∈ [0.0, 2.3072903561229096e-6]
+p(198) ∈ [0.0, 2.2394500058077905e-6]
+p(199) ∈ [0.0, 2.1736043386146568e-6]
+p(200) ∈ [0.0, 2.109694705660673e-6]
+p(201) ∈ [0.0, 2.047664182493025e-6]
+p(202) ∈ [0.0, 1.9874575183861825e-6]
+p(203) ∈ [0.0, 1.929021087129954e-6]
+p(204) ∈ [0.0, 1.8723028392645007e-6]
+p(205) ∈ [0.0, 1.81725225571977e-6]
+p(206) ∈ [0.0, 1.763820302818042e-6]
+p(207) ∈ [0.0, 1.7119593885995277e-6]
+p(208) ∈ [0.0, 1.661623320432101e-6]
+p(209) ∈ [0.0, 1.6127672638674193e-6]
+p(210) ∈ [0.0, 1.5653477027067807e-6]
+p(211) ∈ [0.0, 1.5193224002411475e-6]
+p(212) ∈ [0.0, 1.4746503616308164e-6]
+p(213) ∈ [0.0, 1.431291797391222e-6]
+p(214) ∈ [0.0, 1.3892080879523547e-6]
+p(215) ∈ [0.0, 1.3483617492602233e-6]
+p(216) ∈ [0.0, 1.3087163993897245e-6]
+p(217) ∈ [0.0, 1.2702367261391806e-6]
+p(218) ∈ [0.0, 1.2328884555776833e-6]
+p(219) ∈ [0.0, 1.1966383215172257e-6]
+p(220) ∈ [0.0, 1.1614540358824356e-6]
+p(221) ∈ [0.0, 1.1273042599515141e-6]
+p(222) ∈ [0.0, 1.0941585764427658e-6]
+p(223) ∈ [0.0, 1.0619874624218588e-6]
+p(224) ∈ [0.0, 1.0307622630056802e-6]
+p(225) ∈ [0.0, 1.0004551658393687e-6]
+p(226) ∈ [0.0, 9.710391763237874e-7]
+p(227) ∈ [0.0, 9.424880935713739e-7]
+p(228) ∈ [0.0, 9.14776487068952e-7]
+p(229) ∈ [0.0, 8.878796740267161e-7]
+p(230) ∈ [0.0, 8.617736973932154e-7]
+p(231) ∈ [0.0, 8.364353045167546e-7]
+p(232) ∈ [0.0, 8.118419264342054e-7]
+p(233) ∈ [0.0, 7.879716577687806e-7]
+p(234) ∈ [0.0, 7.648032372188653e-7]
+p(235) ∈ [0.0, 7.423160286205292e-7]
+p(236) ∈ [0.0, 7.204900025668485e-7]
+p(237) ∈ [0.0, 6.993057185676688e-7]
+p(238) ∈ [0.0, 6.787443077339169e-7]
+p(239) ∈ [0.0, 6.587874559710393e-7]
+p(240) ∈ [0.0, 6.394173876665971e-7]
+p(241) ∈ [0.0, 6.206168498574886e-7]
+p(242) ∈ [0.0, 6.023690968626959e-7]
+p(243) ∈ [0.0, 5.846578753678706e-7]
+p(244) ∈ [0.0, 5.674674099484691e-7]
+p(245) ∈ [0.0, 5.507823890185472e-7]
+p(246) ∈ [0.0, 5.345879511926969e-7]
+p(247) ∈ [0.0, 5.188696720489763e-7]
+p(248) ∈ [0.0, 5.036135512810453e-7]
+p(249) ∈ [0.0, 4.888060002280613e-7]
+p(250) ∈ [0.0, 4.7443382977122896e-7]
+p(251) ∈ [0.0, 4.6048423858622195e-7]
+p(252) ∈ [0.0, 4.469448017410154e-7]
+p(253) ∈ [0.0, 4.3380345962897097e-7]
+p(254) ∈ [0.0, 4.2104850722731824e-7]
+p(255) ∈ [0.0, 4.086685836714649e-7]
+p(256) ∈ [0.0, 3.966526621358491e-7]
+p(257) ∈ [0.0, 3.849900400123217e-7]
+p(258) ∈ [0.0, 3.7367032937730856e-7]
+p(259) ∈ [0.0, 3.626834477392646e-7]
+p(260) ∈ [0.0, 3.5201960905817566e-7]
+p(261) ∈ [0.0, 3.416693150291108e-7]
+p(262) ∈ [0.0, 3.3162334662206085e-7]
+p(263) ∈ [0.0, 3.218727558705281e-7]
+p(264) ∈ [0.0, 3.124088579015521e-7]
+p(265) ∈ [0.0, 3.032232232000743e-7]
+p(266) ∈ [0.0, 2.9430767010075003e-7]
+p(267) ∈ [0.0, 2.8565425750052077e-7]
+p(268) ∈ [0.0, 2.7725527778545614e-7]
+p(269) ∈ [0.0, 2.6910324996556475e-7]
+p(270) ∈ [0.0, 2.6119091301145993e-7]
+p(271) ∈ [0.0, 2.5351121938694437e-7]
+p(272) ∈ [0.0, 2.460573287717542e-7]
+p(273) ∈ [0.0, 2.3882260196887014e-7]
+p(274) ∈ [0.0, 2.3180059499097014e-7]
+p(275) ∈ [0.0, 2.2498505332075532e-7]
+p(276) ∈ [0.0, 2.183699063400375e-7]
+p(277) ∈ [0.0, 2.1194926192262601e-7]
+p(278) ∈ [0.0, 2.0571740118619776e-7]
+p(279) ∈ [0.0, 1.9966877339847594e-7]
+p(280) ∈ [0.0, 1.9379799103318044e-7]
+p(281) ∈ [0.0, 1.8809982497134606e-7]
+p(282) ∈ [0.0, 1.825691998437347e-7]
+p(283) ∈ [0.0, 1.7720118951019253e-7]
+p(284) ∈ [0.0, 1.71991012671926e-7]
+p(285) ∈ [0.0, 1.6693402861278837e-7]
+p(286) ∈ [0.0, 1.6202573306578334e-7]
+p(287) ∈ [0.0, 1.5726175420110455e-7]
+p(288) ∈ [0.0, 1.5263784873213687e-7]
+p(289) ∈ [0.0, 1.4814989813595158e-7]
+p(290) ∈ [0.0, 1.4379390498492887e-7]
+p(291) ∈ [0.0, 1.3956598938623994e-7]
+p(292) ∈ [0.0, 1.3546238552601804e-7]
+p(293) ∈ [0.0, 1.3147943831513946e-7]
+p(294) ∈ [0.0, 1.2761360013362755e-7]
+p(295) ∈ [0.0, 1.2386142767077967e-7]
+p(296) ∈ [0.0, 1.202195788582027e-7]
+p(297) ∈ [0.0, 1.166848098930252e-7]
+p(298) ∈ [0.0, 1.1325397234863501e-7]
+p(299) ∈ [0.0, 1.0992401037036853e-7]
 
-Asymptotics: p(n) <= 0.000804259962721654 * 0.9721158331437767^n for n >= 51
+Asymptotics: p(n) <= 0.0008248889172978868 * 0.9705973935464647^n for n >= 51
 
 Moments:
-0-th (raw) moment ∈ [0.9999286376961928, 1.0260314306717224]
-1-th (raw) moment ∈ [11.412741739755202, 12.379955384523026]
-2-th (raw) moment ∈ [155.29659065076004, 225.289077450277]
-3-th (raw) moment ∈ [2536.187781680583, 10041.156731918321]
-4-th (raw) moment ∈ [49456.87752793957, 1115013.4708176444]
-Total time: 1.97837s
+0-th (raw) moment ∈ [0.9999286376961928, 1.0251288166443175]
+1-th (raw) moment ∈ [11.412741739755202, 12.299261041396628]
+2-th (raw) moment ∈ [155.29659065076004, 216.2139241783264]
+3-th (raw) moment ∈ [2536.187781680583, 8735.710981215112]
+4-th (raw) moment ∈ [49456.87752793957, 884224.1833355105]
+Total time: 1.14079 s
