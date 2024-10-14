@@ -12,7 +12,7 @@ geom_bound_output = Path("outputs/asym_rw_bound_probs.txt").read_text()
 residual_output = Path("outputs/asym_rw_residual.txt").read_text()
                           
 
-indices = list(range(200))[1::2]
+indices = list(range(300))[1::2]
 
 # Extracted bounds for residual_output
 residual_bounds = parse_output(residual_output)[1::2]
@@ -50,12 +50,12 @@ ax.plot(indices, tail_uppers, 'k-', marker='|', alpha=0.5, linewidth=1, label='G
 ax.scatter(indices, exact, marker='x', color='green', zorder=5, s=20, label='Exact probability')
 
 # Setting symmetrical logarithmic scale
-linthresh = 1e-7
+linthresh = 1e-14
 ax.set_yscale('symlog', linthresh=linthresh)
 
 # Customizing the y-axis labels
 ax.set_ylim(bottom=0, top=1)
-ax.set_yticks([0, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1])
+ax.set_yticks([0, 1e-14, 1e-12, 1e-10, 1e-8, 1e-6, 1e-4, 1e-2, 1])
 ax.yaxis.set_major_formatter(ticker.LogFormatterSciNotation())
 
 plt.xlabel('Result value')
