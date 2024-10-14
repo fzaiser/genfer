@@ -73,21 +73,24 @@ fn run_program(program: &Program, args: &CliArgs) {
 
     let result = result.marginal(program.result);
 
-    if args.verbose {
-        println!("\nMarginalized bound:");
-        let ax = Axis(program.result.id());
-        for i in 0..result.lower.masses.len_of(ax) {
-            let lo = result
-                .lower
-                .masses
-                .index_axis(ax, i)
-                .first()
-                .unwrap()
-                .clone();
-            let hi = lo.clone() + residual.clone();
-            println!("p'({i}) {}", in_iv(&Interval::exact(lo, hi)));
-        }
+    println!("\nUnnormalized bounds:");
+    let ax = Axis(program.result.id());
+    for i in 0..result.lower.masses.len_of(ax) {
+        let lo = result
+            .lower
+            .masses
+            .index_axis(ax, i)
+            .first()
+            .unwrap()
+            .clone();
+        let hi = lo.clone() + residual.clone();
+        println!("p'({i}) {}", in_iv(&Interval::exact(lo, hi)));
     }
+    println!(
+        "p'(n) {} for all n >= {}",
+        in_iv(&Interval::exact(Rational::zero(), residual.clone())),
+        result.lower.masses.len_of(ax)
+    );
 
     let norm = if program.uses_observe() {
         let total_lo = result.lower.total_mass().clone();
