@@ -1,0 +1,17 @@
+[package]
+name = "descent_ipopt"
+version = "0.5.0"
+authors = ["Paul Scott <paul.m.sco@gmail.com>"]
+description = "IPOPT interface for descent"
+keywords = ["optimisation", "optimization", "constraint", "differentiation", "ipopt"]
+categories = ["science"]
+license = "Apache-2.0 OR MIT"
+repository = "https://gitlab.com/pscott/descent"
+readme = "README.md"
+edition = "2018"
+
+[dependencies]
+libc = "0.2"
+fnv = "1.0"
+snafu = "0.6"
+descent = { path = "../descent" }

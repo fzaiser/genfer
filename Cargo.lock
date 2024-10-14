@@ -204,8 +204,6 @@ checksum = "acbf1af155f9b9ef647e42cdc158db4b64a1b61f743629225fde6f3e0be2a7c7"
 [[package]]
 name = "descent"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3100da10cdd99a1fc43571b0ab15f35cbc1f8a5af0a780b7367968c908d33dc4"
 dependencies = [
  "snafu",
 ]
@@ -213,8 +211,6 @@ dependencies = [
 [[package]]
 name = "descent_ipopt"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52d6d1e9f67211b496916d08aaffacdc8b44b8d83e0f13308b9c362901a90f6b"
 dependencies = [
  "descent",
  "fnv",
