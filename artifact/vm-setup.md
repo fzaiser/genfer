@@ -7,7 +7,7 @@ Password: 123
 ## Dependencies
 
 ```shell
-sudo apt install curl git build-essential libclang-dev python-is-python3 python3-pip
+sudo apt install curl git build-essential
 
 mkdir artifact
 ln -s ~/artifact ~/Desktop/artifact
@@ -22,12 +22,13 @@ ln -s tool/README.md README.md
 # set up our tool:
 cd tool
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-sudo apt install z3 libz3-dev coinor-cbc coinor-libcbc-dev coinor-libipopt-dev
+sudo apt install libclang-dev z3 libz3-dev coinor-cbc coinor-libcbc-dev coinor-libipopt-dev
 cargo build --release --bins
 cd ..
 
 # set up evaluation of our tool:
-
+sudo apt install python-is-python3 python3-pip
+pip install numpy matplotlib
 
 # set up Polar:
 sudo apt install python3.10-venv # for Polar
@@ -58,3 +59,4 @@ cd ..
 
 * adjust power settings (don't go sleep on inactivity)
 * add English keyboard layout (in addition to German (Neo2))
+* list view instead of icons in file explorer
