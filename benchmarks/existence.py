@@ -17,7 +17,7 @@ class ProgramStats:
         self.has_observations = has_observations
 
 
-stat_tool_path = "../target/debug/stats"
+stat_tool_path = "../target/release/stats"
 
 # e.g. "12 variables"
 var_count_re = re.compile(r"([0-9]+) variables")

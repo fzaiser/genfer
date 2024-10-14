@@ -1,4 +1,4 @@
-# flags(geobound-ev): -u 60 -d 3 --solver adam-barrier
+# flags(geobound-ev): -u 60 -d 3
 
 # true EV: 2.444...
 

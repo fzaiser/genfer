@@ -21,8 +21,8 @@ benchmark_dirs = [
     "ours",
 ]
 
-timeout = 120
-num_runs = 1  # TODO: increase
+timeout = 300  # seconds
+num_runs = 3  # take the fastest of `num_runs` runs
 
 total_time_re = re.compile(r"(?:Total|Elapsed) time: ([0-9.]*) *s")
 flags_re = re.compile(r"flags: (.*)")
@@ -49,13 +49,13 @@ class Tool:
         self.file_ext = file_ext
 
 
-residual_path = "../target/debug/residual" # TODO: Change to release
-geo_bound_path = "../target/debug/geobound"  # TODO: Change to release
-polar_path = os.environ.get("POLAR_PATH", "/home/fabian/repos/polar") # TODO: don't hardcode
+residual_path = "../target/release/residual"
+geo_bound_path = "../target/release/geobound"
+polar_path = os.environ.get("POLAR_PATH", "../../polar")
 tools = [
-    # Tool("geobound-existence", geo_bound_path, ["-u", "0", "--keep-while", "--objective", "balance"]),
-    Tool("geobound-ev", geo_bound_path, ["-u", "30", "--keep-while", "--objective", "ev"]),
-    # Tool("geobound-tail", geo_bound_path, ["-u", "0", "--keep-while", "--objective", "tail"]),
+    Tool("geobound-existence", geo_bound_path, ["-u", "0", "--keep-while"]),
+    Tool("geobound-ev", geo_bound_path, ["-u", "30", "--objective", "ev"]),
+    Tool("geobound-tail", geo_bound_path, ["-u", "0", "--keep-while", "--objective", "tail"]),
     Tool("polar", [fr"{polar_path}/.venv/bin/python", fr"{polar_path}/polar.py"], ["--after_loop"], file_ext=".prob"),
 ]
 
@@ -130,7 +130,7 @@ def run_tool(tool, tool_command, path, flags, timeout):
         )
         if exitcode == 0:
             print(
-                f"Tool {tool} {green}successfully{reset} inferred {path} in {result.time:.4f}s"
+                f"Tool {tool} {green}successfully{reset} inferred {path} in {result.time:.4f} s"
             )
         else:
             result.exitcode = exitcode
@@ -145,12 +145,12 @@ def run_tool(tool, tool_command, path, flags, timeout):
             if "panicked" in stderr:
                 result.error = "panic"
             print(
-                f"Tool {tool} {red}FAILED ({result.error}){reset} with exit code {exitcode} in {measured_time:.3f}s."
+                f"Tool {tool} {red}FAILED ({result.error}){reset} with exit code {exitcode} in {measured_time:.3f} s."
             )
     except subprocess.TimeoutExpired as e:
         stdout = (e.stdout or b"").decode("utf-8")
         stderr = (e.stderr or b"").decode("utf-8")
-        print(f"Timemout of {timeout}s {red}expired{reset}.")
+        print(f"Timemout of {timeout} s {red}expired{reset}.")
         result = BenchmarkResult(
             tool,
             path,
@@ -172,7 +172,6 @@ def bench_tool(tool, command, path: Path, timeout, flags=[]):
     for m in tool_flags_re.finditer(file_contents):
         if tool.startswith(m.group(1).strip()):
             extra_flags = m.group(2).strip().split()
-            print(f"Setting flags for {tool}: {extra_flags}")  # TODO: remove
             if extra_flags[0] == "-u":
                 unroll_index = flags.index("-u")
                 del flags[unroll_index : unroll_index + 2]
@@ -189,13 +188,16 @@ def bench_tool(tool, command, path: Path, timeout, flags=[]):
         result = run_tool(tool, command, path, flags, timeout)
         if best_result is None or (result.time < best_result.time and not result.error):
             best_result = result
+            if result.error:
+                print(f"Skipping remaining {num_runs - run - 1} runs...")
+                break
     with open(path_with_tool.with_suffix(".out"), "w") as f:
         f.write(best_result.stdout)
     if best_result.stderr:
         with open(path_with_tool.with_suffix(".err"), "w") as f:
             f.write(best_result.stderr)
     print(
-        f"Best time of {num_runs} runs of {tool} on {path} with flags {flags} was: {best_result.time:.4f}"
+        f"Best time of {run + 1} runs of {tool} on {path} with flags {flags} was: {best_result.time:.4f} s"
     )
     print()
     return best_result
@@ -225,7 +227,7 @@ def jsonserialize(obj):
 
 if __name__ == "__main__":
     start = time.time()
-    cargo_command = "cargo build --bin residual --bin geobound"  # TODO: Change to release
+    cargo_command = "cargo build --release --bins"
     print(f"Running `{cargo_command}`...")
     with subprocess.Popen(
         cargo_command.split(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT
@@ -250,14 +252,14 @@ if __name__ == "__main__":
                 if res.error:
                     print(f"  {tool}: {red}{res.error}{reset}")
                 else:
-                    print(f"  {tool}: {green}{res.time:.5f}s{reset}")
+                    print(f"  {tool}: {green}{res.time:.5f} s{reset}")
                     print(f"  {tool}: EV bound: {res.evbound}")
                     print(f"  {tool}: tail bound: {res.tailbound}")
             print()
             print()
     end = time.time()
     elapsed = end - start
-    print(f"{green}Benchmarking finished successfully in {elapsed:.1f}s.{reset}")
+    print(f"{green}Benchmarking finished successfully in {elapsed:.1f} s.{reset}")
 
     successes = Counter()
     skipped = Counter()
@@ -276,7 +278,7 @@ if __name__ == "__main__":
             if res.error:
                 print(f"  {tool}: {red}{res.error}{reset}")
             else:
-                print(f"  {tool}: {green}{res.time:.5f}s{reset}")
+                print(f"  {tool}: {green}{res.time:.5f} s{reset}")
                 print(f"  {tool}: EV bound: {res.evbound}")
                 print(f"  {tool}: tail bound: {res.tailbound}")
                 successes[tool] += 1
@@ -289,4 +291,4 @@ if __name__ == "__main__":
     with open("bench-results.json", "w") as f:
         json.dump(all_results, f, indent=2, default=jsonserialize)
     print(f"Results written to {own_path}/bench-results.json")
-    print(f"{blue}Total time: {elapsed:.1f}s{reset}")
+    print(f"{blue}Total time: {elapsed:.1f} s{reset}")

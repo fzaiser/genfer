@@ -1,4 +1,4 @@
-# flags(geobound): --optimizer ipopt
+# flags(geobound): --optimizer ipopt --optimizer linear
 
 # Rabin's mutual exclusion algorithm (see "Probabilistic guarded commands mechanized in HOL" by Hurd, McIver, and Morgan)
 

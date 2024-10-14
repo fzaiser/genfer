@@ -1,4 +1,4 @@
-# flags(geobound-ev): -u 200 --optimizer ipopt
+# flags(geobound-ev): -u 200 --optimizer ipopt --optimizer linear
 
 # true EV: 20
 # true tail: 9.523...^n

@@ -1,5 +1,5 @@
-# flags(geobound-ev): -u 70 -d 3 --solver adam-barrier --optimizer adam-barrier
-# flags(geobound-tail): -d 3 --solver adam-barrier --optimizer adam-barrier
+# flags(geobound-ev): -u 70 -d 3 --optimizer adam-barrier --optimizer linear
+# flags(geobound-tail): -d 3
 
 x := 1;
 y := 1;
