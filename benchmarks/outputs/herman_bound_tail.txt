@@ -1,22 +1,22 @@
 
 CONSTRAINT GENERATION:
 Generated 28 constraints with 258 symbolic variables.
-Constraint generation time: 0.03941 s
+Constraint generation time: 0.00594 s
 
 SOLVING CONSTRAINTS:
 IPOPT found a solution that satisfies all constraints exactly.
-Solver time: 0.04732 s
+Solver time: 0.05274 s
 
 OPTIMIZATION:
 Initial objective: 280.97357967120263
 
 Optimization step 1: IPOPT
-Optimizer time (IPOPT): 0.02359 s
+Optimizer time (IPOPT): 0.04039 s
 Improved objective: 2.0004074333130473
 
 Optimization step 2: ADAM with Barrier Method
 Ran for 238 iterations
-Optimizer time (ADAM with Barrier Method): 0.29185 s
+Optimizer time (ADAM with Barrier Method): 0.31340 s
 Unchanged objective: 2.0004074333130473
 
 Optimization step 3: Linear Optimization
@@ -73,10 +73,10 @@ Presolved model was optimal, full model needs cleaning up
 Optimal - objective value 0
 Optimal objective 0 - 2 iterations time 0.002, Presolve 0.00
 LP solver failed to improve the objective.
-Optimizer time (Linear Optimization): 0.01246 s
+Optimizer time (Linear Optimization): 0.01250 s
 Unchanged objective: 2.0004074333130473
 
-Total optimization time: 0.32833 s
+Total optimization time: 0.36684 s
 
 UNNORMALIZED BOUND:
 
@@ -87,7 +87,7 @@ p'(1) ∈ [0.0, 1.0]
 Asymptotics: p'(n) <= 18244022830042.664 * 0.5001018375822501^n for n >= 1
 
 NORMALIZED BOUND:
-Normalizing constant: Z = 1 (no observe statements).
+Normalizing constant: Z = 1 (program terminates a.s. and contains no observations).
 
 Probability masses:
 p(0) ∈ [0.0, 1.0]
@@ -399,4 +399,4 @@ Moments:
 2-th (raw) moment ∈ [0.0, 109560796134251.16]
 3-th (raw) moment ∈ [0.0, 474902324580266.1]
 4-th (raw) moment ∈ [0.0, 2740627115457256.5]
-Total time: 0.41648 s
+Total time: 0.42719 s

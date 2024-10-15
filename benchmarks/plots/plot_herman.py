@@ -11,15 +11,15 @@ geom_bound_output = Path("outputs/herman_bound_probs.txt").read_text()
 
 residual_output = Path("outputs/herman_residual.txt").read_text()                       
 
-indices = list(range(300))[::2]
+indices = list(range(300))[1::2]
 
 # Extracted bounds for residual_output
-residual_bounds = parse_output(residual_output)[::2]
+residual_bounds = parse_output(residual_output)[1::2]
 residual_lowers = [lower for lower, _ in residual_bounds]
 residual_uppers = [upper for _, upper in residual_bounds]
 
 # Extracted bounds for geom_bound_output
-geom_bounds = parse_output(geom_bound_output)[::2]
+geom_bounds = parse_output(geom_bound_output)[1::2]
 geom_bound_lowers = [lower for lower, _ in geom_bounds]
 geom_bound_uppers = [upper for _, upper in geom_bounds]
 
