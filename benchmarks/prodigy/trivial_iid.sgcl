@@ -1,4 +1,4 @@
-# flags(geobound-tail): -u 1
+# flags(geobound-existence): -u 1
 
 # true EV: 3.5
 # true tail: 0.8318...^n

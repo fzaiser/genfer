@@ -1,6 +1,6 @@
 # flags(geobound): --optimizer ipopt --optimizer linear
 
-# true EV: >= 2.312
+# expected value is >= 2.312
 
 # See also: https://www.prismmodelchecker.org/casestudies/self-stabilisation.php
 

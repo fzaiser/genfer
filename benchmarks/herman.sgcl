@@ -1,3 +1,4 @@
+
 # true EV: 1.333...
 
 process1 ~ Bernoulli(1/2);

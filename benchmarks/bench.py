@@ -55,7 +55,7 @@ polar_path = os.environ.get("POLAR_PATH", "../../polar")
 tools = [
     Tool("geobound-existence", geo_bound_path, ["-u", "0"]),
     Tool("geobound-ev", geo_bound_path, ["-u", "30", "--objective", "ev"]),
-    Tool("geobound-tail", geo_bound_path, ["-u", "0", "--objective", "tail"]),
+    Tool("geobound-tail", geo_bound_path, ["-u", "1", "--objective", "tail"]),
     Tool("polar", [fr"{polar_path}/.venv/bin/python", fr"{polar_path}/polar.py"], ["--after_loop"], file_ext=".prob"),
 ]
 

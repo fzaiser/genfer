@@ -1,3 +1,5 @@
+# flags(geobound-ev): -u 80
+
 # true EV: 8
 # true tail: 0.875^n
 

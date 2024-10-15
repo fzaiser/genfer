@@ -1,5 +1,6 @@
-# flags(geobound): -d 2
-# flags(geobound-tail): -u 1
+# flags(geobound): -d 3
+# flags(geobound-existence): -u 1
+# flags(geobound-tail): -u 3
 
 x := 1;
 y := 1;
