@@ -1,4 +1,4 @@
-# flags(geobound-ev): -u 6
+# flags(geobound-ev): -u 5
 
 x ~ Geometric(1/2);
 c := 0;

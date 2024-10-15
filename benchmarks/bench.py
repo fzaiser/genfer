@@ -53,9 +53,9 @@ residual_path = "../target/release/residual"
 geo_bound_path = "../target/release/geobound"
 polar_path = os.environ.get("POLAR_PATH", "../../polar")
 tools = [
-    Tool("geobound-existence", geo_bound_path, ["-u", "0", "--keep-while"]),
+    Tool("geobound-existence", geo_bound_path, ["-u", "0"]),
     Tool("geobound-ev", geo_bound_path, ["-u", "30", "--objective", "ev"]),
-    Tool("geobound-tail", geo_bound_path, ["-u", "0", "--keep-while", "--objective", "tail"]),
+    Tool("geobound-tail", geo_bound_path, ["-u", "0", "--objective", "tail"]),
     Tool("polar", [fr"{polar_path}/.venv/bin/python", fr"{polar_path}/polar.py"], ["--after_loop"], file_ext=".prob"),
 ]
 
@@ -93,7 +93,7 @@ def run_tool(tool, tool_command, path, flags, timeout):
         tool_command = [tool_command]
     try:
         command = tool_command + [path] + flags
-        print(f"Running {command}...")
+        print(f"Running {' '.join(command)}...")
         start = time.perf_counter()
         env = os.environ.copy()
         env["RUST_BACKTRACE"] = "1"
@@ -134,14 +134,12 @@ def run_tool(tool, tool_command, path, flags, timeout):
             )
         else:
             result.exitcode = exitcode
-            result.error = "crashed"
+            result.error = "failed"
             if "Solver failed" in stderr:
                 if "infeasible" in stderr:
-                    result.error = "infeasible"
+                    result.error = "possibly_infeasible"
                 if "unknown reason" in stderr:
                     result.error = "solver_error"
-                if "timeout" in stderr:
-                    result.error = "timeout"
             if "panicked" in stderr:
                 result.error = "panic"
             print(
