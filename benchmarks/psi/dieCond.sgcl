@@ -1,4 +1,5 @@
-# flags(geobound-tail): -d 2
+# flags(geobound-ev): -u 40
+# flags(geobound-tail): -u 1 -d 2
 
 # true EV: 1.5
 # true tail: 0.3333...^n
