@@ -92,18 +92,13 @@ fn run_program(program: &Program, args: &CliArgs) {
         result.lower.masses.len_of(ax)
     );
 
-    let norm = if program.uses_observe() {
-        let total_lo = result.lower.total_mass().clone();
-        let total_hi = Rational::one() - result.reject.clone();
-        let total = Interval::exact(total_lo.clone(), total_hi.clone());
-        if args.verbose {
-            println!("\nNormalizing constant: Z {}", in_iv(&total));
-            println!("Everything from here on is normalized.");
-        }
-        total
-    } else {
-        Interval::one()
-    };
+    let norm_lo = result.lower.total_mass().clone();
+    let norm_hi = Rational::one() - result.reject.clone();
+    let norm = Interval::exact(norm_lo.clone(), norm_hi.clone());
+    if args.verbose {
+        println!("\nNormalizing constant: Z {}", in_iv(&norm));
+        println!("Everything from here on is normalized.");
+    }
 
     println!("\nProbability masses:");
     let limit = if let Some(range) = result.var_supports[program.result].finite_nonempty_range() {

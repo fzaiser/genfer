@@ -387,7 +387,11 @@ fn bound_normalization_constant(program: &Program, bound: &GeometricBound) -> In
         println!("Normalizing constant: Z {}", in_iv(&total));
         total
     } else {
-        println!("Normalizing constant: Z = 1 (no observe statements).");
+        println!(
+            "Normalizing constant: Z = 1 (program terminates a.s. and contains no observations)."
+        );
+        // This is sound because at this point, we know that the program is almost surely terminating.
+        // Otherwise no geometric bound could exist.
         Interval::one()
     }
 }
