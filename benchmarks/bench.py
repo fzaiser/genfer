@@ -93,7 +93,8 @@ def run_tool(tool, tool_command, path, flags, timeout):
         tool_command = [tool_command]
     try:
         command = tool_command + [path] + flags
-        print(f"Running {' '.join(command)}...")
+        command_str = " ".join(str(x) for x in command)
+        print(f"Running {command_str}...")
         start = time.perf_counter()
         env = os.environ.copy()
         env["RUST_BACKTRACE"] = "1"
