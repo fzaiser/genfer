@@ -25,8 +25,8 @@ true_tail_re = re.compile(r"true tail: (.*)")
 tail_bound_zero_re = re.compile(r"Asymptotics: p\(n\) = 0")
 tail_bound_re = re.compile(r"Asymptotics: p\(n\) (?:(?:.*) \* ([e.0123456789+-]+)\^n)")
 true_ev_re = re.compile(r"true EV: (.*)")
-exact_ev_re = re.compile(r"1-th \(raw\) moment = ([e.0123456789+-]+)")
-ev_bound_re = re.compile(r"1-th \(raw\) moment ∈ \[([e.0123456789+-]+), ([e.0123456789+-]+)\]")
+exact_ev_re = re.compile(r"1-th \(raw\) moment = ([Nae.0123456789+-]+)")
+ev_bound_re = re.compile(r"1-th \(raw\) moment ∈ \[([Nae.0123456789+-]+), ([Nae.0123456789+-]+)\]")
 polar_ev_re = re.compile(r"E\([A-Za-z0-9_]*\) = (.*)")
 
 def quality_of_bounds_table():

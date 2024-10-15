@@ -19,8 +19,8 @@ default_unroll = 30
 total_time_re = re.compile(r"(?:Total|Elapsed) time: ([0-9.]*) *s")
 tail_bound_zero_re = re.compile(r"Asymptotics: p\(n\) = 0")
 tail_bound_re = re.compile(r"Asymptotics: p\(n\) (?:(?:.*) \* ([e.0123456789+-]+)\^n)")
-exact_ev_re = re.compile(r"1-th \(raw\) moment = ([e.0123456789+-]+)")
-ev_bound_re = re.compile(r"1-th \(raw\) moment ∈ \[([e.0123456789+-]+), ([e.0123456789+-]+)\]")
+exact_ev_re = re.compile(r"1-th \(raw\) moment = ([Nae.0123456789+-]+)")
+ev_bound_re = re.compile(r"1-th \(raw\) moment ∈ \[([Nae.0123456789+-]+), ([Nae.0123456789+-]+)\]")
 
 def bench(benchmark, unroll=None, inv_size=None, flags=None, slow=False):
     benchmark = { "name": benchmark }
@@ -61,7 +61,7 @@ benchmarks = [
     "prodigy/brp_obs",
     "prodigy/condand",
     "prodigy/dep_bern",
-    bench("prodigy/endless_conditioning", flags=["--no-normalize"]),
+    "prodigy/endless_conditioning",
     "prodigy/geometric",
     "prodigy/ky_die",
     "prodigy/n_geometric",
