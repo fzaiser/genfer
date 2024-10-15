@@ -340,7 +340,62 @@ For details on this claim, see Section 6.4 in the paper.
 
 ## 4 Further details
 
-## Probabilistic programming language (SGCL)
+## 4.1 How to use the tool
+
+The tool consists of two binaries (created in `target/release` after running `cargo build --release --bins`): `residual` and `geobound`.
+
+The `residual` binary implements the Residual Mass Semantic (Section 3 in the paper).
+It computes bounds on probability masses of the posterior distribution by unrolling all loops a number of times and bounding the remaining probability mass.
+It takes the following command-line arguments:
+
+* `<filename>.sgcl`: a file containing the probabilistic program to analyze.
+  The probabilistic programming language is described below.
+* `-u <number>` or `--unroll <number>` (default: 8): the loop unrolling limit (i.e. number of times each loop is unrolled).
+  Higher values take longer, but yield more precise results.
+* `--limit <number>`: the limit up to which probability mass bounds are output, e.g. `--limit 50` outputs `p(0), ..., p(50)`.
+
+The `geobound` binary implements the Geometric Bound Semantics (Section 4 in the paper).
+It computes a global bound on the program distribution that takes the form of an EGD (eventually geometric distribution).
+In order to find such an EGD bound, it needs to synthesize a contraction invariant, a problem that the Geometric Bound Semantics reduces to a system of polynomial inequality constraints.
+Typically, we do not just want any solution to this constraint problem, but one that minimizes a certain bound, e.g. the expected value or the tail asymptotics.
+If such an objective is specified, the tool will try to minimize this objective.
+It takes the following command-line arguments:
+
+* `<filename>.sgcl`: a file containing the probabilistic program to analyze.
+  The probabilistic programming language is described below.
+* `-u <number>` or `--unroll <number>` (default: 8): the loop unrolling limit (i.e. the number of times each loop is unrolled).
+  Higher values take longer, but (usually) yield more precise results (unless the solver encounters numerical issues).
+* `-d <number>` (default: 1): the size of the contraction invariant to be synthesized.
+  The default of 1 is usually fine, but some programs only admit larger contraction invariants.
+  Increasing this value can also sometimes improve the bounds.
+* `--objective <objective>` (default: none): the bound to minimize.
+  It can be one of the following:
+  * `total`: the total probability mass
+  * `ev`: the expected value
+  * `tail`: the tail asymptotic bound, i.e. the `c` in `O(c^n)` where `p(n) = O(c^n)` as `n` grows.
+* `--solver <solver>` (default: `ipopt`): the solver to use for the constraint problem.
+  The following solvers are available:
+  * `ipopt`: the IPOPT solver. This is a fast numerical solver and almost always the best option.
+  * `z3`: the Z3 SMT solver. This is an exact solver but only works for small programs and low unrolling limits.
+    On the upside, it can (in principle) prove infeasiblity, i.e. that no bound exists for the given invariant size.
+* `--optimizer <optimizer>` (default: `ipopt adam-barrier linear`): a list of optimizers to minimize the objective.
+  The optimizers are run in the order they are specified, e.g. `--optimizer ipopt --optimizer linear`.
+  The following optimizers are available:
+  * `ipopt`: the IPOPT solver. This is a fast numerical optimizer and should usually be included.
+  * `linear`: a linear programming solver (uses COIN-CBC).
+    This is an extremely fast way to optimize the linear variables of the constraint problem.
+    It should usually be included, but is not enough on its own, as it does not touch the nonlinear variables.
+  * `adam-barrier`: a solver provided by us that combines the barrier method with the ADAM optimizer.
+    This is usually the slowest solver, so it is best omitted in some cases by passing `--optimizer ipopt --optimizer linear`.
+    However, it is typically useful for `--objective tail`, which is why it is included in the default.
+* `--keep-while`: deactivates the usual transformation of `while` loops into `do-while` loops.
+  By default, the semantics conceptually treats `while <event> { ... }` as `if <event> { do { ... } while <event> }`.
+  (But note that this is not valid syntax!)
+  Occasionally, it can be useful to deactivate this transformation, which is what `--keep-while` does.
+
+
+
+## 4.2 Probabilistic programming language (SGCL)
 
 The syntax of a probabilistic program is as follows:
 
@@ -380,3 +435,7 @@ Rational numbers can be written as decimals (e.g. `0.4`) or fractions (e.g. `355
 * `not <event>`: negation/complement
 * `<event> and <event>`: conjunction/intersection
 * `<event> or <event>`: disjunction/union
+
+## 4.3 Organization of the source code
+
+
