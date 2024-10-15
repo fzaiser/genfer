@@ -197,7 +197,7 @@ For the first 3 claims, we have to run our tool (and the Polar tool, for compari
 The benchmarks were collected from the repositories of the tools Polar, Prodigy, and PSI, as well as some benchmarks added by us (see details in the paper).
 This will take a few hours (it took 2 hours on my computer).
 
-**If you don't want to wait a long time*, you can skip this step at first.
+**If you don't want to wait a long time**, you can skip this step at first.
 We have already included the resulting data of the benchmarks in `bench-results.json`, so you can directly continue with the remaining steps.
 
 ```shell
@@ -298,7 +298,7 @@ To run our tool with the Residual Mass Semantics on the same examples with compa
 cd tool/benchmarks # if not already
 ../target/release/residual geo.sgcl -u 100 # ~0.006 seconds
 ../target/release/residual asym_rw.sgcl -u 14 # ~0.002 seconds
-../target/release/residual die_paradox.sgcl -u 6 # ~0.001 seconds
+../target/release/residual die_paradox.sgcl -u 6 # ~0.0008 seconds
 ```
 
 The running time is reported by our tool at the end of each run.
@@ -339,6 +339,9 @@ For details on this claim, see Section 6.4 in the paper.
 
 
 ## 4 Further details
+
+Here is some additional information about how to use the artifact.
+As a starting point for experimentation, have a look at the `*.sgcl` files in `benchmarks`, e.g. `benchmarks/geo.sgcl`.
 
 ## 4.1 How to use the tool
 
@@ -438,4 +441,48 @@ Rational numbers can be written as decimals (e.g. `0.4`) or fractions (e.g. `355
 
 ## 4.3 Organization of the source code
 
+The source code is organized as follows:
 
+- `benchmarks/`: directory containing the benchmarks and benchmark scripts
+  - `ours/`: new benchmarks that we contributed (some are adapted from existing benchmarks)
+  - `output/`: directory for GuBPI output files
+  - `outputs/`: directory for output of our tool (for Fig. 7 in the paper)
+  - `plots/`: plotting scripts (for Fig. 7)
+  - `polar/`: benchmarks from the Polar repository
+  - `prodigy/`: benchmarks from the Prodigy repository
+  - `psi/`: benchmark from the PSI repository
+- `dependencies/`: two Rust dependencies which had to be patched
+- `src/`: source code of our implementation
+  - `bin/`: binaries
+    - `geobound.rs`: code for the `geobound` binary implementing the Geometric Bound Semantics
+    - `residual.rs`: code for the `residual` binary implementing the Residual Mass Semantics
+    - `stats.rs`: code for an auxiliary `stats` binary to report information about a probabilistic program (e.g. number of variables)
+  - `bound/`: for data structures implementing bounds on distributions
+    - `egd.rs`: implements EGDs (eventually geometric distributions)
+    - `finite_discrete.rs`: implements finite discrete distributions
+    - `geometric.rs`: implements a geometric bound, aggregating a finite discrete lower bound and an EGD upper bound
+    - `residual.rs`: implements a residual mass bound, consisting of a finite discrete lower bound and the residual mass
+  - `number/`: for number types
+    - `f64.rs`: an extension of double-precision floating point numbers.
+      Floating point numbers are used in some places to speed up the computations.
+      But all results are verified with rational number computations.
+    - `float_rat.rs`: for storing a rational number and its closest floating point number
+    - `number.rs`: traits for number types
+    - `rational.rs`: rational number type
+  - `semantics/`: implementations of the transformer semantics from the paper
+    - `geometric.rs`: the geometric bound semantics, which generates polynomial inequality constraints
+    - `residual.rs`: the residual mass semantics
+    - `support.rs`: for overapproximating the support of variables
+  - `solvers/`: implementations of the solvers and optimizers for the polynomial inequality constraints
+    - `adam.rs`: the `adam-barrier` solver that combines the barrier method with the popular ADAM algorithm
+    - `ipopt.rs`: to run the IPOPT solver
+    - `linear.rs`: to run an LP solver (COIN-CBC) to optimize the linear variables of the optimization problem
+    - `problem.rs`: data structure for the constraint problem
+    - `z3.rs`: to run the Z3 SMT solver
+  - `interval.rs`: an interval data type
+  - `parser.rs`: for parsing SGCL programs
+  - `ppl.rs`: data structures for constructs in the PPL (probabilistic programming language)
+  - `support.rs`: data structures for the support set of program variables
+  - `sym_expr.rs`: data structures for symbolic expressions and constraints
+  - `util.rs`: contains miscellaneous functions
+  - `test.py`: a script to test changes during development (irrelevant for the artifact evaluation)
