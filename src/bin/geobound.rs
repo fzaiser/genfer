@@ -172,7 +172,6 @@ fn compute_constraints_solution(
         println!("Solving without loop unrolling first...");
         let modified_args = CliArgs {
             unroll: 1,
-            objective: None,
             ..args.clone()
         };
         println!("\nCONSTRAINT GENERATION (simplified problem):");
@@ -181,10 +180,6 @@ fn compute_constraints_solution(
         let simple_solution = solve_constraints(&modified_args, &simple_problem);
         if let Ok(simple_solution) = simple_solution {
             println!("\nOPTIMIZATION (simplified problem):");
-            let modified_args = CliArgs {
-                objective: args.objective,
-                ..args.clone()
-            };
             let simple_solution =
                 optimize_solution(&modified_args, &simple_problem, simple_solution.clone());
             println!("\nEXTENDING SOLUTION:");
@@ -268,6 +263,10 @@ fn solve_constraints(
     args: &CliArgs,
     problem: &ConstraintProblem,
 ) -> Result<Vec<Rational>, SolverError> {
+    let problem = &ConstraintProblem {
+        objective: SymExpr::zero(),
+        ..problem.clone()
+    };
     let start_solver = Instant::now();
     let solution = match args.solver {
         Solver::Z3 => Z3Solver.solve(problem),
