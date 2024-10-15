@@ -183,7 +183,7 @@ We make the following claims in the paper:
 
 * **Claim 1 (Section 6.1)**: The geometric Bound Semantics is applicable often (over 80% of the benchmarks).
 * **Claim 2 (Section 6.2)**: The Geometric Bound Semantics typically yields good bounds (majority of the benchmarks).
-* **Claim 3 (Seciton 6.3)**: The Geometric Bound Semantics is usually faster and applicable to more benchmarks than Polar (another tool to analyze the moments of probabilistic loops).
+* **Claim 3 (Section 6.3)**: The Geometric Bound Semantics is usually faster and applicable to more benchmarks than Polar (another tool to analyze the moments of probabilistic loops).
 * **Claim 4 (Section 6.3)**: The Residual Bound Semantics as implemented in our tool is orders of magnitude faster than GuBPI (another tool to compute guaranteed bounds for probabilistic programs).
 * **Claim 5 (Section 6.4)**: There are trade-offs between the two semantics presented in the paper: while the Geometric Bound Semantics is much more informative, the Residual Mass Semantics is much faster in practice.
 
@@ -380,7 +380,7 @@ It takes the following command-line arguments:
   The following solvers are available:
   * `ipopt`: the IPOPT solver. This is a fast numerical solver and almost always the best option.
   * `z3`: the Z3 SMT solver. This is an exact solver but only works for small programs and low unrolling limits.
-    On the upside, it can (in principle) prove infeasiblity, i.e. that no bound exists for the given invariant size.
+    On the upside, it can (in principle) prove infeasibility, i.e. that no bound exists for the given invariant size.
 * `--optimizer <optimizer>` (default: `ipopt adam-barrier linear`): a list of optimizers to minimize the objective.
   The optimizers are run in the order they are specified, e.g. `--optimizer ipopt --optimizer linear`.
   The following optimizers are available:
