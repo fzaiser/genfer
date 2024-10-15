@@ -8,7 +8,8 @@ This artifact contains the implementation of the two semantics from the paper (R
 It also includes the benchmarks from the paper and scripts to reproduce the reported data (i.e. plots and tables).
 The artifact is distributed as a VirtualBox image to avoid issues with dependencies.
 
-To get started, follow the artifact URL and download the README file. Then follow the instructions in the README.
+To get started, follow the artifact URL and download the README file.
+Then follow the instructions in the README.
 
 
 
@@ -28,7 +29,7 @@ To get started, follow the artifact URL and download the README file. Then follo
 * Log in with user name `user` and password `123`.
 * All dependencies are already installed on the VM.
 * Guest extensions are installed, so you should be able to copy and paste between the host and the guest system.
-* Make sure that the keyboard layout "en" (English US), not "de", is selected (top right of the screen, next to the network indicator etc.).
+* Make sure that the correct keyboard layout ("en": English US), is selected (top right of the screen, next to the network indicator etc.).
 
 **Hardware requirements**: The VM was tested on a laptop computer with a 13th Gen Intel® Core™ i7-1365U × 12 processor and 16.0 GB RAM, running Ubuntu 22.05.05.
 Similar hardware should also be able to run this artifact.
@@ -169,6 +170,7 @@ Total time: 0.07913 s
 As you can see, the asymptotic tail bound of `O(0.33942394950033866^n)` is much better than the asymptotic tail bound of `O(0.8230384253075658^n)` obtained above with a different optimization objective.
 
 All the flags that the tool accepts are documented in the help text (`target/release/geobound --help`).
+More information on how to use this tool can be found further down.
 
 
 
@@ -209,11 +211,11 @@ python3 bench.py
 
 This script runs each benchmark with the following configurations:
 
-* `geobound-existence`: Geometric Bound Semantics without unrolling and without optimization.
+* `geobound -u 0`: Geometric Bound Semantics without unrolling and without optimization.
   This checks whether a geometric bound can be found at all.
   It runs the command `../target/release/geobound <benchmark>.sgcl -u 0`.
 * `geobound -u 30 --objective ev`: Geometric Bound Semantics with unrolling limit 30 and optimizing the bound on the expected value of the program distribution.
-  To obtain good bounds on the expected value, unrolling is needed and the optimization objective must be set.
+  To obtain good bounds on the expected value, unrolling is needed (`-u 30`) and the optimization objective must be set (`--objective ev`).
 * `geobound -u 0 --objective tail`: Geometric Bound Semantics without unrolling but optimizing the tail asymptotic bound.
   For tail bounds, unrolling is not helpful (except for numerical issues, in some cases), so the unrolling limit is set to 0.
 * `polar`: The Polar tool by Moosbrugger et al. (OOPSLA2022), see https://github.com/probing-lab/polar.
@@ -222,6 +224,8 @@ This script runs each benchmark with the following configurations:
 
 Each configuration is run 3 times for each benchmark, and the fastest run is recorded.
 (This is to mitigate noise in the running times due to background activity on the computer.)
+Some benchmarks require slight adjustments to the unrolling limit or contraction invariant size.
+These changes are listed at the top of the file (e.g. `# flags(geobound): ...`) and parsed by the benchmarking script.
 
 The results are written to `bench-results.json` and will be visualized in the following steps.
 
@@ -357,7 +361,7 @@ It takes the following command-line arguments:
   Higher values take longer, but yield more precise results.
 * `--limit <number>`: the limit up to which probability mass bounds are output, e.g. `--limit 50` outputs `p(0), ..., p(50)`.
 
-The `geobound` binary implements the Geometric Bound Semantics (Section 4 in the paper).
+The `geobound` binary implements the Geometric Bound Semantics (Section 4 and 5 in the paper).
 It computes a global bound on the program distribution that takes the form of an EGD (eventually geometric distribution).
 In order to find such an EGD bound, it needs to synthesize a contraction invariant, a problem that the Geometric Bound Semantics reduces to a system of polynomial inequality constraints.
 Typically, we do not just want any solution to this constraint problem, but one that minimizes a certain bound, e.g. the expected value or the tail asymptotics.
