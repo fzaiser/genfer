@@ -239,9 +239,11 @@ python3 tables.py applicability
 This script reads `bench-results.json` and outputs a LaTeX table containing the results.
 For each benchmark, it records some statistics and lists whether a bound could be found, and if so, the time it took.
 
+One can see that for over 80% of the benchmarks, the Geometric Bound Semantics succeeds, supporting our claim about its applicability.
 
 
-### 3.4 Claim 2: Geometric Bound Semantics yields good bounds (Table 3)
+
+### 3.4 Claim 2: Geometric Bound Semantics yields useful bounds (Table 3)
 
 To generate Table 3 (Quality of the Geometric Bounds), run this script:
 
@@ -252,9 +254,13 @@ python3 tables.py quality
 
 It reads `bench-results.json` and outputs a LaTeX table containing the results.
 
+One can see that the upper and lower bounds on the expected value are usually close together and all the bounds are nontrivial.
+Most of the tail bounds are also very close to the theoretical optimum (where the latter is known, see Table 3 in the paper).
+This supports the claim that our implementation of the Geometric Bound Semantics yields useful bounds.
 
 
-### 3.5 Claim 3: Geometric Bound Semantics is typically faster than Polar (Table 5)
+
+### 3.5 Claim 3: Geometric Bound Semantics is typically faster and more often applicable than Polar (Table 5)
 
 To generate Table 5 (Comparison of Geometric Bounds and Polar), run this script:
 
@@ -264,6 +270,9 @@ python3 tables.py polar-comparison
 ```
 
 It reads `bench-results.json` and outputs a LaTeX table containing the results.
+
+One can see that our tool is typically faster than Polar and applicable to more benchmarks.
+The computed bounds are typically very close to the exact values.
 
 
 
@@ -296,7 +305,7 @@ The running time is reported by our tool at the end of each run.
 You can check that the bounds of our tool are at least as good as GuBPI's by comparing our tool's output in the terminal with GuBPI's output in `output/<benchmark>-norm.bounds`.
 Note that for the `die_paradox` example, GuBPI fails to compute normalized bounds, so we compare our tool's unnormalized bounds (under `Unnormalized bounds:` in the output) with GuBPI's unnormalized bounds in `output/die_paradox-unnorm.bounds`.
 
-These experiments support the data in Table 4 and demonstrate that our tool is orders of magnitude faster than GuBPI to produce the same (or better) bounds (Claim 1).
+These experiments support the data in Table 4 and demonstrate that our tool is orders of magnitude faster than GuBPI to produce the same (or better) bounds.
 
 
 
@@ -318,6 +327,11 @@ The script `./comparison.sh` runs the Geometric Bound Semantics on 5 benchmarks:
 Each benchmark is run 4 times: once with the Residual Mass Semantics and three times with the Geometric Bound Semantics, each time with a different optimization objective (`total` for probability masses, `ev` for moments, or `tail` for tail asymptotics).
 The output of each run is written to `outputs/<benchmark>-residual.txt` for the Residual Mass Semantics and `outputs/<benchmark>-bound-<objective>.txt` for the Geometric Bound Semantics.
 The data for Table 6 is taken from the relevant files in `outputs/`.
+
+The claim here is a bit subtle:
+The residual mass semantics is faster and yields tighter bounds for the probability masses on small values, but the bound is flat, i.e. the difference between upper and lower bounds on probability masses is constant.
+In contrast, the geometric bound semantics yields a decreasing bound and can bound moments and tail asymptotics in addition to probability masses.
+For details on this claim, see Section 6.4 in the paper.
 
 
 
