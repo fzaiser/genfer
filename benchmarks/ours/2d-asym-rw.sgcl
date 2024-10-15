@@ -1,4 +1,4 @@
-# flags(geobound-ev): -u 70 -d 3
+# flags(geobound-ev): -u 70 -d 3 --optimizer adam-barrier --optimizer linear
 # flags(geobound-tail): -d 4
 
 x := 1;

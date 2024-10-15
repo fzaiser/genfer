@@ -1,4 +1,5 @@
 # flags(geobound): -d 3
+# flags(geobound-ev): --optimizer adam-barrier --optimizer linear
 # flags(geobound-existence): -u 1
 # flags(geobound-tail): -u 3
 
