@@ -2,7 +2,13 @@
 
 ## Abstract
 
-TODO
+This is the artifact for "Guaranteed Bounds on Posterior Distributions of Discrete Probabilistic Programs with Loops" (POPL 2025).
+The paper proposes two new methods to bound the posterior distribution of probabilistic programs.
+This artifact contains the implementation of the two semantics from the paper (Residual Mass Semantics & Geometric Bound Semantics).
+It also includes the benchmarks from the paper and scripts to reproduce the reported data (i.e. plots and tables).
+The artifact is distributed as a VirtualBox image to avoid issues with dependencies.
+
+To get started, follow the artifact URL and download the README file. Then follow the instructions in the README.
 
 
 
@@ -10,20 +16,19 @@ TODO
 
 ### 1.1 Download
 
-* Download the README file `README.md` and the VM image `popl2025.ova` from TODO.
+* Download the VM image `popl2025.ova` from https://doi.org/10.5281/zenodo.13935838.
 * Download Oracle VirtualBox 7.1.2 for your system here: https://www.virtualbox.org/wiki/Downloads.
-* Follow the instructions in `README.md`.
 
 
 
 ### 1.2 Setup
 
-Import the VM image `popl2025.ova` and start the virtual machine.
-The guest OS is Ubuntu 22.04.05.
-Log in with user name `user` and password `123`.
-All dependencies are already installed on the VM.
-
-Make sure that the keyboard layout "en" (English US), not "de", is selected (top right of the screen, next to the network indicator etc.).
+* Import the VM image `popl2025.ova` and start the virtual machine.
+* The guest OS is Ubuntu 22.04.05.
+* Log in with user name `user` and password `123`.
+* All dependencies are already installed on the VM.
+* Guest extensions are installed, so you should be able to copy and paste between the host and the guest system.
+* Make sure that the keyboard layout "en" (English US), not "de", is selected (top right of the screen, next to the network indicator etc.).
 
 **Hardware requirements**: The VM was tested on a laptop computer with a 13th Gen Intel® Core™ i7-1365U × 12 processor and 16.0 GB RAM, running Ubuntu 22.05.05.
 Similar hardware should also be able to run this artifact.
@@ -176,9 +181,93 @@ All the flags that the tool accepts are documented in the help text (`target/rel
 
 We make the following claims in the paper:
 
-* **Claim 1**: The Residual Bound Semantics as implemented in our tool is orders of magnitude faster than GuBPI (another tool to compute guaranteed bounds for probabilistic programs).
+* **Claim 1 (Section 6.1)**: The geometric Bound Semantics is applicable often (over 80% of the benchmarks).
+* **Claim 2 (Section 6.2)**: The Geometric Bound Semantics typically yields good bounds (majority of the benchmarks).
+* **Claim 3 (Seciton 6.3)**: The Geometric Bound Semantics is usually faster and applicable to more benchmarks than Polar (another tool to analyze the moments of probabilistic loops).
+* **Claim 4 (Section 6.3)**: The Residual Bound Semantics as implemented in our tool is orders of magnitude faster than GuBPI (another tool to compute guaranteed bounds for probabilistic programs).
+* **Claim 5 (Section 6.4)**: There are trade-offs between the two semantics presented in the paper: while the Geometric Bound Semantics is much more informative, the Residual Mass Semantics is much faster in practice.
 
-### 3.2 Comparison with GuBPI (Table 4)
+The following instructions describe how to verify those claims.
+
+
+
+### 3.2 Generating data for the remaining claims:
+
+For the first 3 claims, we have to run our tool (and the Polar tool, for comparison) on about 40 benchmarks in `tool/benchmarks/**/*.sgcl`.
+The benchmarks were collected from the repositories of the tools Polar, Prodigy, and PSI, as well as some benchmarks added by us (see details in the paper).
+This will take a few hours (it took 2 hours on my computer).
+
+**If you don't want to wait a long time*, you can skip this step at first.
+We have already included the resulting data of the benchmarks in `bench-results.json`, so you can directly continue with the remaining steps.
+
+```shell
+cd tool/benchmarks # if not already
+# WARNING: This will take a few hours. You can skip this step at first, if you want.
+python3 bench.py
+# Writes a file `bench-results.json`.
+```
+
+This script runs each benchmark with the following configurations:
+
+* `geobound-existence`: Geometric Bound Semantics without unrolling and without optimization.
+  This checks whether a geometric bound can be found at all.
+  It runs the command `../target/release/geobound <benchmark>.sgcl -u 0`.
+* `geobound -u 30 --objective ev`: Geometric Bound Semantics with unrolling limit 30 and optimizing the bound on the expected value of the program distribution.
+  To obtain good bounds on the expected value, unrolling is needed and the optimization objective must be set.
+* `geobound -u 0 --objective tail`: Geometric Bound Semantics without unrolling but optimizing the tail asymptotic bound.
+  For tail bounds, unrolling is not helpful (except for numerical issues, in some cases), so the unrolling limit is set to 0.
+* `polar`: The Polar tool by Moosbrugger et al. (OOPSLA2022), see https://github.com/probing-lab/polar.
+  Polar cannot compute tail bounds but can compute exact moments (in particular expected values) for some benchmarks.
+  We have translated the relevant benchmarks to Polar's format (file extension: `.prob`).
+
+Each configuration is run 3 times for each benchmark, and the fastest run is recorded.
+(This is to mitigate noise in the running times due to background activity on the computer.)
+
+The results are written to `bench-results.json` and will be visualized in the following steps.
+
+
+
+### 3.3 Claim 1: Geometric Bound Semantics is applicable often (Table 2)
+
+To generate Table 2 (Applicability of the Geometric Bound Semantics), run this script:
+
+```shell
+cd tool/benchmarks # if not already
+python3 tables.py applicability
+```
+
+This script reads `bench-results.json` and outputs a LaTeX table containing the results.
+For each benchmark, it records some statistics and lists whether a bound could be found, and if so, the time it took.
+
+
+
+### 3.4 Claim 2: Geometric Bound Semantics yields good bounds (Table 3)
+
+To generate Table 3 (Quality of the Geometric Bounds), run this script:
+
+```shell
+cd tool/benchmarks # if not already
+python3 tables.py quality
+```
+
+It reads `bench-results.json` and outputs a LaTeX table containing the results.
+
+
+
+### 3.5 Claim 3: Geometric Bound Semantics is typically faster than Polar (Table 5)
+
+To generate Table 5 (Comparison of Geometric Bounds and Polar), run this script:
+
+```shell
+cd tool/benchmarks # if not already
+python3 tables.py polar-comparison
+```
+
+It reads `bench-results.json` and outputs a LaTeX table containing the results.
+
+
+
+### 3.6 Claim 4: Our Residual Mass Semantics is orders of magnitude faster than GuBPI (Table 4)
 
 We compare our tool with GuBPI on three benchmarks: the geometric counter, asymmetric random walk, and die paradox example from the paper.
 We translated the examples to GuBPI's file format (`.spcf`) and you can run GuBPI on them as follows.
@@ -211,9 +300,9 @@ These experiments support the data in Table 4 and demonstrate that our tool is o
 
 
 
-### 3.3 Reproducing the plots from the paper (Fig. 7)
+### 3.7 Claim 5: Tradeoffs between the two semantics (Table 6, Fig. 7)
 
-Next, let's reproduce the plots from Fig. 7 in the paper.
+Next, let's reproduce the plots from Fig. 7 (Section 6.4) in the paper.
 To do this, run the following commands:
 
 ```shell
@@ -227,6 +316,8 @@ cd tool/benchmarks # if not already
 
 The script `./comparison.sh` runs the Geometric Bound Semantics on 5 benchmarks: `asym_rw.sgcl`, `coupon-collector.sgcl`, `die_paradox.sgcl`, `geo.sgcl`, `herman.sgcl`.
 Each benchmark is run 4 times: once with the Residual Mass Semantics and three times with the Geometric Bound Semantics, each time with a different optimization objective (`total` for probability masses, `ev` for moments, or `tail` for tail asymptotics).
+The output of each run is written to `outputs/<benchmark>-residual.txt` for the Residual Mass Semantics and `outputs/<benchmark>-bound-<objective>.txt` for the Geometric Bound Semantics.
+The data for Table 6 is taken from the relevant files in `outputs/`.
 
 
 
@@ -235,7 +326,7 @@ Each benchmark is run 4 times: once with the Residual Mass Semantics and three t
 
 ## 4 Further details
 
-## Probabilistic programming language
+## Probabilistic programming language (SGCL)
 
 The syntax of a probabilistic program is as follows:
 
