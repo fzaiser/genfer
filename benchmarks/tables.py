@@ -143,9 +143,9 @@ def quality_of_bounds_table():
         results = json.load(f)
     print(r"========================================")
     print(r"QUALITY OF BOUNDS TABLE:")
-    print(r"\begin{tabular}{l|ccc|ccc}")
+    print(r"\begin{tabular}{l|cccc|ccc}")
     print(r"\toprule")
-    print(r"Benchmark & \#U & \#C & \#CV & True EV & EV bound & Time & True tail & Tail bound & Time \\")
+    print(r"Benchmark & \#U & True EV & EV bound & Time & True tail & Tail bound & Time \\")
     print(r"\midrule")
     for benchmark, bench_result in results.items():
         if not bench_result:
@@ -206,7 +206,7 @@ def quality_of_bounds_table():
         if tail_error == "timeout":
             tail_runtime = r"t/o"
         print(
-                fr"\verb|{benchmark}| & {ev_unroll} & {constr_count} & {constr_var_count} & {true_ev} & {ev_bound} & {ev_runtime} & {true_tail} & {tail_bound} & {tail_runtime} \\"
+                fr"\verb|{benchmark}| & {ev_unroll} & {true_ev} & {ev_bound} & {ev_runtime} & {true_tail} & {tail_bound} & {tail_runtime} \\"
             )
     print(r"\bottomrule")
     print(r"\end{tabular}")
