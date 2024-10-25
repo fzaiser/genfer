@@ -31,7 +31,7 @@ Then follow the instructions in the README.
 * Guest extensions are installed, so you should be able to copy and paste between the host and the guest system.
 * Make sure that the correct keyboard layout ("en": English US), is selected (top right of the screen, next to the network indicator etc.).
 
-**Hardware requirements**: The VM was tested on a laptop computer with a 13th Gen Intel® Core™ i7-1365U × 12 processor and 16.0 GB RAM, running Ubuntu 22.05.05.
+**Hardware requirements**: The VM was tested on a laptop computer with a 13th Gen Intel® Core™ i7-1365U × 12 processor and 16.0 GB RAM, running Ubuntu 22.04.05.
 Similar hardware should also be able to run this artifact.
 
 
