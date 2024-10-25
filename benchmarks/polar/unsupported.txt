@@ -1,6 +1,6 @@
-https://github.com/search?q=repo%3Aprobing-lab%2Fpolar+path%3A%2F%5Ebenchmarks%5C%2F%2F+while+NOT+%22while+true%22&type=code&p=2
+https://github.com/search?q=repo%3Aprobing-lab%2Fpolar+path%3A%2F%5Ebenchmarks%5C%2F%2F+while+NOT+%22while+true%22&type=code
 
-many bounded loops (but bounded by a variable), e.g.: https://github.com/probing-lab/polar/blob/5fb1f34a8085d49ba91920ebaf8298e2d46fb387/benchmarks/k_induction/ber.prob
+many bounded loops, e.g. https://github.com/probing-lab/polar/blob/a4808e396d87a184414c2cf7c20b2b7af3b32517/benchmarks/rodriguez_2004/test3.prob
 
 prinsys/geometric.prob: duplicate; https://github.com/probing-lab/polar/blob/5fb1f34a8085d49ba91920ebaf8298e2d46fb387/benchmarks/prinsys/geometric.prob
 schreuder_ong_2019/martingale_bet.prob: support incudes negative numbers
@@ -8,6 +8,15 @@ chakarov_sriram_2014/ex1.prob: support includes negative numbers
 polar_paper/gambling.prob: support includes negative numbers
 prinsys/fair_biased_coin.prob: symbolic parameter
 
-## Benchmarks that could not be translated
+prinsys/bounded_random_walk.prob: requires comparison of two variables
+k_induction/rdwalk.prob: requires comparison of two variables
+k_induction/prdwalk.prob: requires comparison of two variables
+k_induction/ber.prob: requires comparison of two variables
+k_induction/race.prob: requires comparison of two variables
+k_induction/hyper.prob: requires comparison of two variables
+k_induction/prdspeed.prob: requires comparison of two variables
+
+
+development/test1.prob: requires continuous variables; https://github.com/probing-lab/polar/blob/a4808e396d87a184414c2cf7c20b2b7af3b32517/benchmarks/development/test1.prob
 
 k_induction/unif_gen.prob: uses a lot of subtraction and multiplication, which is tedious and inefficient to encode as while loops. Hence we did not attempt this.
