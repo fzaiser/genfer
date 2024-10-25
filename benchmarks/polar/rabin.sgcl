@@ -8,7 +8,8 @@ phase := 0;
 while 1 < i or phase = 1 {
     if phase = 0 {
         phase := 1;
-        # n := i;
+        # The following lines encode the assignment: n := i;
+        n := 0;
         temp := 0;
         while i > 0 {
             i -= 1;
