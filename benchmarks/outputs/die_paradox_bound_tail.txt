@@ -1,298 +1,435 @@
 
 CONSTRAINT GENERATION:
-Generated 6 constraints with 7 symbolic variables.
-Constraint generation time: 0.00064 s
+Generated 2 constraints with 6 symbolic variables.
+Constraint generation time: 0.00075 s
 
 SOLVING SIMPLIFIED PROBLEM:
 Solving without loop unrolling first...
 
 CONSTRAINT GENERATION (simplified problem):
-Generated 6 constraints with 7 symbolic variables.
-Constraint generation time: 0.00025 s
+Generated 2 constraints with 6 symbolic variables.
+Constraint generation time: 0.00051 s
 
 SOLVING CONSTRAINTS (simplified problem):
 IPOPT found a solution that satisfies all constraints exactly.
-Solver time: 0.01563 s
+Solver time: 0.01049 s
 
 OPTIMIZATION (simplified problem):
-Initial objective: 8.31640180521285
+Initial objective: 3.187083209529717
 
 Optimization step 1: IPOPT
 Solution by IPOPT does not actually satisfy the constraints (due to numerical issues).
-Optimizer time (IPOPT): 0.00767 s
-Unchanged objective: 8.31640180521285
+Optimizer time (IPOPT): 0.00878 s
+Unchanged objective: 3.187083209529717
 
 Optimization step 2: ADAM with Barrier Method
-Ran for 131 iterations
-Optimizer time (ADAM with Barrier Method): 0.00197 s
-Improved objective: 4.161519761079306
+Ran for 1821 iterations
+Optimizer time (ADAM with Barrier Method): 0.01825 s
+Improved objective: 1.5138612845714858
 
 Optimization step 3: Linear Optimization
 Running LP solver CBC...
-Presolve 0 (-6) rows, 0 (-7) columns and 0 (-16) elements
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
 Optimal - objective value 0
 After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
 Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
-LP solver failed to improve the objective.
-Optimizer time (Linear Optimization): 0.00074 s
-Unchanged objective: 4.161519761079306
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
+LP solver failed after 8 retries (probably numerical issues).
+LP solver failed; returning previous solution.
+Optimizer time (Linear Optimization): 0.00506 s
+Unchanged objective: 1.5138612845714858
 
-Total optimization time: 0.01045 s
+Total optimization time: 0.03287 s
 
 EXTENDING SOLUTION:
 Extending simplified solution to the original problem...
 Running LP solver CBC...
-Presolve 0 (-6) rows, 0 (-7) columns and 0 (-16) elements
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
 Optimal - objective value 0
 After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
 Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
-Extension time (LP solver): 0.00041 s
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
+LP solver failed after 8 retries (probably numerical issues).
+Extension time (LP solver): 0.00455 s
+Solving simplified problem (unrolling limit set to 0) failed.
+Continuing with the original problem.
+
+SOLVING CONSTRAINTS (original problem):
+IPOPT found a solution that satisfies all constraints exactly.
+Solver time: 0.00791 s
 
 OPTIMIZATION:
-Initial objective: 4.161519761079306
+Initial objective: 3.187083209529717
 
 Optimization step 1: IPOPT
 Solution by IPOPT does not actually satisfy the constraints (due to numerical issues).
-Optimizer time (IPOPT): 0.01526 s
-Unchanged objective: 4.161519761079306
+Optimizer time (IPOPT): 0.00925 s
+Unchanged objective: 3.187083209529717
 
 Optimization step 2: ADAM with Barrier Method
-Ran for 5000 iterations
-Optimizer time (ADAM with Barrier Method): 0.07230 s
-Improved objective: 1.509010457657401
+Ran for 1821 iterations
+Optimizer time (ADAM with Barrier Method): 0.01976 s
+Improved objective: 1.5138612845714858
 
 Optimization step 3: Linear Optimization
 Running LP solver CBC...
-Presolve 0 (-6) rows, 0 (-7) columns and 0 (-16) elements
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
 Optimal - objective value 0
 After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
 Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
-LP solver failed to improve the objective.
-Optimizer time (Linear Optimization): 0.00038 s
-Unchanged objective: 1.509010457657401
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
+Retrying with modified numerical tolerances...
+Solution by LP solver does not satisfy the constraints (rounding issues).
+Presolve 0 (-2) rows, 0 (-6) columns and 0 (-8) elements
+Optimal - objective value 0
+After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
+Optimal objective 0 - 0 iterations time 0.002, Presolve 0.00
+LP solver failed after 8 retries (probably numerical issues).
+LP solver failed; returning previous solution.
+Optimizer time (Linear Optimization): 0.00523 s
+Unchanged objective: 1.5138612845714858
 
-Total optimization time: 0.08799 s
+Total optimization time: 0.03507 s
 
 UNNORMALIZED BOUND:
 
 Probability masses:
-p'(0) ∈ [0.0, 1.0]
-p'(1) ∈ [0.16666666666666666, 1.0]
-p'(2) ∈ [0.05555555555555555, 1.0]
+p'(0) = 0.0
+p'(1) = 0.16666666666666666
 
-Asymptotics: p'(n) <= 275.2019055493973 * 0.337314069014202^n for n >= 3
+Asymptotics: p'(n) <= 11064.246284517369 * 0.3394374965583057^n for n >= 2
 
 NORMALIZED BOUND:
-Normalizing constant: Z ∈ [0.2222222222222222, 1.0]
+Normalizing constant: Z ∈ [0.16666666666666666, 1.0]
 
 Probability masses:
-p(0) ∈ [0.0, 1.0]
+p(0) = 0.0
 p(1) ∈ [0.16666666666666666, 1.0]
-p(2) ∈ [0.05555555555555555, 1.0]
+p(2) ∈ [0.0, 1.0]
 p(3) ∈ [0.0, 1.0]
 p(4) ∈ [0.0, 1.0]
 p(5) ∈ [0.0, 1.0]
 p(6) ∈ [0.0, 1.0]
-p(7) ∈ [0.0, 0.6153258201229094]
-p(8) ∈ [0.0, 0.20755805615515951]
-p(9) ∈ [0.0, 0.07001225247837509]
-p(10) ∈ [0.0, 0.02361611776433035]
-p(11) ∈ [0.0, 0.00796604877740485]
-p(12) ∈ [0.0, 0.0026870603270720394]
-p(13) ∈ [0.0, 0.0009063832526113022]
-p(14) ∈ [0.0, 0.0003057358230246457]
-p(15) ∈ [0.0, 0.00010312899450784919]
-p(16) ∈ [0.0, 0.0000347868607707859]
-p(17) ∈ [0.0, 0.000011734097554824314]
-p(18) ∈ [0.0, 3.958076192427388e-6]
-p(19) ∈ [0.0, 1.3351147859359217e-6]
-p(20) ∈ [0.0, 4.503530010450711e-7]
-p(21) ∈ [0.0, 1.519104032752701e-7]
-p(22) ∈ [0.0, 5.124151625436972e-8]
-p(23) ∈ [0.0, 1.728448435021882e-8]
-p(24) ∈ [0.0, 5.830299746984607e-9]
-p(25) ∈ [0.0, 1.9666421312278503e-9]
-p(26) ∈ [0.0, 6.633760595792284e-10]
-p(27) ∈ [0.0, 2.2376607794327724e-10]
-p(28) ∈ [0.0, 7.547944625839593e-11]
-p(29) ∈ [0.0, 2.5460279144358318e-11]
-p(30) ∈ [0.0, 8.58811035642093e-12]
-p(31) ∈ [0.0, 2.8968904494673527e-12]
-p(32) ∈ [0.0, 9.771619049982133e-13]
-p(33) ∈ [0.0, 3.2961045826061647e-13]
-p(34) ∈ [0.0, 1.1118224486552433e-13]
-p(35) ∈ [0.0, 3.7503335417723385e-14]
-p(36) ∈ [0.0, 1.2650402671356712e-14]
-p(37) ∈ [0.0, 4.267158799743464e-15]
-p(38) ∈ [0.0, 1.4393726978712262e-15]
-p(39) ∈ [0.0, 4.85520661546893e-16]
-p(40) ∈ [0.0, 1.6377294993684967e-16]
-p(41) ∈ [0.0, 5.524292013765796e-17]
-p(42) ∈ [0.0, 1.8634214175860008e-17]
-p(43) ∈ [0.0, 6.2855826065414646e-18]
-p(44) ∈ [0.0, 2.1202154451373955e-18]
-p(45) ∈ [0.0, 7.151784989860524e-19]
-p(46) ∈ [0.0, 2.4123976956445473e-19]
-p(47) ∈ [0.0, 8.137356827983467e-20]
-p(48) ∈ [0.0, 2.7448449426676034e-20]
-p(49) ∈ [0.0, 9.258748164242633e-21]
-p(50) ∈ [0.0, 3.1231060172584557e-21]
-p(51) ∈ [0.0, 1.0534675986441884e-21]
-p(52) ∈ [0.0, 3.553494422732914e-22]
-p(53) ∈ [0.0, 1.1986436629513123e-22]
-p(54) ∈ [0.0, 4.0431937124819486e-23]
-p(55) ∈ [0.0, 1.3638261229699236e-23]
-p(56) ∈ [0.0, 4.600377389668484e-24]
-p(57) ∈ [0.0, 1.5517720163100096e-24]
-p(58) ∈ [0.0, 5.23434533003902e-25]
-p(59) ∈ [0.0, 1.765618321900948e-25]
-p(60) ∈ [0.0, 5.955679004864359e-26]
-p(61) ∈ [0.0, 2.0089343188732506e-26]
-p(62) ∈ [0.0, 6.776418094814105e-27]
-p(63) ∈ [0.0, 2.2857811609032126e-27]
-p(64) ∈ [0.0, 7.710261442602691e-28]
-p(65) ∈ [0.0, 2.600779660367625e-28]
-p(66) ∈ [0.0, 8.77279569847978e-29]
-p(67) ∈ [0.0, 2.959187413684503e-29]
-p(68) ∈ [0.0, 9.981755474855324e-30]
-p(69) ∈ [0.0, 3.366986555128238e-30]
-p(70) ∈ [0.0, 1.1357319352264168e-30]
-p(71) ∈ [0.0, 3.8309836038059673e-31]
-p(72) ∈ [0.0, 1.2922446677264825e-31]
-p(73) ∈ [0.0, 4.358923070327253e-32]
-p(74) ∈ [0.0, 1.4703260773719643e-32]
-p(75) ∈ [0.0, 4.959616719360277e-33]
-p(76) ∈ [0.0, 1.672948496358283e-33]
-p(77) ∈ [0.0, 5.643090645578033e-34]
-p(78) ∈ [0.0, 1.9034938674759064e-34]
-p(79) ∈ [0.0, 6.420752617818782e-35]
-p(80) ∈ [0.0, 2.165810191650043e-35]
-p(81) ∈ [0.0, 7.305582484579048e-36]
-p(82) ∈ [0.0, 2.4642757543922422e-36]
-p(83) ∈ [0.0, 8.312348818870895e-37]
-p(84) ∈ [0.0, 2.8038722031587377e-37]
-p(85) ∈ [0.0, 9.457855418432891e-38]
-p(86) ∈ [0.0, 3.190267695339617e-38]
-p(87) ∈ [0.0, 1.0761221775595668e-38]
-p(88) ∈ [0.0, 3.629911504690411e-39]
-p(89) ∈ [0.0, 1.2244202198085871e-39]
-p(90) ∈ [0.0, 4.130141665268982e-40]
-p(91) ∈ [0.0, 1.3931548907169725e-40]
-p(92) ∈ [0.0, 4.699307449547779e-41]
-p(93) ∈ [0.0, 1.5851425173557133e-41]
-p(94) ∈ [0.0, 5.34690872496671e-42]
-p(95) ∈ [0.0, 1.8035875386660598e-42]
-p(96) ∈ [0.0, 6.083754514907581e-43]
-p(97) ∈ [0.0, 2.052135990306999e-43]
-p(98) ∈ [0.0, 6.922143410609428e-44]
-p(99) ∈ [0.0, 2.3349363601325124e-44]
-p(100) ∈ [0.0, 7.87606884525508e-45]
-p(101) ∈ [0.0, 2.6567088300289782e-45]
-p(102) ∈ [0.0, 8.961452656430347e-46]
-p(103) ∈ [0.0, 3.02282405981865e-46]
-p(104) ∈ [0.0, 1.0196410835314585e-46]
-p(105) ∈ [0.0, 3.4393928282004615e-47]
-p(106) ∈ [0.0, 1.160155589818562e-47]
-p(107) ∈ [0.0, 3.913368026912706e-48]
-p(108) ∈ [0.0, 1.3200340927080042e-48]
-p(109) ∈ [0.0, 4.452660710488073e-49]
-p(110) ∈ [0.0, 1.5019451021943996e-49]
-p(111) ∈ [0.0, 5.066272138571444e-50]
-p(112) ∈ [0.0, 1.708924869794817e-50]
-p(113) ∈ [0.0, 5.764444014700552e-51]
-p(114) ∈ [0.0, 1.9444280662032054e-51]
-p(115) ∈ [0.0, 6.5588294291641945e-52]
-p(116) ∈ [0.0, 2.2123854427214705e-52]
-p(117) ∈ [0.0, 7.46268735912166e-53]
-p(118) ∈ [0.0, 2.5172694388861766e-53]
-p(119) ∈ [0.0, 8.491103972357933e-54]
-p(120) ∈ [0.0, 2.864168831338709e-54]
-p(121) ∈ [0.0, 9.661244428425116e-55]
-p(122) ∈ [0.0, 3.258873669892864e-55]
-p(123) ∈ [0.0, 1.0992639379948075e-55]
-p(124) ∈ [0.0, 3.7079719184560395e-56]
-p(125) ∈ [0.0, 1.2507510956048036e-56]
-p(126) ∈ [0.0, 4.2189594138242755e-57]
-p(127) ∈ [0.0, 1.423114366882839e-57]
-p(128) ∈ [0.0, 4.8003649776582035e-58]
-p(129) ∈ [0.0, 1.6192306433671577e-58]
-p(130) ∈ [0.0, 5.4618927698666016e-59]
-p(131) ∈ [0.0, 1.8423732747229537e-59]
-p(132) ∈ [0.0, 6.214584259398198e-60]
-p(133) ∈ [0.0, 2.0962667037692175e-60]
-p(134) ∈ [0.0, 7.071002515873836e-61]
-p(135) ∈ [0.0, 2.385148630639063e-61]
-p(136) ∈ [0.0, 8.045441898045145e-62]
-p(137) ∈ [0.0, 2.7138407436469523e-62]
-p(138) ∈ [0.0, 9.154166638960813e-63]
-p(139) ∈ [0.0, 3.087829197421934e-63]
-p(140) ∈ [0.0, 1.0415682310032502e-63]
-p(141) ∈ [0.0, 3.513356181556307e-64]
-p(142) ∈ [0.0, 1.1851044694969573e-64]
-p(143) ∈ [0.0, 3.997524108129359e-65]
-p(144) ∈ [0.0, 1.348421122895483e-65]
-p(145) ∈ [0.0, 4.548414157085748e-66]
-p(146) ∈ [0.0, 1.5342440868883954e-66]
-p(147) ∈ [0.0, 5.1752211580930353e-67]
-p(148) ∈ [0.0, 1.745674906884753e-67]
-p(149) ∈ [0.0, 5.8884070601728415e-68]
-p(150) ∈ [0.0, 1.9862425454788565e-68]
-p(151) ∈ [0.0, 6.699875550645993e-69]
-p(152) ∈ [0.0, 2.2599622838771672e-69]
-p(153) ∈ [0.0, 7.623170737932364e-70]
-p(154) ∈ [0.0, 2.5714027404019628e-70]
-p(155) ∈ [0.0, 8.673703214392559e-71]
-p(156) ∈ [0.0, 2.9257621246683177e-71]
-p(157) ∈ [0.0, 9.869007272395072e-72]
-p(158) ∈ [0.0, 3.328955000182333e-72]
-p(159) ∈ [0.0, 1.1229033566766764e-72]
-p(160) ∈ [0.0, 3.7877110035031555e-73]
-p(161) ∈ [0.0, 1.2776482108415156e-73]
-p(162) ∈ [0.0, 4.3096871676766675e-74]
-p(163) ∈ [0.0, 1.4537181147073082e-74]
-p(164) ∈ [0.0, 4.903595724715767e-75]
-p(165) ∈ [0.0, 1.65405182670452e-75]
-p(166) ∈ [0.0, 5.579349520260754e-76]
-p(167) ∈ [0.0, 1.8819930891315908e-76]
-p(168) ∈ [0.0, 6.348227467515847e-77]
-p(169) ∈ [0.0, 2.1413464380954933e-77]
-p(170) ∈ [0.0, 7.223062802030589e-78]
-p(171) ∈ [0.0, 2.4364407044980616e-78]
-p(172) ∈ [0.0, 8.218457279460702e-79]
-p(173) ∈ [0.0, 2.772201265954278e-79]
-p(174) ∈ [0.0, 9.351024891453597e-80]
-p(175) ∈ [0.0, 3.154232255589299e-80]
-p(176) ∈ [0.0, 1.063966916748671e-80]
-p(177) ∈ [0.0, 3.5889100998498895e-81]
-p(178) ∈ [0.0, 1.2105898691065323e-81]
-p(179) ∈ [0.0, 4.0834899465569464e-82]
-p(180) ∈ [0.0, 1.37741860965171e-82]
-p(181) ∈ [0.0, 4.6462267595750305e-83]
-p(182) ∈ [0.0, 1.567237653834924e-83]
-p(183) ∈ [0.0, 5.286513101273297e-84]
-p(184) ∈ [0.0, 1.7832152450873838e-84]
-p(185) ∈ [0.0, 6.01503590248583e-85]
-p(186) ∈ [0.0, 2.028956235534008e-85]
-p(187) ∈ [0.0, 6.84395483659714e-86]
-p(188) ∈ [0.0, 2.308562254082009e-86]
-p(189) ∈ [0.0, 7.787105274970006e-87]
-p(190) ∈ [0.0, 2.6267001661420896e-87]
-p(191) ∈ [0.0, 8.860229211216687e-88]
-p(192) ∈ [0.0, 2.9886799676339943e-88]
-p(193) ∈ [0.0, 1.0081238008638562e-88]
-p(194) ∈ [0.0, 3.4005434133945045e-89]
-p(195) ∈ [0.0, 1.147051135631544e-89]
-p(196) ∈ [0.0, 3.869164859272374e-90]
-p(197) ∈ [0.0, 1.305123742367927e-90]
-p(198) ∈ [0.0, 4.4023660010516854e-91]
-p(199) ∈ [0.0, 1.4849799891045246e-91]
+p(7) ∈ [0.0, 1.0]
+p(8) ∈ [0.0, 1.0]
+p(9) ∈ [0.0, 1.0]
+p(10) ∈ [0.0, 1.0]
+p(11) ∈ [0.0, 0.4575420965066408]
+p(12) ∈ [0.0, 0.15530694380825286]
+p(13) ∈ [0.0, 0.0527170002043948]
+p(14) ∈ [0.0, 0.01789412657544346]
+p(15) ∈ [0.0, 0.0060739375278659755]
+p(16) ∈ [0.0, 0.002061722148710371]
+p(17) ∈ [0.0, 0.0006998258047570591]
+p(18) ∈ [0.0, 0.00023754711919363777]
+p(19) ∈ [0.0, 0.00008063239945372584]
+p(20) ∈ [0.0, 0.000027369659812061997]
+p(21) ∈ [0.0, 9.290288808258791e-6]
+p(22) ∈ [0.0, 3.1534723753790094e-6]
+p(23) ∈ [0.0, 1.0704067685644246e-6]
+p(24) ∈ [0.0, 3.6333619382057394e-7]
+p(25) ∈ [0.0, 1.2332992803947897e-7]
+p(26) ∈ [0.0, 4.186280202443673e-8]
+p(27) ∈ [0.0, 1.4209804718090774e-8]
+p(28) ∈ [0.0, 4.823340540091133e-9]
+p(29) ∈ [0.0, 1.6372226379767202e-9]
+p(30) ∈ [0.0, 5.557347535434032e-10]
+p(31) ∈ [0.0, 1.8863721349321975e-10]
+p(32) ∈ [0.0, 6.403054350587315e-11]
+p(33) ∈ [0.0, 2.1734367390901262e-11]
+p(34) ∈ [0.0, 7.377459256445999e-12]
+p(35) ∈ [0.0, 2.504186300968929e-12]
+p(36) ∈ [0.0, 8.500147289164971e-13]
+p(37) ∈ [0.0, 2.885268716211026e-13]
+p(38) ∈ [0.0, 9.793683899286672e-14]
+p(39) ∈ [0.0, 3.324343544857254e-14]
+p(40) ∈ [0.0, 1.1284068505661098e-14]
+p(41) ∈ [0.0, 3.830235964554024e-15]
+p(42) ∈ [0.0, 1.3001257070358053e-15]
+p(43) ∈ [0.0, 4.413114152073309e-16]
+p(44) ∈ [0.0, 1.497976419805794e-16]
+p(45) ∈ [0.0, 5.084693658422523e-17]
+p(46) ∈ [0.0, 1.725935686180834e-17]
+p(47) ∈ [0.0, 5.858472885378637e-18]
+p(48) ∈ [0.0, 1.9885853698676386e-18]
+p(49) ∈ [0.0, 6.750004396403436e-19]
+p(50) ∈ [0.0, 2.2912045940727395e-19]
+p(51) ∈ [0.0, 7.777207515149396e-20]
+p(52) ∈ [0.0, 2.6398758491567523e-20]
+p(53) ∈ [0.0, 8.960728494624995e-21]
+p(54) ∈ [0.0, 3.0416072475541833e-21]
+p(55) ∈ [0.0, 1.0324355496233908e-21]
+p(56) ∈ [0.0, 3.5044733832196213e-22]
+p(57) ∈ [0.0, 1.189549671955284e-22]
+p(58) ∈ [0.0, 4.037777626802554e-23]
+p(59) ∈ [0.0, 1.3705731293009955e-23]
+p(60) ∈ [0.0, 4.652239118600129e-24]
+p(61) ∈ [0.0, 1.5791443998082465e-24]
+p(62) ∈ [0.0, 5.360208217749794e-25]
+p(63) ∈ [0.0, 1.8194556584642472e-25]
+p(64) ∈ [0.0, 6.175914738079478e-26]
+p(65) ∈ [0.0, 2.096337037651242e-26]
+p(66) ∈ [0.0, 7.115753960027922e-27]
+p(67) ∈ [0.0, 2.415353710316728e-27]
+p(68) ∈ [0.0, 8.198616167327252e-28]
+p(69) ∈ [0.0, 2.7829177470800135e-28]
+p(70) ∈ [0.0, 9.446266331965198e-29]
+p(71) ∈ [0.0, 3.206416995545276e-29]
+p(72) ∈ [0.0, 1.0883781578898924e-29]
+p(73) ∈ [0.0, 3.694363572228854e-30]
+p(74) ∈ [0.0, 1.2540055223335617e-30]
+p(75) ∈ [0.0, 4.2565649517119466e-31]
+p(76) ∈ [0.0, 1.4448377511469285e-31]
+p(77) ∈ [0.0, 4.9043210918224565e-32]
+p(78) ∈ [0.0, 1.6647104737263112e-32]
+p(79) ∈ [0.0, 5.6506515569605017e-33]
+p(80) ∈ [0.0, 1.918043018417965e-33]
+p(81) ∈ [0.0, 6.510557204629302e-34]
+p(82) ∈ [0.0, 2.209927238739011e-34]
+p(83) ∈ [0.0, 7.50132169493579e-35]
+p(84) ∈ [0.0, 2.5462298570075113e-35]
+p(85) ∈ [0.0, 8.642858883246423e-36]
+p(86) ∈ [0.0, 2.933710382435879e-36]
+p(87) ∈ [0.0, 9.958113078411445e-37]
+p(88) ∈ [0.0, 3.3801569737805034e-37]
+p(89) ∈ [0.0, 1.1473520211541526e-37]
+p(90) ∈ [0.0, 3.8945429773167775e-38]
+p(91) ∈ [0.0, 1.321953918459137e-38]
+p(92) ∈ [0.0, 4.4872072864721206e-39]
+p(93) ∈ [0.0, 1.5231264078582847e-39]
+p(94) ∈ [0.0, 5.17006214825261e-40]
+p(95) ∈ [0.0, 1.7549129526537218e-40]
+p(96) ∈ [0.0, 5.956832593265238e-41]
+p(97) ∈ [0.0, 2.0219723428748722e-41]
+p(98) ∈ [0.0, 6.863332301755788e-42]
+p(99) ∈ [0.0, 2.3296723345557382e-42]
+p(100) ∈ [0.0, 7.907781450427434e-43]
+p(101) ∈ [0.0, 2.6841975388632956e-43]
+p(102) ∈ [0.0, 9.111172928597225e-44]
+p(103) ∈ [0.0, 3.0926737295928487e-44]
+p(104) ∈ [0.0, 1.0497694284446349e-44]
+p(105) ∈ [0.0, 3.563311067546903e-45]
+p(106) ∈ [0.0, 1.2095213882266244e-45]
+p(107) ∈ [0.0, 4.105569120533719e-46]
+p(108) ∈ [0.0, 1.3935841042210504e-46]
+p(109) ∈ [0.0, 4.730346995802423e-47]
+p(110) ∈ [0.0, 1.6056571421072767e-47]
+p(111) ∈ [0.0, 5.4502024064785766e-48]
+p(112) ∈ [0.0, 1.850003060591141e-48]
+p(113) ∈ [0.0, 6.279604075122605e-49]
+p(114) ∈ [0.0, 2.1315330866369518e-49]
+p(115) ∈ [0.0, 7.235222547592449e-50]
+p(116) ∈ [0.0, 2.455905828596988e-50]
+p(117) ∈ [0.0, 8.336265262419129e-51]
+p(118) ∈ [0.0, 2.8296410113215166e-51]
+p(119) ∈ [0.0, 9.604862610416879e-52]
+p(120) ∈ [0.0, 3.260250519266378e-52]
+p(121) ∈ [0.0, 1.1066512744126956e-52]
+p(122) ∈ [0.0, 3.7563893814970395e-53]
+p(123) ∈ [0.0, 1.2750594077535574e-53]
+p(124) ∈ [0.0, 4.328029733309834e-54]
+p(125) ∈ [0.0, 1.4690955777046015e-54]
+p(126) ∈ [0.0, 4.986661251009278e-55]
+p(127) ∈ [0.0, 1.692659811226898e-55]
+p(128) ∈ [0.0, 5.745522088477125e-56]
+p(129) ∈ [0.0, 1.9502456341331235e-56]
+p(130) ∈ [0.0, 6.619864957239128e-57]
+p(131) ∈ [0.0, 2.247030388639305e-57]
+p(132) ∈ [0.0, 7.627263698101623e-58]
+p(133) ∈ [0.0, 2.5889792952736597e-58]
+p(134) ∈ [0.0, 8.787966506289776e-59]
+p(135) ∈ [0.0, 2.982965350733241e-59]
+p(136) ∈ [0.0, 1.0125302909730597e-59]
+p(137) ∈ [0.0, 3.436907471573482e-60]
+p(138) ∈ [0.0, 1.1666152680534388e-60]
+p(139) ∈ [0.0, 3.9599296603475603e-61]
+p(140) ∈ [0.0, 1.3441486104553575e-61]
+p(141) ∈ [0.0, 4.562544393352918e-62]
+p(142) ∈ [0.0, 1.548698646815848e-62]
+p(143) ∈ [0.0, 5.256863915984071e-63]
+p(144) ∈ [0.0, 1.7843767273893243e-63]
+p(145) ∈ [0.0, 6.0568436926193455e-64]
+p(146) ∈ [0.0, 2.0559198600676746e-64]
+p(147) ∈ [0.0, 6.978562904258736e-65]
+p(148) ∈ [0.0, 2.3687859217962446e-65]
+p(149) ∈ [0.0, 8.040547631770757e-66]
+p(150) ∈ [0.0, 2.729263359086079e-66]
+p(151) ∈ [0.0, 9.264143220564908e-67]
+p(152) ∈ [0.0, 3.144597582546152e-67]
+p(153) ∈ [0.0, 1.0673943311027659e-67]
+p(154) ∈ [0.0, 3.6231365959005008e-68]
+p(155) ∈ [0.0, 1.2298284158012477e-68]
+p(156) ∈ [0.0, 4.174498786558425e-69]
+p(157) ∈ [0.0, 1.4169814174950767e-69]
+p(158) ∈ [0.0, 4.809766250241682e-70]
+p(159) ∈ [0.0, 1.6326150150126658e-70]
+p(160) ∈ [0.0, 5.541707535393999e-71]
+p(161) ∈ [0.0, 1.8810633324724372e-71]
+p(162) ∈ [0.0, 6.38503428442068e-72]
+p(163) ∈ [0.0, 2.1673200529427082e-72]
+p(164) ∈ [0.0, 7.356696930114874e-73]
+p(165) ∈ [0.0, 2.4971387888963655e-73]
+p(166) ∈ [0.0, 8.476225390616217e-74]
+p(167) ∈ [0.0, 2.8771487268547156e-74]
+p(168) ∈ [0.0, 9.76612161069481e-75]
+p(169) ∈ [0.0, 3.3149878706182147e-75]
+p(170) ∈ [0.0, 1.1252311839237953e-75]
+p(171) ∈ [0.0, 3.8194565612043153e-76]
+p(172) ∈ [0.0, 1.2964667733483877e-76]
+p(173) ∈ [0.0, 4.40069435916401e-77]
+p(174) ∈ [0.0, 1.4937606763928891e-77]
+p(175) ∈ [0.0, 5.070383844520437e-78]
+p(176) ∈ [0.0, 1.7210783987736944e-78]
+p(177) ∈ [0.0, 5.841985430603201e-79]
+p(178) ∈ [0.0, 1.982988909494046e-79]
+p(179) ∈ [0.0, 6.731007911415436e-80]
+p(180) ∈ [0.0, 2.2847564747650056e-80]
+p(181) ∈ [0.0, 7.755320180396131e-81]
+p(182) ∈ [0.0, 2.6324464670417705e-81]
+p(183) ∈ [0.0, 8.935510385964149e-82]
+p(184) ∈ [0.0, 3.0330472758824107e-82]
+p(185) ∈ [0.0, 1.0295299742685143e-82]
+p(186) ∈ [0.0, 3.494610770974413e-83]
+p(187) ∈ [0.0, 1.1862019315452454e-83]
+p(188) ∈ [0.0, 4.026414140563448e-84]
+p(189) ∈ [0.0, 1.3667159359798187e-84]
+p(190) ∈ [0.0, 4.639146358153312e-85]
+p(191) ∈ [0.0, 1.5747002259791413e-85]
+p(192) ∈ [0.0, 5.34512302536158e-86]
+p(193) ∈ [0.0, 1.814335178524892e-86]
+p(194) ∈ [0.0, 6.158533909161559e-87]
+p(195) ∈ [0.0, 2.0904373325952353e-87]
+p(196) ∈ [0.0, 7.09572814888149e-88]
+p(197) ∈ [0.0, 2.4085561991146332e-88]
+p(198) ∈ [0.0, 8.175542865474591e-89]
+p(199) ∈ [0.0, 2.7750858032618123e-89]
 
-Asymptotics: p(n) <= 1238.4085749722876 * 0.337314069014202^n for n >= 3
+Asymptotics: p(n) <= 66385.47770710422 * 0.3394374965583057^n for n >= 2
 
 Moments:
-0-th (raw) moment ∈ [0.2222222222222222, 1866.5831338155253]
-1-th (raw) moment ∈ [0.27777777777777773, 951.2330825846124]
-2-th (raw) moment ∈ [0.38888888888888884, 1919.599245537463]
-3-th (raw) moment ∈ [0.611111111111111, 5335.05708279688]
-4-th (raw) moment ∈ [1.0555555555555554, 19612.896288512184]
-Total time: 0.11615 s
+0-th (raw) moment ∈ [0.16666666666666666, 11580.206490737653]
+1-th (raw) moment ∈ [0.16666666666666666, 29109.518903124244]
+2-th (raw) moment ∈ [0.16666666666666666, 82183.41371566517]
+3-th (raw) moment ∈ [0.16666666666666666, 270149.06263749965]
+4-th (raw) moment ∈ [0.16666666666666666, 1059706.0594879]
+Total time: 0.09824 s

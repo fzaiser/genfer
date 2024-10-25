@@ -11,7 +11,7 @@ geom_bound_output = Path("outputs/herman_bound_probs.txt").read_text()
 
 residual_output = Path("outputs/herman_residual.txt").read_text()                       
 
-indices = list(range(300))[1::2]
+indices = list(range(200))[1::2]
 
 # Extracted bounds for residual_output
 residual_bounds = parse_output(residual_output)[1::2]
@@ -43,12 +43,12 @@ ax.fill_between(indices, geom_bound_lowers, geom_bound_uppers, color='blue', alp
 ax.plot(indices, tail_uppers, 'k-', marker='|', alpha=0.5, linewidth=1, label='Geometric Bound (tail-optimized)')
 
 # Setting symmetrical logarithmic scale
-linthresh = 1e-18
+linthresh = 1e-24
 ax.set_yscale('symlog', linthresh=linthresh)
 
 # Customizing the y-axis labels
 ax.set_ylim(bottom=0, top=1)
-ax.set_yticks([0, 1e-18, 1e-15, 1e-12, 1e-9, 1e-6, 1e-3, 1])
+ax.set_yticks([0, 1e-24, 1e-20, 1e-16, 1e-12, 1e-8, 1e-4, 1])
 ax.yaxis.set_major_formatter(ticker.LogFormatterSciNotation())
 
 plt.xlabel('Result value')
