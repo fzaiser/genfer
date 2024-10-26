@@ -5,6 +5,11 @@ import matplotlib.ticker as ticker
 from util import parse_output
 from pathlib import Path
 
+# Fix matplotlib fonttype:
+import matplotlib
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
+
 tail_output = Path("outputs/die_paradox_bound_tail.txt").read_text()
 
 geom_bound_output = Path("outputs/die_paradox_bound_probs.txt").read_text()

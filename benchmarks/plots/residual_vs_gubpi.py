@@ -4,6 +4,11 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from util import hitting_time_prob, asymptotic_hitting_time
 
+# Fix matplotlib fonttype:
+import matplotlib
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
+
 gubpi_time = 103 # seconds
 gubpi_output = """
 [-0.1, 0.9]: [0, 0]
