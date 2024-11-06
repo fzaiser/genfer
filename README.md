@@ -17,8 +17,8 @@ Then follow the instructions in the README.
 
 ### 1.1 Download
 
-* Download the VM image `popl2025.ova` from https://doi.org/10.5281/zenodo.13935838.
-* Download Oracle VirtualBox 7.1.2 for your system here: https://www.virtualbox.org/wiki/Downloads.
+* Download the VM image `popl2025.ova` from <https://doi.org/10.5281/zenodo.13935837>.
+* Download Oracle VirtualBox 7.1.2 for your system here: <https://www.virtualbox.org/wiki/Downloads>.
 
 
 
@@ -76,6 +76,8 @@ target/release/residual benchmarks/die_paradox.sgcl -u 30
 This runs the Residual Mass Semantics with unrolling limit 30 and should produce the following output:
 
 ```
+[...]
+
 Probability masses:
 p(0) = 0
 p(1) ∈ [0.6666666666666374, 0.6666666666667347]
@@ -123,51 +125,50 @@ It produces some more detailed output with information about the constraint gene
 
 Probability masses:
 p(0) = 0.0
-p(1) ∈ [0.6666642308420133, 0.6666673132400747]
-p(2) ∈ [0.22222141028067113, 0.2222227543769802]
-p(3) ∈ [0.07407380342689038, 0.07407451205788756]
-p(4) ∈ [0.024691267808963458, 0.024691718502199346]
-p(5) ∈ [0.008230422602987819, 0.008230749361737594]
-p(6) ∈ [0.0027434742009959396, 0.00274372840963568]
-p(7) ∈ [0.0009144914003319799, 0.0009146957150214882]
-p(8) ∈ [0.00030483046677732666, 0.0003049969893546323]
-p(9) ∈ [0.00010161015559244222, 0.00010174666465124123]
-p(10) ∈ [0.0000338700518641474, 0.00003398222225793997]
-p(11) ∈ [0.000011290017288049134, 0.00001138227722998843]
-p(12) ∈ [3.763339096016378e-6, 3.839252372571109e-6]
-p(13) ∈ [1.2544463653387928e-6, 1.3169191753416838e-6]
-p(14) ∈ [4.1814878844626425e-7, 4.6956406708469844e-7]
-p(15) ∈ [1.393829294820881e-7, 1.8169893127245337e-7]
-p(16) ∈ [4.646097649402936e-8, 8.12884225805633e-8]
-p(17) ∈ [1.5486992164676452e-8, 4.4151235418448015e-8]
-p(18) ∈ [5.162330721558818e-9, 2.8754076641518152e-8]
-p(19) ∈ [1.7207769071862728e-9, 2.1137681082653185e-8]
+p(1) ∈ [0.6666527630456288, 0.6666770943633902]
+p(2) ∈ [0.22221758768187627, 0.22222743618884813]
+p(3) ∈ [0.07407252922729209, 0.07407668111652053]
+p(4) ∈ [0.02469084307576403, 0.02469266157548205]
+p(5) ∈ [0.008230281025254676, 0.008231104465076538]
+p(6) ∈ [0.0027434270084182254, 0.002743810127447624]
+p(7) ∈ [0.0009144756694727419, 0.0009146576965923832]
+p(8) ∈ [0.0003048252231575806, 0.00030491305986845587]
+p(9) ∈ [0.00010160840771919354, 0.00010165126743302656]
+p(10) ∈ [0.00003386946923973118, 0.00003389054637013827]
+p(11) ∈ [0.000011289823079910394, 0.00001130024414662526]
+p(12) ∈ [3.7632743599701313e-6, 3.768445765672778e-6]
+p(13) ∈ [1.2544247866567103e-6, 1.2569974662109285e-6]
+p(14) ∈ [4.181415955522368e-7, 4.19423603857774e-7]
+p(15) ∈ [1.393805318507456e-7, 1.4002009699349777e-7]
+p(16) ∈ [4.646017728358187e-8, 4.6779482591927495e-8]
+p(17) ∈ [1.5486725761193953e-8, 1.5646220531204762e-8]
+p(18) ∈ [5.162241920397985e-9, 5.241937279120439e-9]
+p(19) ∈ [1.7207473067993283e-9, 1.7605779449585905e-9]
 [...]
 
-Asymptotics: p(n) <= 7.855965656259541e-7 * 0.8230384253075658^n for n >= 31
+Asymptotics: p(n) <= 0.000031278015409592094 * 0.5000113414027128^n for n >= 31
 
 Moments:
-0-th (raw) moment ∈ [0.9999963462630153, 1.0000036537503347]
-1-th (raw) moment ∈ [1.4999945193943771, 1.5000206471407989]
-2-th (raw) moment ∈ [2.9999890387842374, 3.0002127045826996]
-3-th (raw) moment ∈ [8.249969856517756, 8.253276566000135]
-4-th (raw) moment ∈ [29.99989038308604, 30.067296968529845]
-Total time: 0.12318 s
+0-th (raw) moment ∈ [0.9999791445684384, 1.0000208558665198]
+1-th (raw) moment ∈ [1.4999687168525118, 1.5000417126793457]
+2-th (raw) moment ∈ [2.9999374337005067, 3.0001251418274286]
+3-th (raw) moment ∈ [8.2498279425375, 8.250542299060541]
+4-th (raw) moment ∈ [29.99937433224882, 30.003128755450366]
 ```
 
-In particular, it finds the bound `[1.4999945193943771, 1.5000206471407989]` on the expected value (i.e. the `1-th (raw) moment`).
+In particular, it finds the bound `[1.4999687168525118, 1.5000417126793457]` on the expected value (i.e. the `1-th (raw) moment`).
 
 You can also optimize the asymptotic tail bound instead (for this, no unrolling is needed):
 
 ```
 $ target/release/geobound benchmarks/die_paradox.sgcl --objective tail
 [...]
-Asymptotics: p(n) <= 674.6678732164137 * 0.33942394950033866^n for n >= 9
+Asymptotics: p(n) <= 764.9018711960184 * 0.33874380844278107^n for n >= 9
 [...]
-Total time: 0.07913 s
+Total time: 0.15064 s
 ```
 
-As you can see, the asymptotic tail bound of `O(0.33942394950033866^n)` is much better than the asymptotic tail bound of `O(0.8230384253075658^n)` obtained above with a different optimization objective.
+As you can see, the asymptotic tail bound of `O(0.33874380844278107^n)` is much better than the asymptotic tail bound of `O(0.5000113414027128^n)` obtained above with a different optimization objective.
 
 All the flags that the tool accepts are documented in the help text (`target/release/geobound --help`).
 More information on how to use this tool can be found further down.
@@ -190,6 +191,7 @@ We make the following claims in the paper:
 * **Claim 5 (Section 6.4)**: There are trade-offs between the two semantics presented in the paper: while the Geometric Bound Semantics is much more informative, the Residual Mass Semantics is much faster in practice.
 
 The following instructions describe how to verify those claims.
+The solvers that our tool uses are **not fully deterministic**, so you may see **small discrepancies** in the running times and the results compared to the paper.
 
 
 
@@ -216,8 +218,8 @@ This script runs each benchmark with the following configurations:
   It runs the command `../target/release/geobound <benchmark>.sgcl -u 0`.
 * `geobound -u 30 --objective ev`: Geometric Bound Semantics with unrolling limit 30 and optimizing the bound on the expected value of the program distribution.
   To obtain good bounds on the expected value, unrolling is needed (`-u 30`) and the optimization objective must be set (`--objective ev`).
-* `geobound -u 0 --objective tail`: Geometric Bound Semantics without unrolling but optimizing the tail asymptotic bound.
-  For tail bounds, unrolling is not helpful (except for numerical issues, in some cases), so the unrolling limit is set to 0.
+* `geobound -u 1 --objective tail`: Geometric Bound Semantics but optimizing the tail asymptotic bound.
+  For tail bounds, unrolling is not very helpful (except for numerical issues, in some cases), so the unrolling limit is set to only 1.
 * `polar`: The Polar tool by Moosbrugger et al. (OOPSLA2022), see https://github.com/probing-lab/polar.
   Polar cannot compute tail bounds but can compute exact moments (in particular expected values) for some benchmarks.
   We have translated the relevant benchmarks to Polar's format (file extension: `.prob`).
@@ -231,9 +233,10 @@ The results are written to `bench-results.json` and will be visualized in the fo
 
 
 
-### 3.3 Claim 1: Geometric Bound Semantics is applicable often (Table 2)
+### 3.3 Claim 1: Geometric Bound Semantics is applicable often (Section 6.1, in particular Table 6 in Appendix D)
 
-To generate Table 2 (Applicability of the Geometric Bound Semantics), run this script:
+The claim in Section 6.1 is based on Table 6 in Appendix D (Applicability of the Geometric Bound Semantics).
+To generate it, run this script:
 
 ```shell
 cd tool/benchmarks # if not already
@@ -247,9 +250,9 @@ One can see that for over 80% of the benchmarks, the Geometric Bound Semantics s
 
 
 
-### 3.4 Claim 2: Geometric Bound Semantics yields useful bounds (Table 3)
+### 3.4 Claim 2: Geometric Bound Semantics yields useful bounds (Table 2 in Section 6.2)
 
-To generate Table 3 (Quality of the Geometric Bounds), run this script:
+To generate Table 2 (Quality of the Geometric Bounds), run this script:
 
 ```shell
 cd tool/benchmarks # if not already
@@ -259,14 +262,14 @@ python3 tables.py quality
 It reads `bench-results.json` and outputs a LaTeX table containing the results.
 
 One can see that the upper and lower bounds on the expected value are usually close together and all the bounds are nontrivial.
-Most of the tail bounds are also very close to the theoretical optimum (where the latter is known, see Table 3 in the paper).
+Most of the tail bounds are also very close to the theoretical optimum (where the latter is known, see Table 2 in the paper).
 This supports the claim that our implementation of the Geometric Bound Semantics yields useful bounds.
 
 
 
-### 3.5 Claim 3: Geometric Bound Semantics is typically faster and more often applicable than Polar (Table 5)
+### 3.5 Claim 3: Geometric Bound Semantics is typically faster and more often applicable than Polar (Table 4 in Section 6.3)
 
-To generate Table 5 (Comparison of Geometric Bounds and Polar), run this script:
+To generate Table 4 (Comparison of Geometric Bounds and Polar), run this script:
 
 ```shell
 cd tool/benchmarks # if not already
@@ -280,7 +283,7 @@ The computed bounds are typically very close to the exact values.
 
 
 
-### 3.6 Claim 4: Our Residual Mass Semantics is orders of magnitude faster than GuBPI (Table 4)
+### 3.6 Claim 4: Our Residual Mass Semantics is orders of magnitude faster than GuBPI (Table 3 in Section 6.3)
 
 We compare our tool with GuBPI on three benchmarks: the geometric counter, asymmetric random walk, and die paradox example from the paper.
 We translated the examples to GuBPI's file format (`.spcf`) and you can run GuBPI on them as follows.
@@ -313,7 +316,7 @@ These experiments support the data in Table 4 and demonstrate that our tool is o
 
 
 
-### 3.7 Claim 5: Tradeoffs between the two semantics (Table 6, Fig. 7)
+### 3.7 Claim 5: Tradeoffs between the two semantics (Table 5 and Fig. 7 in Section 6.4)
 
 Next, let's reproduce the plots from Fig. 7 (Section 6.4) in the paper.
 To do this, run the following commands:
@@ -322,15 +325,22 @@ To do this, run the following commands:
 cd tool/benchmarks # if not already
 # Generate the data for the plots (takes about 1min):
 ./comparison.sh
+
+# Extract the data for Table 5:
+python3 tables.py semantics-comparison
+
 # Plot the data:
-./plots.sh
+python3 plots.py
 # Now the plots (named `plot_<benchmark>.pdf`) are in the `benchmarks/` directory
 ```
 
 The script `./comparison.sh` runs the Geometric Bound Semantics on 5 benchmarks: `asym_rw.sgcl`, `coupon-collector.sgcl`, `die_paradox.sgcl`, `geo.sgcl`, `herman.sgcl`.
 Each benchmark is run 4 times: once with the Residual Mass Semantics and three times with the Geometric Bound Semantics, each time with a different optimization objective (`total` for probability masses, `ev` for moments, or `tail` for tail asymptotics).
-The output of each run is written to `outputs/<benchmark>-residual.txt` for the Residual Mass Semantics and `outputs/<benchmark>-bound-<objective>.txt` for the Geometric Bound Semantics.
-The data for Table 6 is taken from the relevant files in `outputs/`.
+The output of each run is written to `outputs/<benchmark>_residual.txt` for the Residual Mass Semantics and `outputs/<benchmark>_bound_<objective>.txt` for the Geometric Bound Semantics.
+
+The `tables.py` script can read this data and output Table 5.
+The version in the paper is adjusted for readability.
+The `plots.py` script creates the plots `plot_*.pdf` that are used in Fig. 7.
 
 The claim here is a bit subtle:
 The residual mass semantics is faster and yields tighter bounds for the probability masses on small values, but the bound is flat, i.e. the difference between upper and lower bounds on probability masses is constant.
