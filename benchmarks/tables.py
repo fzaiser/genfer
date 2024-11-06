@@ -18,10 +18,16 @@ tail_bound_re = re.compile(r"Asymptotics: p\(n\) (?:(?:.*) \* ([e.0123456789+-]+
 true_ev_re = re.compile(r"true EV: (.*)")
 # e.g. "1-th (raw) moment = 0.5":
 exact_ev_re = re.compile(r"1-th \(raw\) moment = ([Nae.0123456789+-]+)")
+# e.g. "2-th (raw) moment = 0.5":
+exact_mom2_re = re.compile(r"2-th \(raw\) moment = ([Nae.0123456789+-]+)")
 # e.g. "1-th (raw) moment ∈ [0.5, 0.6]":
-ev_bound_re = re.compile(r"1-th \(raw\) moment ∈ \[([Nae.0123456789+-]+), ([Nae.0123456789+-]+)\]")
+ev_bound_re = re.compile(r"1-th \(raw\) moment ∈ \[([Nae.0123456789+-]+), ([Nainfe.0123456789+-]+)\]")
+# e.g. "2-th (raw) moment ∈ [0.5, 0.6]":
+mom2_bound_re = re.compile(r"2-th \(raw\) moment ∈ \[([Nae.0123456789+-]+), ([Nainfe.0123456789+-]+)\]")
 # e.g. "E[var] = 0.5":
 polar_ev_re = re.compile(r"E\([A-Za-z0-9_]*\) = (.*)")
+# e.g. "Total time: 42.0 s":
+total_time_re = re.compile(r"(?:Total|Elapsed) time: ([0-9.]*) *s")
 
 # e.g. "12 variables"
 var_count_re = re.compile(r"([0-9]+) variables")
@@ -94,7 +100,42 @@ def program_stats(path: Path):
     support = [cardinality(supset) for supset in support_re.findall(supports)]
     has_observations = "Contains observations: true" in out
     return ProgramStats(var_count, stmt_count, support, has_observations)
-    
+
+def extract_ev(output):
+    m = exact_ev_re.search(output)
+    ev_lo = ev_hi = None
+    if m:
+        ev_lo = ev_hi = float(m.group(1))
+    m = ev_bound_re.search(output)
+    if m:
+        ev_lo = float(m.group(1))
+        ev_hi = float(m.group(2))
+    return ev_lo, ev_hi
+
+def extract_mom2(output):
+    m = exact_mom2_re.search(output)
+    mom2_lo = mom2_hi = None
+    if m:
+        mom2_lo = mom2_hi = float(m.group(1))
+    m = mom2_bound_re.search(output)
+    if m:
+        mom2_lo = float(m.group(1))
+        mom2_hi = float(m.group(2))
+    return mom2_lo, mom2_hi
+
+def extract_decay_rate(output):
+    m = tail_bound_re.search(output)
+    if m:
+        return float(m.group(1))
+    return None
+
+
+def extract_time(output):
+    m = total_time_re.search(output)
+    if m:
+        return float(m.group(1))
+    return None
+
 
 def applicability_table():
     with open("bench-results.json") as f:
@@ -155,7 +196,7 @@ def quality_of_bounds_table():
         program = Path(f"{benchmark}.sgcl").read_text()
         ev_result = bench_result["geobound-ev"]
         tail_result = bench_result["geobound-tail"]
-        
+
         m = constr_count_re.search(ev_result["stdout"])
         if m:
             constr_count = m.group(1)
@@ -261,6 +302,39 @@ def polar_comparison_table():
     print(r"\end{tabular}")
 
 
+def semantics_comparison_table():
+    print(r"========================================")
+    print(r"TABLE FOR COMPARISON BETWEEN THE TWO SEMANTICS:")
+    benchmarks = ["geo", "asym_rw", "die_paradox", "coupon_collector", "herman"]
+    exact = {
+        "geo": [1, 3, "$\Theta(0.5^n)$"],
+        "asym_rw": [2, 10, "$\Theta(n^{-3/2}0.8660...^n)$"],
+        "die_paradox": [1.5, 3, "$\Theta(0.3333...^n)$"],
+        "coupon_collector": ["11.41666...", "155.513888...", "$\Theta(0.8^n)$"],
+        "herman": ["1.333...", "4.222...", "?"]
+    }
+    print(r"\begin{tabular}{l|lllll}")
+    print(r"\toprule")
+    print(r"Example &Method &Expected value &2nd moment &Tail &Time \\")
+    for benchmark in benchmarks:
+        print(r"\midrule")
+        exact_ev, exact_mom2, exact_tail = exact[benchmark]
+        print(fr"\verb|{benchmark}| &exact &{exact_ev} &{exact_mom2} &{exact_tail} & \\")
+        residual_output = Path(f"outputs/{benchmark}_residual.txt").read_text()
+        ev_lo, _ = extract_ev(residual_output)
+        mom2_lo, _ = extract_mom2(residual_output)
+        geometric_moments_output = Path(f"outputs/{benchmark}_bound_moments.txt").read_text()
+        _, ev_hi = extract_ev(geometric_moments_output)
+        _, mom2_hi = extract_mom2(geometric_moments_output)
+        geometric_tail_output = Path(f"outputs/{benchmark}_bound_tail.txt").read_text()
+        decay = extract_decay_rate(geometric_tail_output)
+        residual_time = extract_time(residual_output)
+        geometric_time = max(extract_time(geometric_moments_output), extract_time(geometric_tail_output))
+        print(fr" &residual &$\ge {ev_lo}$ &$\ge {mom2_lo}$ &n/a &{residual_time:.3f} s \\")
+        print(fr" &geometric &$\le {ev_hi}$ &$\le {mom2_hi}$ &$O({round_up(decay, 4):.4f}^n)$ &{geometric_time:.3f} s \\")
+    print(r"\bottomrule")
+    print(r"\end{tabular}")
+
 if __name__ == "__main__":
     own_path = Path(sys.argv[0]).parent
     os.chdir(own_path)
@@ -270,3 +344,5 @@ if __name__ == "__main__":
         quality_of_bounds_table()
     if len(sys.argv) == 1 or "polar-comparison" in sys.argv:
         polar_comparison_table()
+    if len(sys.argv) == 1 or "semantics-comparison" in sys.argv:
+        semantics_comparison_table()
