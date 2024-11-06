@@ -43,7 +43,9 @@ def parse_output(output_str):
         bound = re.search(r"p\(\d+\) = ([\d.e-]+)", line)
         if bound:
             bounds.append((float(bound.group(1)), float(bound.group(1))))
-    return bounds
+    time = re.search(r"Total time: ([\d.]+) ?s", output_str)
+    time = float(time.group(1)) if time else None
+    return bounds, time
 
 
 def plot_benchmark(name, indices, exact, lin_thresh, tick_factor):
@@ -52,21 +54,21 @@ def plot_benchmark(name, indices, exact, lin_thresh, tick_factor):
     residual_output = Path(f"outputs/{name}_residual.txt").read_text()
 
     # Extracted bounds for residual_output
-    residual_bounds = parse_output(residual_output)
+    residual_bounds, residual_time = parse_output(residual_output)
     count = len(residual_bounds)
     residual_bounds = [residual_bounds[i] for i in indices]
     residual_lowers = [lower for lower, _ in residual_bounds]
     residual_uppers = [upper for _, upper in residual_bounds]
 
     # Extracted bounds for geom_bound_output
-    geom_bounds = parse_output(geom_bound_output)
+    geom_bounds, geom_time = parse_output(geom_bound_output)
     assert len(geom_bounds) == count
     geom_bounds = [geom_bounds[i] for i in indices]
     geom_bound_lowers = [lower for lower, _ in geom_bounds]
     geom_bound_uppers = [upper for _, upper in geom_bounds]
 
     # Extracted bounds for geom_bound tail output
-    tail_bounds = parse_output(tail_output)
+    tail_bounds, tail_time = parse_output(tail_output)
     assert len(tail_bounds) == count
     tail_bounds = [tail_bounds[i] for i in indices]
     tail_uppers = [upper for _, upper in tail_bounds]
@@ -82,10 +84,10 @@ def plot_benchmark(name, indices, exact, lin_thresh, tick_factor):
         residual_uppers,
         color="red",
         alpha=0.2,
-        label="Resid. Mass Bounds",
+        label=f"Resid. mass bound ({residual_time:.2g} s)",
     )
 
-    # Plot geom_bound bounds:
+    # Plot geom_bound bounds optimizing the bound on the total mass:
     ax.plot(indices, geom_bound_lowers, "b-", marker="|", alpha=0.5, linewidth=1)
     ax.plot(indices, geom_bound_uppers, "b--", marker="|", alpha=0.5, linewidth=1)
     ax.fill_between(
@@ -94,10 +96,10 @@ def plot_benchmark(name, indices, exact, lin_thresh, tick_factor):
         geom_bound_uppers,
         color="blue",
         alpha=0.2,
-        label="Geom. Bound",
+        label=f"Geom. bound, mass-opt. ({geom_time:.2g} s)",
     )
 
-    # Plot tail bounds:
+    # Plot tail bounds optimizing the bound on the tail decay rate:
     ax.plot(
         indices,
         tail_uppers,
@@ -105,7 +107,7 @@ def plot_benchmark(name, indices, exact, lin_thresh, tick_factor):
         marker="|",
         alpha=0.5,
         linewidth=1,
-        label="Geom. Bound (tail-opt.)",
+        label=f"Geom. bound, tail-opt. ({tail_time:.2g} s)",
     )
 
     if exact is not None:
@@ -117,7 +119,7 @@ def plot_benchmark(name, indices, exact, lin_thresh, tick_factor):
             color="green",
             zorder=5,
             s=20,
-            label="Exact result",
+            label="Exact probability",
         )
 
     # Setting symmetrical logarithmic scale
