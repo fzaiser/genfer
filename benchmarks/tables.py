@@ -191,6 +191,8 @@ def quality_of_bounds_table():
     for benchmark, bench_result in results.items():
         if not bench_result:
             continue
+        if bench_result["geobound-existence"]["error"]:
+            continue
         ev_flags = bench_result["geobound-ev"]["flags"]
         ev_unroll = ev_flags[ev_flags.index("-u") + 1]
         program = Path(f"{benchmark}.sgcl").read_text()
@@ -264,6 +266,8 @@ def polar_comparison_table():
     print(r"\midrule")
     for benchmark, bench_result in results.items():
         if not bench_result or "geobound-ev" not in bench_result or "polar" not in bench_result:
+            continue
+        if bench_result["geobound-existence"]["error"]:
             continue
 
         ev_result = bench_result["geobound-ev"]
