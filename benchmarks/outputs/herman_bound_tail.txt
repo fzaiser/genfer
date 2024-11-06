@@ -1,29 +1,29 @@
 
 CONSTRAINT GENERATION:
 Generated 29 constraints with 258 symbolic variables.
-Constraint generation time: 0.01268 s
+Constraint generation time: 0.01354 s
 
 SOLVING SIMPLIFIED PROBLEM:
 Solving without loop unrolling first...
 
 CONSTRAINT GENERATION (simplified problem):
 Generated 29 constraints with 258 symbolic variables.
-Constraint generation time: 0.01246 s
+Constraint generation time: 0.01380 s
 
 SOLVING CONSTRAINTS (simplified problem):
 IPOPT found a solution that satisfies all constraints exactly.
-Solver time: 0.04418 s
+Solver time: 0.04941 s
 
 OPTIMIZATION (simplified problem):
 Initial objective: 296.37408368977134
 
 Optimization step 1: IPOPT
-Optimizer time (IPOPT): 0.04016 s
+Optimizer time (IPOPT): 0.03584 s
 Improved objective: 2.0006159408252056
 
 Optimization step 2: ADAM with Barrier Method
 Ran for 5000 iterations
-Optimizer time (ADAM with Barrier Method): 5.15234 s
+Optimizer time (ADAM with Barrier Method): 5.79962 s
 Unchanged objective: 2.0006159408252056
 
 Optimization step 3: Linear Optimization
@@ -35,10 +35,10 @@ Optimal - objective value 0
 After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
 Optimal objective 0 - 2 iterations time 0.002, Presolve 0.00
 LP solver failed to improve the objective.
-Optimizer time (Linear Optimization): 0.00539 s
+Optimizer time (Linear Optimization): 0.00588 s
 Unchanged objective: 2.0006159408252056
 
-Total optimization time: 5.19831 s
+Total optimization time: 5.84174 s
 
 EXTENDING SOLUTION:
 Extending simplified solution to the original problem...
@@ -49,19 +49,19 @@ Presolve 4 (-25) rows, 4 (-254) columns and 10 (-529) elements
 Optimal - objective value 0
 After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
 Optimal objective 0 - 2 iterations time 0.002, Presolve 0.00
-Extension time (LP solver): 0.00519 s
+Extension time (LP solver): 0.00629 s
 
 OPTIMIZATION:
 Initial objective: 2.0006159408252056
 
 Optimization step 1: IPOPT
 Solution by IPOPT does not actually satisfy the constraints (due to numerical issues).
-Optimizer time (IPOPT): 0.26279 s
+Optimizer time (IPOPT): 0.27452 s
 Unchanged objective: 2.0006159408252056
 
 Optimization step 2: ADAM with Barrier Method
 Ran for 5000 iterations
-Optimizer time (ADAM with Barrier Method): 6.06263 s
+Optimizer time (ADAM with Barrier Method): 7.10921 s
 Unchanged objective: 2.0006159408252056
 
 Optimization step 3: Linear Optimization
@@ -73,10 +73,10 @@ Optimal - objective value 0
 After Postsolve, objective 0, infeasibilities - dual 0 (0), primal 0 (0)
 Optimal objective 0 - 2 iterations time 0.002, Presolve 0.00
 LP solver failed to improve the objective.
-Optimizer time (Linear Optimization): 0.00522 s
+Optimizer time (Linear Optimization): 0.00587 s
 Unchanged objective: 2.0006159408252056
 
-Total optimization time: 6.33123 s
+Total optimization time: 7.39027 s
 
 UNNORMALIZED BOUND:
 
@@ -299,4 +299,4 @@ Moments:
 2-th (raw) moment ∈ [0.28125, 3370115635.8698034]
 3-th (raw) moment ∈ [0.28125, 14610292346.384212]
 4-th (raw) moment ∈ [0.28125, 84327634744.53279]
-Total time: 11.60580 s
+Total time: 13.31690 s

@@ -1,24 +1,24 @@
 
 CONSTRAINT GENERATION:
 Generated 29 constraints with 258 symbolic variables.
-Constraint generation time: 1.75698 s
+Constraint generation time: 2.84450 s
 
 SOLVING SIMPLIFIED PROBLEM:
 Solving without loop unrolling first...
 
 CONSTRAINT GENERATION (simplified problem):
 Generated 29 constraints with 258 symbolic variables.
-Constraint generation time: 0.00839 s
+Constraint generation time: 0.01198 s
 
 SOLVING CONSTRAINTS (simplified problem):
 IPOPT found a solution that satisfies all constraints exactly.
-Solver time: 0.02644 s
+Solver time: 0.03615 s
 
 OPTIMIZATION (simplified problem):
 Initial objective: 1029903414658.4199
 
 Optimization step 1: IPOPT
-Optimizer time (IPOPT): 0.02268 s
+Optimizer time (IPOPT): 0.03232 s
 Improved objective: 9.147503827437388
 
 Optimization step 2: Linear Optimization
@@ -30,10 +30,10 @@ Perturbing problem by 0.001% of 1 - largest nonzero change 9.1981161e-05 ( 0.012
 Optimal - objective value 0.64818936
 After Postsolve, objective 0.64818936, infeasibilities - dual 0 (0), primal 0 (0)
 Optimal objective 0.6481893584 - 3 iterations time 0.002, Presolve 0.00
-Optimizer time (Linear Optimization): 0.00747 s
+Optimizer time (Linear Optimization): 0.01093 s
 Improved objective: 9.14417959262475
 
-Total optimization time: 0.03044 s
+Total optimization time: 0.04373 s
 
 EXTENDING SOLUTION:
 Extending simplified solution to the original problem...
@@ -81,14 +81,14 @@ Presolved model was optimal, full model needs cleaning up
 17  Obj 1.9592343e-05
 Optimal - objective value 1.9592343e-05
 Optimal objective 1.959234347e-05 - 17 iterations time 0.002, Presolve 0.00
-Extension time (LP solver): 0.02597 s
+Extension time (LP solver): 0.03824 s
 
 OPTIMIZATION:
 Initial objective: 1.000223314349261
 
 Optimization step 1: IPOPT
 IPOPT failed to solve the problem; returning initial solution.
-Optimizer time (IPOPT): 17.08239 s
+Optimizer time (IPOPT): 29.44284 s
 Unchanged objective: 1.000223314349261
 
 Optimization step 2: Linear Optimization
@@ -137,10 +137,10 @@ Presolved model was optimal, full model needs cleaning up
 Optimal - objective value 1.9592343e-05
 Optimal objective 1.959234347e-05 - 17 iterations time 0.002, Presolve 0.00
 LP solver failed to improve the objective.
-Optimizer time (Linear Optimization): 0.04160 s
+Optimizer time (Linear Optimization): 0.02825 s
 Unchanged objective: 1.000223314349261
 
-Total optimization time: 17.12573 s
+Total optimization time: 29.47259 s
 
 UNNORMALIZED BOUND:
 
@@ -392,4 +392,4 @@ Moments:
 2-th (raw) moment ∈ [4.222221505569501, 4.231898951030216]
 3-th (raw) moment ∈ [18.888865862403893, 19.016450289554406]
 4-th (raw) moment ∈ [110.73999917281249, 112.98367277917825]
-Total time: 18.98700 s
+Total time: 32.45773 s
