@@ -1,5 +1,5 @@
-
-# true EV: 1.333...
+# Equivalent but cleaner version of `psi/herman.sgcl`
+# It removes a few unnecessary branches from the original code.
 
 process1 ~ Bernoulli(1/2);
 process2 ~ Bernoulli(1/2);
