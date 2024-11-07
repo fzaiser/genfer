@@ -100,10 +100,10 @@ impl Transformer for ResidualSemantics {
                     else_res.reject = Rational::zero();
                     (then_res, else_res)
                 } else {
-                    todo!()
+                    todo!("Unsupported event: {event}")
                 }
             }
-            Event::VarComparison(..) => todo!(),
+            Event::VarComparison(..) => todo!("Unsupported event: {event}"),
             Event::Complement(event) => {
                 let (then_res, else_res) = self.transform_event(event, init);
                 (else_res, then_res)
@@ -187,7 +187,7 @@ impl Transformer for ResidualSemantics {
                             .collect::<Vec<_>>();
                         res.lower.add_categorical(*var, &categorical);
                     }
-                    _ => todo!(),
+                    _ => todo!("Unsupported distribution: {distribution}"),
                 };
                 res.var_supports = new_var_info;
                 res
@@ -233,7 +233,7 @@ impl Transformer for ResidualSemantics {
                     (None, offset) => {
                         res.lower.shift_right(*var, offset.0 as usize);
                     }
-                    _ => todo!("{}", stmt.to_string()),
+                    _ => todo!("Unsupported assignment: {}", stmt.to_string()),
                 }
                 res.var_supports = self.support.transform_statement(stmt, res.var_supports);
                 res

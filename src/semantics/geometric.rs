@@ -132,10 +132,10 @@ impl Transformer for GeometricBoundSemantics {
                     else_res.upper *= SymExpr::from(els);
                     (then_res, else_res)
                 } else {
-                    todo!()
+                    todo!("Unsupported event: {event}")
                 }
             }
-            Event::VarComparison(..) => todo!(),
+            Event::VarComparison(..) => todo!("Comparison of two variables is not supported"),
             Event::Complement(event) => {
                 let (then_res, else_res) = self.transform_event(event, init);
                 (else_res, then_res)
@@ -193,12 +193,12 @@ impl Transformer for GeometricBoundSemantics {
                         let mut added_masses = res.lower.marginalize_out(*var) * p.clone();
                         res.lower = FiniteDiscrete::zero(res.var_supports.num_vars());
                         let limit = self.unroll + 1;
+                        // TODO: should this limit be higher?
                         for _ in 0..limit {
                             res.lower += &added_masses;
                             added_masses *= Rational::one() - p.clone();
                             added_masses.shift_right(*var, 1);
                         }
-                        // TODO: should we extend lower in the `var` dimension? If so, how far?
                         res.upper *= SymExpr::from(p.clone());
                         res.upper.decays[var.id()] = SymExpr::from(Rational::one() - p);
                     }
@@ -224,7 +224,7 @@ impl Transformer for GeometricBoundSemantics {
                         res.lower.add_categorical(*var, &categorical);
                         res.upper.add_categorical(*var, &categorical);
                     }
-                    _ => todo!(),
+                    _ => todo!("Unsupported distribution: {distribution}"),
                 };
                 res.var_supports = new_var_info;
                 res
@@ -285,14 +285,14 @@ impl Transformer for GeometricBoundSemantics {
                             new_bound.lower.masses = res_lower_masses;
                             new_bound.upper.block = res_upper_block;
                         } else {
-                            todo!("Addition of a variable is not implemented for infinite support: {}", stmt.to_string());
+                            todo!("Addition of a variable is not implemented for infinite support: {stmt}");
                         }
                     }
                     (None, offset) => {
                         new_bound.lower.shift_right(*var, offset.0 as usize);
                         new_bound.upper.shift_right(*var, offset.0 as usize);
                     }
-                    _ => todo!("{}", stmt.to_string()),
+                    _ => todo!("Unsupported assignment: {stmt}"),
                 }
                 new_bound.var_supports = self
                     .support
