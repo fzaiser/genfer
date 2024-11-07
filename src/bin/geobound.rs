@@ -51,7 +51,7 @@ impl std::fmt::Display for Optimizer {
     }
 }
 
-#[derive(Copy, Clone, ValueEnum)]
+#[derive(Copy, Clone, PartialEq, ValueEnum)]
 enum Objective {
     Total,
     #[value(name = "ev")]
@@ -115,6 +115,14 @@ pub fn main() -> std::io::Result<ExitCode> {
     }
     if args.objective.is_none() {
         println!("WARNING: No optimization objective set. The resulting bounds will be BAD.");
+        println!("Consider setting an objective with `--objective`.")
+    }
+    if args.objective == Some(Objective::Tail) && args.unroll > 1 {
+        println!("WARNING: For tail bounds, unrolling of 0 or 1 is recommended.");
+        println!(
+            "Higher unrolling limits rarely improve the decay rate but increase the running time."
+        );
+        println!("Consider setting a lower unrolling limit with `-u 0` or `-u 1`.");
     }
     Ok(run_program(&program, &args))
 }
@@ -170,6 +178,8 @@ fn compute_constraints_solution(
     if args.unroll != 0 {
         println!("\nSOLVING SIMPLIFIED PROBLEM:");
         println!("Solving without loop unrolling first...");
+        // In experiments, an unrolling of 1 did better than 0 at all.
+        // TODO: Would it make sense to try unrolling 0 before unrolling 1?
         let modified_args = CliArgs {
             unroll: 1,
             ..args.clone()
